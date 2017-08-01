@@ -1,0 +1,111 @@
+# Copyright 2017 by the contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This is an example of how to deploy kubernetes-aws-authenticator.
+#
+# To use this, you'll at least need to edit the role ARNs in the ConfigMap. You
+# may also need to rework other bits to work in your cluster (e.g., node labels).
+#
+# This was tested with a kubeadm-installed cluster.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: kube-system
+  name: kubernetes-aws-authenticator
+  labels:
+    k8s-app: kubernetes-aws-authenticator
+data:
+  config.yaml: |
+    # a unique-per-cluster identifier to prevent replay attacks
+    # (good choices are a random token or a domain name that will be unique to your cluster)
+    clusterID: my-dev-cluster.example.com
+    server:
+      # a mapping of IAM role (specified by ARN) to a list of Kubernetes group names
+      mapRoles:
+      # map arn:aws:iam::000000000000:role/KubernetesAdmin to a cluster admin (make sure this is )
+      - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
+        username: kubernetes-admin
+        groups:
+         - system:masters
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  namespace: kube-system
+  name: kubernetes-aws-authenticator
+  labels:
+    k8s-app: kubernetes-aws-authenticator
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        k8s-app: kubernetes-aws-authenticator
+    spec:
+      # run on the host network (don't depend on CNI)
+      hostNetwork: true
+
+      # run on each master node
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      - key: CriticalAddonsOnly
+        operator: Exists
+
+      # run `kubernetes-aws-authenticator server` with three volumes
+      # - config (mounted from the ConfigMap at /etc/kubernetes-aws-authenticator/config.yaml)
+      # - state (persisted TLS certificate and keys, mounted from the host)
+      # - output (output kubeconfig to plug into your apiserver configuration, mounted from the host)
+      containers:
+      - name: kubernetes-aws-authenticator
+        image: gcr.io/heptio-images/kubernetes-aws-authenticator:v0.1.0
+        args:
+        - server
+        - --config=/etc/kubernetes-aws-authenticator/config.yaml
+        - --state-dir=/var/kubernetes-aws-authenticator
+        - --generate-kubeconfig=/etc/kubernetes/kubernetes-aws-authenticator/kubeconfig.yaml
+
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+          limits:
+            memory: 20Mi
+            cpu: 100m
+
+        volumeMounts:
+        - name: config
+          mountPath: /etc/kubernetes-aws-authenticator/
+        - name: state
+          mountPath: /var/kubernetes-aws-authenticator/
+        - name: output
+          mountPath: /etc/kubernetes/kubernetes-aws-authenticator/
+
+      volumes:
+      - name: config
+        configMap:
+          name: kubernetes-aws-authenticator
+      - name: output
+        hostPath:
+          path: /etc/kubernetes/kubernetes-aws-authenticator/
+      - name: state
+        hostPath:
+          path: /var/kubernetes-aws-authenticator/
+
