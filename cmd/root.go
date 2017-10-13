@@ -79,6 +79,12 @@ func getConfig() (config.Config, error) {
 	if err := viper.UnmarshalKey("server.mapRoles", &config.StaticRoleMappings); err != nil {
 		return config, fmt.Errorf("invalid server role mappings: %v", err)
 	}
+	if err := viper.UnmarshalKey("server.mapEC2InstanceRoles", &config.EC2InstanceRoleMappings); err != nil {
+		logrus.WithError(err).Fatal("invalid server EC2 role mappings")
+	}
+	if err := viper.UnmarshalKey("server.mapUsers", &config.StaticUserMappings); err != nil {
+		logrus.WithError(err).Fatal("invalid server user mappings")
+	}
 
 	if config.ClusterID == "" {
 		return config, errors.New("cluster ID cannot be empty")

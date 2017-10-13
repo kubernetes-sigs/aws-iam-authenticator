@@ -47,6 +47,11 @@ aws iam create-role \
   --query 'Role.Arn'
 ```
 
+You can also skip this step and use:
+ - An existing role (such as a cross-account access role).
+ - An IAM user (see `mapUsers` below).
+ - An EC2 instance role (see `mapEC2InstanceRoles` below).
+
 ### 2. Run the server
 The server is meant to run on each of your master nodes as a DaemonSet with host networking so it can expose a localhost port.
 
@@ -87,7 +92,6 @@ systemctl restart kubelet.service
 ```
 
 ### 4. Set up kubectl to use kubernetes-aws-authenticator tokens
-
 Finally, once the server is set up you'll want to authenticate!
 You will still need a `kubeconfig` that has the public data about your cluster (cluster CA certificate, endpoint address).
 The `users` section of your configuration, however, can be mostly blank:
@@ -95,7 +99,7 @@ The `users` section of your configuration, however, can be mostly blank:
 # [...]
 users:
 - name: kubernetes-admin
-  # no client certificate/key needed here
+  # no client certificate/key needed here!
 ```
 
 This means the `kubeconfig` is entirely public data and can be shared across all kubernetes-aws-authenticator users.
@@ -106,6 +110,10 @@ You can install it with `go get -u -v github.com/heptiolabs/kubernetes-aws-authe
 
 To authenticate, run `kubectl --kubeconfig /path/to/kubeconfig --token "$(kubernetes-aws-authenticator token -i CLUSTER_ID -r ROLE_ARN)" [...]`.
 You can simplify this with an alias or shell wrapper.
+The token is valid for 15 minutes (the shortest value AWS permits) and can be reused multiple times.
+
+You can also omit `-r ROLE_ARN` to sign the token with your existing credentials without assuming a dedicated role.
+This is useful if you want to authenticate as an IAM user directly or if you want to authenticate using an EC2 instance role.
 
 ## How does it work?
 It works using the AWS [`sts:GetCallerIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html) API endpoint.
@@ -153,16 +161,40 @@ server:
   # localhost port where the server will serve the /authenticate endpoint
   port: 21362 # (default)
 
-  # State directory for generated TLS certificate and private keys
+  # state directory for generated TLS certificate and private keys
   stateDir: /var/kubernetes-aws-authenticator # (default)
 
-  # Output `path` where a generated webhook kubeconfig will be stored.
+  # output `path` where a generated webhook kubeconfig will be stored.
   generateKubeconfig: /etc/kubernetes/kubernetes-aws-authenticator.kubeconfig # (default)
 
-  # a mapping of IAM role (specified by ARN) to a list of Kubernetes group names
+  # each mapRoles entry maps an IAM role to a static username and set of groups
   mapRoles:
+  # e.g., map arn:aws:iam::000000000000:role/KubernetesAdmin to a cluster admin
   - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
     username: kubernetes-admin
     groups:
-     - system:masters
+    - system:masters
+
+  # mapEC2InstanceRoles is like mapRoles but specifically for EC2 instance
+  # roles. Only use this if you trust that the role can only be assumed by
+  # EC2 (otherwise, you can't trust the EC2 instance ID that comes from the
+  # session name). It has the benefit of letting you include the EC2
+  # instance ID (e.g., "i-0123456789abcdef0") in the generated username.
+  mapEC2InstanceRoles:
+  # e.g., map EC2 instances in my "KubernetesNode" role to users like
+  # "aws:000000000000:instance:i-0123456789abcdef0" in the groups
+  - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
+    usernameFormat: aws:{{AccountID}}:instance:{{InstanceID}}
+    groups:
+    - system:bootstrappers
+    - aws:instances
+
+  # each mapUsers entry maps an IAM role to a static username and set of groups
+  mapUsers:
+  # e.g., map user IAM user Alice in 000000000000 to user "alice" in
+  # group "system:masters"
+  - userARN: arn:aws:iam::000000000000:user/Alice
+    username: alice
+    groups:
+    - system:masters
 ```

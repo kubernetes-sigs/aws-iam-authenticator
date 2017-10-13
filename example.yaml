@@ -32,13 +32,36 @@ data:
     # (good choices are a random token or a domain name that will be unique to your cluster)
     clusterID: my-dev-cluster.example.com
     server:
-      # a mapping of IAM role (specified by ARN) to a list of Kubernetes group names
+      # each mapRoles entry maps an IAM role to a static username and set of groups
       mapRoles:
-      # map arn:aws:iam::000000000000:role/KubernetesAdmin to a cluster admin (make sure this is )
+      # e.g., map arn:aws:iam::000000000000:role/KubernetesAdmin to a cluster admin
       - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
         username: kubernetes-admin
         groups:
          - system:masters
+
+      # mapEC2InstanceRoles is like mapRoles but specifically for EC2 instance
+      # roles. Only use this if you trust that the role can only be assumed by
+      # EC2 (otherwise, you can't trust the EC2 instance ID that comes from the
+      # session name). It has the benefit of letting you include the EC2
+      # instance ID (e.g., "i-0123456789abcdef0") in the generated username.
+      mapEC2InstanceRoles:
+      # e.g., map EC2 instances in my "KubernetesNode" role to users like
+      # "aws:000000000000:instance:i-0123456789abcdef0"
+      - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
+        usernameFormat: aws:{{AccountID}}:instance:{{InstanceID}}
+        groups:
+        - system:bootstrappers
+        - aws:instances
+
+      # each mapUsers entry maps an IAM role to a static username and set of groups
+      mapUsers:
+      # e.g., map user IAM user Alice in 000000000000 to user "alice" in "system:masters"
+      - userARN: arn:aws:iam::000000000000:user/Alice
+        username: alice
+        groups:
+        - system:masters
+
 ---
 apiVersion: extensions/v1beta1
 kind: DaemonSet

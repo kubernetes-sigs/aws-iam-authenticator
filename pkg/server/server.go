@@ -17,9 +17,7 @@ limitations under the License.
 package server
 
 import (
-	"crypto/sha256"
 	"crypto/tls"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -49,8 +47,10 @@ var tokenReviewDenyJSON = func() []byte {
 // server state (internal)
 type handler struct {
 	http.ServeMux
-	clusterID        string
-	lowercaseRoleMap map[string]config.StaticRoleMapping
+	clusterID           string
+	lowercaseRoleMap    map[string]config.StaticRoleMapping
+	lowercaseEC2RoleMap map[string]config.EC2InstanceRoleMapping
+	lowercaseUserMap    map[string]config.StaticUserMapping
 }
 
 // New creates a new server from a config
@@ -68,6 +68,20 @@ func (c *Server) Run() {
 			"username": mapping.Username,
 			"groups":   mapping.Groups,
 		}).Infof("statically mapping IAM role")
+	}
+	for _, mapping := range c.EC2InstanceRoleMappings {
+		logrus.WithFields(logrus.Fields{
+			"role":           mapping.RoleARN,
+			"usernameFormat": mapping.UsernameFormat,
+			"groups":         mapping.Groups,
+		}).Infof("mapping EC2 instance role")
+	}
+	for _, mapping := range c.StaticUserMappings {
+		logrus.WithFields(logrus.Fields{
+			"user":     mapping.UserARN,
+			"username": mapping.Username,
+			"groups":   mapping.Groups,
+		}).Infof("statically mapping IAM user")
 	}
 
 	// we always listen on localhost (and run with host networking)
@@ -104,11 +118,19 @@ func (c *Server) Run() {
 
 func (c *Server) getHandler() *handler {
 	h := &handler{
-		clusterID:        c.ClusterID,
-		lowercaseRoleMap: make(map[string]config.StaticRoleMapping),
+		clusterID:           c.ClusterID,
+		lowercaseRoleMap:    make(map[string]config.StaticRoleMapping),
+		lowercaseEC2RoleMap: make(map[string]config.EC2InstanceRoleMapping),
+		lowercaseUserMap:    make(map[string]config.StaticUserMapping),
 	}
 	for _, m := range c.StaticRoleMappings {
 		h.lowercaseRoleMap[strings.ToLower(m.RoleARN)] = m
+	}
+	for _, m := range c.EC2InstanceRoleMappings {
+		h.lowercaseEC2RoleMap[strings.ToLower(m.RoleARN)] = m
+	}
+	for _, m := range c.StaticUserMappings {
+		h.lowercaseUserMap[strings.ToLower(m.UserARN)] = m
 	}
 
 	h.HandleFunc("/authenticate", h.authenticateEndpoint)
@@ -147,7 +169,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	// if the token is invalid, reject with a 403
-	roleARN, err := token.Verify(tokenReview.Spec.Token, h.clusterID)
+	identity, err := token.Verify(tokenReview.Spec.Token, h.clusterID)
 	if err != nil {
 		log.WithError(err).Warn("access denied")
 		w.WriteHeader(http.StatusForbidden)
@@ -155,36 +177,48 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	// if the token has a valid signature but the role is not mapped,
-	// deny with a 403 but print a more useful log message
-	roleARNLower := strings.ToLower(roleARN)
-	mapping, exists := h.lowercaseRoleMap[roleARNLower]
-	if !exists {
-		log.WithField("role", roleARN).Warn("access denied because role is not mapped")
+	// look up the ARN in each of our mappings to fill in the username and groups
+	arnLower := strings.ToLower(identity.CanonicalARN)
+	log = log.WithField("arn", identity.CanonicalARN)
+	var username string
+	var groups []string
+	if ec2RoleMapping, exists := h.lowercaseEC2RoleMap[arnLower]; exists {
+		username = ec2RoleMapping.UsernameFormat
+		username = strings.Replace(username, "{{AccountID}}", identity.AccountID, -1)
+		username = strings.Replace(username, "{{InstanceID}}", identity.SessionName, -1)
+		groups = ec2RoleMapping.Groups
+	} else if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
+		username = roleMapping.Username
+		groups = roleMapping.Groups
+	} else if userMapping, exists := h.lowercaseUserMap[arnLower]; exists {
+		username = userMapping.Username
+		groups = userMapping.Groups
+	} else {
+		// if the token has a valid signature but the role is not mapped,
+		// deny with a 403 but print a more useful log message
+		log.Warn("access denied because ARN is not mapped")
 		w.WriteHeader(http.StatusForbidden)
 		w.Write(tokenReviewDenyJSON)
 		return
 	}
 
-	// use a prefixed 128 bit hash of the lowercase role ARN as a UID
-	// (this is meant to be opaque but uniquely identity the user over time)
-	hash := sha256.Sum256([]byte(roleARNLower))
-	uid := fmt.Sprintf("kubernetes-aws-authenticator:%s", hex.EncodeToString(hash[:16]))
+	// use a prefixed UID that includes the AWS account ID and AWS user ID ("AROAAAAAAAAAAAAAAAAAA")
+	uid := fmt.Sprintf("kubernetes-aws-authenticator:%s:%s", identity.AccountID, identity.UserID)
 
 	// the token is valid and the role is mapped, return success!
 	log.WithFields(logrus.Fields{
-		"username": mapping.Username,
+		"username": username,
 		"uid":      uid,
-		"groups":   mapping.Groups,
+		"groups":   groups,
 	}).Info("access granted")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(authenticationv1beta1.TokenReview{
 		Status: authenticationv1beta1.TokenReviewStatus{
 			Authenticated: true,
 			User: authenticationv1beta1.UserInfo{
-				Username: mapping.Username,
+				Username: username,
 				UID:      uid,
-				Groups:   mapping.Groups,
+				Groups:   groups,
 			},
 		},
 	})

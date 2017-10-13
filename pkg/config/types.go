@@ -29,6 +29,37 @@ type StaticRoleMapping struct {
 	Groups []string
 }
 
+// EC2InstanceRoleMapping is a mapping of a single AWS Role ARN that is trusted
+// to be assumed _only_ by EC2 instances. It maps to dynamic set of Kubernetes
+// usernames based on the provided format. It maps to a static list of
+// Kubernetes groups.
+type EC2InstanceRoleMapping struct {
+	// RoleARN is the AWS Resource Name of the role. (e.g., "arn:aws:iam::000000000000:role/Foo").
+	RoleARN string
+
+	// UsernameFormat is the username pattern that this instances assuming this
+	// role will have in Kubernetes. Can contain two template parameters,
+	// "{{AccountID}}" is the 12 digit AWS ID and "{{InstanceID}}" is the EC2
+	// instance ID (e.g., "i-0123456789abcdef0")
+	UsernameFormat string
+
+	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:bootstrappers`)
+	Groups []string
+}
+
+// StaticUserMapping is a static mapping of a single AWS User ARN to a
+// Kubernetes username and a list of Kubernetes groups
+type StaticUserMapping struct {
+	// UserARN is the AWS Resource Name of the user. (e.g., "arn:aws:iam::000000000000:user/Test").
+	UserARN string
+
+	// Username is the Kubernetes username this role will authenticate as (e.g., `mycorp:foo`)
+	Username string
+
+	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:masters`)
+	Groups []string
+}
+
 // Config specifies the configuration for a kubernetes-aws-authenticator server
 type Config struct {
 	// ClusterID is a unique-per-cluster identifier for your
@@ -52,4 +83,13 @@ type Config struct {
 	// StaticRoleMappings is a list of static mappings from AWS IAM Role to
 	// Kubernetes username+group.
 	StaticRoleMappings []StaticRoleMapping
+
+	// EC2InstanceRoleMappings is a list of dynamic mappings from AWS IAM Role
+	// that is assumed only by EC2 instances to Kubernetes username pattern
+	// that includes the instance ID.
+	EC2InstanceRoleMappings []EC2InstanceRoleMapping
+
+	// StaticUserMappings is a list of static mappings from AWS IAM User to
+	// Kubernetes username+group.
+	StaticUserMappings []StaticUserMapping
 }
