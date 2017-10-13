@@ -35,9 +35,9 @@ import (
 )
 
 const (
-	v1Prefix         = "kubernetes-aws-authenticator-v1."
+	v1Prefix         = "k8s-aws-v1."
 	maxTokenLenBytes = 1024 * 4
-	serverIDHeader   = "x-kubernetes-aws-authenticator-server-id"
+	serverIDHeader   = "x-k8s-aws-id"
 )
 
 var parameterWhitelist = map[string]bool{
