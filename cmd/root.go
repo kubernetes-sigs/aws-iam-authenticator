@@ -17,8 +17,11 @@ limitations under the License.
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
+
+	"github.com/heptiolabs/kubernetes-aws-authenticator/pkg/config"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -64,4 +67,22 @@ func initConfig() {
 		fmt.Printf("Can't read configuration file %q: %v\n", cfgFile, err)
 		os.Exit(1)
 	}
+}
+
+func getConfig() (config.Config, error) {
+	config := config.Config{
+		ClusterID:              viper.GetString("clusterID"),
+		LocalhostPort:          viper.GetInt("server.port"),
+		GenerateKubeconfigPath: viper.GetString("server.generateKubeconfig"),
+		StateDir:               viper.GetString("server.stateDir"),
+	}
+	if err := viper.UnmarshalKey("server.mapRoles", &config.StaticRoleMappings); err != nil {
+		return config, fmt.Errorf("invalid server role mappings: %v", err)
+	}
+
+	if config.ClusterID == "" {
+		return config, errors.New("cluster ID cannot be empty")
+	}
+
+	return config, nil
 }

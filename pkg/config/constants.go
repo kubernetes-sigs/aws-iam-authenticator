@@ -14,18 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package server
+package config
 
-import (
-	"github.com/heptiolabs/kubernetes-aws-authenticator/pkg/config"
+import "time"
+
+const (
+	// certFilename is the filename (under the StateDir) where the self-signed
+	// CA certificate will be stored.
+	certFilename = "cert.pem"
+
+	// keyFilename is the filename (under the StateDir) where the private key
+	// will be stored.
+	keyFilename = "key.pem"
+
+	// certLifetime is the lifetime of the CA certificate (100 years)
+	certLifetime = time.Hour * 24 * 365 * 100
 )
-
-// StaticRoleMapping is a static mapping of a single AWS Role ARN to a
-// Kubernetes username and a list of Kubernetes groups
-type Server struct {
-	// Config is the whole configuration of kubernetes-aws-authenticator used for valid keys and certs, kubeconfig, and so on
-	config.Config
-
-	// InitOnServer is set to true when you'd like to generate the key, the certificate, and kubeconfig on server-side
-	InitOnServer bool
-}

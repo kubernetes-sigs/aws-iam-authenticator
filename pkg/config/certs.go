@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package server
+package config
 
 import (
 	"crypto/rand"
@@ -41,9 +41,9 @@ func (c *Config) keyPath() string {
 	return filepath.Join(c.StateDir, keyFilename)
 }
 
-func (c *Config) getCertificate() (*tls.Certificate, error) {
+func (c *Config) CreateCertificate() (*tls.Certificate, error) {
 	// first try to load the existing keypair
-	cert, err := c.loadExistingCertificate()
+	cert, err := c.LoadExistingCertificate()
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (c *Config) getCertificate() (*tls.Certificate, error) {
 	return &newCert, err
 }
 
-func (c *Config) loadExistingCertificate() (*tls.Certificate, error) {
+func (c *Config) LoadExistingCertificate() (*tls.Certificate, error) {
 
 	// if either file does not exist, we'll consider that not an error but
 	// return a nil
