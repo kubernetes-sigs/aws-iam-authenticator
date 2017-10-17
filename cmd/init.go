@@ -26,7 +26,7 @@ import (
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize kubernetes-aws-authenticator by generating the key used by the server, a kubeconfig used by clients, the certificate used between both",
+	Short: "Pre-generate certificate, private key, and kubeconfig files for the server.",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := getConfig()
@@ -36,7 +36,7 @@ var initCmd = &cobra.Command{
 		}
 
 		localCfg := cfg
-		localCfg.GenerateKubeconfigPath = "./kubernetes-aws-authenticator.kubeconfig"
+		localCfg.GenerateKubeconfigPath = "kubernetes-aws-authenticator.kubeconfig"
 		localCfg.StateDir = "./"
 
 		err = localCfg.GenerateFiles()
@@ -45,9 +45,10 @@ var initCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		logrus.Infof("please put ./cert.pem to %s/cert.pem on kubernetes master node(s)", cfg.StateDir)
-		logrus.Infof("please put ./key.pem to %s/key.pem on kubernetes master node(s)", cfg.StateDir)
-		logrus.Info("please put kubernetes-aws-authenticator.kubeconfig to /etc/kubernetes/kubernetes-aws-authenticator.kubeconfig on kubernetes master node(s)")
+		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.CertPath(), cfg.CertPath())
+		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.KeyPath(), cfg.KeyPath())
+		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.GenerateKubeconfigPath, cfg.GenerateKubeconfigPath)
+		logrus.Infof("configure your apiserver with `--authentication-token-webhook-config-file=%s` to enable authentication with kubernetes-aws-authenticator", cfg.GenerateKubeconfigPath)
 	},
 }
 

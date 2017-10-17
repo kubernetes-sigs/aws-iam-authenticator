@@ -18,6 +18,7 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 )
@@ -60,4 +61,14 @@ func (c *Config) CreateKubeconfig() error {
 		logrus.WithField("kubeconfigPath", c.GenerateKubeconfigPath).WithError(err).Fatal("could not write kubeconfig")
 	}
 	return nil
+}
+
+// CertPath returns the path to the pem file containing the certificate
+func (c *Config) CertPath() string {
+	return filepath.Join(c.StateDir, "cert.pem")
+}
+
+// KeyPath returns the path to the pem file containing the private key
+func (c *Config) KeyPath() string {
+	return filepath.Join(c.StateDir, "key.pem")
 }
