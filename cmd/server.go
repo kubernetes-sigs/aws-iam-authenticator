@@ -33,20 +33,13 @@ var serverCmd = &cobra.Command{
 	Short: "Run a webhook validation server suitable that validates tokens using AWS IAM",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		config := server.Config{
-			ClusterID:              viper.GetString("clusterID"),
-			LocalhostPort:          viper.GetInt("server.port"),
-			GenerateKubeconfigPath: viper.GetString("server.generateKubeconfig"),
-			StateDir:               viper.GetString("server.stateDir"),
-		}
-		if err := viper.UnmarshalKey("server.mapRoles", &config.StaticRoleMappings); err != nil {
-			logrus.WithError(err).Fatal("invalid server role mappings")
+		config, err := getConfig()
+
+		if err != nil {
+			logrus.Fatalf("%s", err)
 		}
 
-		if config.ClusterID == "" {
-			logrus.Fatal("cluster ID cannot be empty")
-		}
-		config.Run()
+		server.New(config).Run()
 	},
 }
 

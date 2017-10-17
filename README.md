@@ -52,6 +52,25 @@ The server is meant to run on each of your master nodes as a DaemonSet with host
 
 For a sample ConfigMap and DaemonSet configuration, see [`example.yaml`](./example.yaml).
 
+Also note that you must generate and copy all the files required by the server to master nodes, or otherwise any pod in the daemonset will fail to start.
+
+Fortunately, kubernetes-aws-authenticator has a convenient command to generate the files for you.
+Run the `init` command:
+
+```
+$ ./kubernetes-aws-authenticator -c config.yaml init
+INFO[2017-10-17T16:39:42+09:00] generated a new private key and certificate   certBytes=819 keyBytes=1192
+INFO[2017-10-17T16:39:42+09:00] saving new key and certificate                certPath=cert.pem keyPath=key.pem
+INFO[2017-10-17T16:39:42+09:00] loaded existing keypair                       certPath=cert.pem keyPath=key.pem
+INFO[2017-10-17T16:39:42+09:00] writing webhook kubeconfig file               kubeconfigPath=kubernetes-aws-authenticator.kubeconfig
+INFO[2017-10-17T16:39:42+09:00] copy cert.pem to /var/kubernetes-aws-authenticator/cert.pem on kubernetes master node(s)
+INFO[2017-10-17T16:39:42+09:00] copy key.pem to /var/kubernetes-aws-authenticator/key.pem on kubernetes master node(s)
+INFO[2017-10-17T16:39:42+09:00] copy kubernetes-aws-authenticator.kubeconfig to /etc/kubernetes/kubernetes-aws-authenticator.kubeconfig on kubernetes master node(s)
+INFO[2017-10-17T16:39:42+09:00] configure your apiserver with `--authentication-token-webhook-config-file=/etc/kubernetes/kubernetes-aws-authenticator.kubeconfig` to enable authentication with kubernetes-aws-authenticator
+```
+
+Then, you should upload mentioned files accordingly by utilizing your node/cluster provisioning tool or manually.
+
 ### 3. Configure your API server to talk to the server
 The Kubernetes API integrates with kubernetes-aws-authenticator using a [token authentication webhook](https://kubernetes.io/docs/admin/authentication/#webhook-token-authentication).
 When you run `kubernetes-aws-authenticator server`, it will generate a webhook configuration file and save it onto the host filesystem.

@@ -25,25 +25,12 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
+	"github.com/heptiolabs/kubernetes-aws-authenticator/pkg/config"
 	"github.com/heptiolabs/kubernetes-aws-authenticator/pkg/token"
 
 	"github.com/sirupsen/logrus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
-)
-
-const (
-	// certFilename is the filename (under the StateDir) where the self-signed
-	// CA certificate will be stored.
-	certFilename = "cert.pem"
-
-	// keyFilename is the filename (under the StateDir) where the private key
-	// will be stored.
-	keyFilename = "key.pem"
-
-	// certLifetime is the lifetime of the CA certificate (100 years)
-	certLifetime = time.Hour * 24 * 365 * 100
 )
 
 // tokenReviewDenyJSON is a static encoding (at init time) of the 'deny' TokenReview
@@ -63,11 +50,18 @@ var tokenReviewDenyJSON = func() []byte {
 type handler struct {
 	http.ServeMux
 	clusterID        string
-	lowercaseRoleMap map[string]StaticRoleMapping
+	lowercaseRoleMap map[string]config.StaticRoleMapping
+}
+
+// New creates a new server from a config
+func New(config config.Config) *Server {
+	return &Server{
+		Config: config,
+	}
 }
 
 // Run the authentication webhook server.
-func (c *Config) Run() {
+func (c *Server) Run() {
 	for _, mapping := range c.StaticRoleMappings {
 		logrus.WithFields(logrus.Fields{
 			"role":     mapping.RoleARN,
@@ -80,20 +74,9 @@ func (c *Config) Run() {
 	listenAddr := fmt.Sprintf("127.0.0.1:%d", c.LocalhostPort)
 	listenURL := fmt.Sprintf("https://%s/authenticate", listenAddr)
 
-	// load or generate a certificate+private key
-	cert, err := c.getCertificate()
+	cert, err := c.LoadExistingCertificate()
 	if err != nil {
 		logrus.WithError(err).Fatalf("could not load/generate a certificate")
-	}
-
-	// write a kubeconfig suitable for the API server to call us
-	logrus.WithField("kubeconfigPath", c.GenerateKubeconfigPath).Info("writing webhook kubeconfig file")
-	err = kubeconfigParams{
-		ServerURL:                  listenURL,
-		CertificateAuthorityBase64: certToPEMBase64(cert.Certificate[0]),
-	}.writeTo(c.GenerateKubeconfigPath)
-	if err != nil {
-		logrus.WithField("kubeconfigPath", c.GenerateKubeconfigPath).WithError(err).Fatal("could not write kubeconfig")
 	}
 
 	// start a TLS listener with our custom certs
@@ -119,10 +102,10 @@ func (c *Config) Run() {
 	logrus.WithError(httpServer.Serve(listener)).Fatal("HTTP server exited")
 }
 
-func (c *Config) getHandler() *handler {
+func (c *Server) getHandler() *handler {
 	h := &handler{
 		clusterID:        c.ClusterID,
-		lowercaseRoleMap: make(map[string]StaticRoleMapping),
+		lowercaseRoleMap: make(map[string]config.StaticRoleMapping),
 	}
 	for _, m := range c.StaticRoleMappings {
 		h.lowercaseRoleMap[strings.ToLower(m.RoleARN)] = m
