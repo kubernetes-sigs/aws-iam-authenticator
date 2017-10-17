@@ -60,27 +60,6 @@ func New(config config.Config) *Server {
 	}
 }
 
-func (s *Server) LoadOrCreateCertificate() (*tls.Certificate, error) {
-	if s.InitOnServer {
-		cert, err := s.GetOrCreateCertificate()
-		return cert, err
-	} else {
-		cert, err := s.LoadExistingCertificate()
-		return cert, err
-	}
-
-}
-
-func (s *Server) CreateKubeconfigIfNecessary() error {
-	if s.InitOnServer {
-		err := s.CreateKubeconfig()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Run the authentication webhook server.
 func (c *Server) Run() {
 	for _, mapping := range c.StaticRoleMappings {
@@ -95,15 +74,9 @@ func (c *Server) Run() {
 	listenAddr := fmt.Sprintf("127.0.0.1:%d", c.LocalhostPort)
 	listenURL := fmt.Sprintf("https://%s/authenticate", listenAddr)
 
-	// load or generate a certificate+private key
-	cert, err := c.LoadOrCreateCertificate()
+	cert, err := c.LoadExistingCertificate()
 	if err != nil {
 		logrus.WithError(err).Fatalf("could not load/generate a certificate")
-	}
-
-	err = c.CreateKubeconfigIfNecessary()
-	if err != nil {
-		logrus.WithError(err).Fatalf("could not create a kubeconfig")
 	}
 
 	// start a TLS listener with our custom certs

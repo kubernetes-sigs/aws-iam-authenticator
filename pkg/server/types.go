@@ -25,7 +25,4 @@ import (
 type Server struct {
 	// Config is the whole configuration of kubernetes-aws-authenticator used for valid keys and certs, kubeconfig, and so on
 	config.Config
-
-	// InitOnServer is set to true when you'd like to generate the key, the certificate, and kubeconfig on server-side
-	InitOnServer bool
 }
