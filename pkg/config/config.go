@@ -34,7 +34,7 @@ func (c *Config) ListenAddr() string {
 
 func (c *Config) GenerateFiles() error {
 	// load or generate a certificate+private key
-	_, err := c.CreateCertificate()
+	_, err := c.GetOrCreateCertificate()
 	if err != nil {
 		return fmt.Errorf("could not load/generate a certificate")
 	}

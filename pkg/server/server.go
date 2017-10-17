@@ -62,7 +62,7 @@ func New(config config.Config) *Server {
 
 func (s *Server) LoadOrCreateCertificate() (*tls.Certificate, error) {
 	if s.InitOnServer {
-		cert, err := s.CreateCertificate()
+		cert, err := s.GetOrCreateCertificate()
 		return cert, err
 	} else {
 		cert, err := s.LoadExistingCertificate()

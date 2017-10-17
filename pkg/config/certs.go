@@ -41,7 +41,7 @@ func (c *Config) keyPath() string {
 	return filepath.Join(c.StateDir, keyFilename)
 }
 
-func (c *Config) CreateCertificate() (*tls.Certificate, error) {
+func (c *Config) GetOrCreateCertificate() (*tls.Certificate, error) {
 	// first try to load the existing keypair
 	cert, err := c.LoadExistingCertificate()
 	if err != nil {
