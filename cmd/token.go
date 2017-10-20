@@ -31,7 +31,7 @@ var tokenCmd = &cobra.Command{
 	Short: "Authenticate using AWS IAM and get token for Kubernetes",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		roleARN := viper.GetString("defaultRole")
+		roleARN := viper.GetString("role")
 		clusterID := viper.GetString("clusterID")
 
 		if clusterID == "" {
@@ -40,13 +40,15 @@ var tokenCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if roleARN == "" {
-			fmt.Fprintf(os.Stderr, "error: role not specified\n")
-			cmd.Usage()
-			os.Exit(1)
+		var tok string
+		var err error
+		if roleARN != "" {
+			// if a role was provided, assume that role for the token
+			tok, err = token.GetWithRole(clusterID, roleARN)
+		} else {
+			// otherwise sign the token with immediately available credentials
+			tok, err = token.Get(clusterID)
 		}
-
-		tok, err := token.Get(roleARN, clusterID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
 			os.Exit(1)
@@ -57,7 +59,7 @@ var tokenCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(tokenCmd)
-	tokenCmd.Flags().StringP("role", "r", "", "IAM Role ARN to assume")
-	viper.BindPFlag("defaultRole", tokenCmd.Flags().Lookup("role"))
-	viper.BindEnv("defaultRole", "DEFAULT_ROLE")
+	tokenCmd.Flags().StringP("role", "r", "", "Assume an IAM Role ARN before signing this token")
+	viper.BindPFlag("role", tokenCmd.Flags().Lookup("role"))
+	viper.BindEnv("role", "DEFAULT_ROLE")
 }
