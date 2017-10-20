@@ -57,24 +57,15 @@ The server is meant to run on each of your master nodes as a DaemonSet with host
 
 For a sample ConfigMap and DaemonSet configuration, see [`example.yaml`](./example.yaml).
 
-Also note that you must generate and copy all the files required by the server to master nodes, or otherwise any pod in the daemonset will fail to start.
+#### (Optional) Pre-generate a certificate, key, and kubeconfig
+If you're building an automated installer, you can also pre-generate the certificate, key, and webhook kubeconfig files easily using `kubernetes-aws-authenticator init`.
+This command will generate files and place them in the configured output directories.
 
-Fortunately, kubernetes-aws-authenticator has a convenient command to generate the files for you.
-Run the `init` command:
+You can run this on each master node prior to starting the API server.
+You could also generate them before provisioning master nodes and install them in the appropriate host paths.
 
-```
-$ ./kubernetes-aws-authenticator -c config.yaml init
-INFO[2017-10-17T16:39:42+09:00] generated a new private key and certificate   certBytes=819 keyBytes=1192
-INFO[2017-10-17T16:39:42+09:00] saving new key and certificate                certPath=cert.pem keyPath=key.pem
-INFO[2017-10-17T16:39:42+09:00] loaded existing keypair                       certPath=cert.pem keyPath=key.pem
-INFO[2017-10-17T16:39:42+09:00] writing webhook kubeconfig file               kubeconfigPath=kubernetes-aws-authenticator.kubeconfig
-INFO[2017-10-17T16:39:42+09:00] copy cert.pem to /var/kubernetes-aws-authenticator/cert.pem on kubernetes master node(s)
-INFO[2017-10-17T16:39:42+09:00] copy key.pem to /var/kubernetes-aws-authenticator/key.pem on kubernetes master node(s)
-INFO[2017-10-17T16:39:42+09:00] copy kubernetes-aws-authenticator.kubeconfig to /etc/kubernetes/kubernetes-aws-authenticator.kubeconfig on kubernetes master node(s)
-INFO[2017-10-17T16:39:42+09:00] configure your apiserver with `--authentication-token-webhook-config-file=/etc/kubernetes/kubernetes-aws-authenticator.kubeconfig` to enable authentication with kubernetes-aws-authenticator
-```
-
-Then, you should upload mentioned files accordingly by utilizing your node/cluster provisioning tool or manually.
+If you do not pre-generate files, `kubernetes-aws-authenticator server` will generate them on demand.
+This works but requires that you restart your Kubernetes API server after installation.
 
 ### 3. Configure your API server to talk to the server
 The Kubernetes API integrates with kubernetes-aws-authenticator using a [token authentication webhook](https://kubernetes.io/docs/admin/authentication/#webhook-token-authentication).
