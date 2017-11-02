@@ -84,10 +84,10 @@ type Config struct {
 	// Kubernetes username+group.
 	StaticRoleMappings []StaticRoleMapping
 
-	// EC2InstanceRoleMappings is a list of dynamic mappings from AWS IAM Role
+	// AssumedRoleMappings is a list of dynamic mappings from AWS IAM Role
 	// that is assumed only by EC2 instances to Kubernetes username pattern
 	// that includes the instance ID.
-	EC2InstanceRoleMappings []EC2InstanceRoleMapping
+	AssumedRoleMappings []EC2InstanceRoleMapping
 
 	// StaticUserMappings is a list of static mappings from AWS IAM User to
 	// Kubernetes username+group.

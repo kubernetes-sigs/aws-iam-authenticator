@@ -69,7 +69,7 @@ func (c *Server) Run() {
 			"groups":   mapping.Groups,
 		}).Infof("statically mapping IAM role")
 	}
-	for _, mapping := range c.EC2InstanceRoleMappings {
+	for _, mapping := range c.AssumedRoleMappings {
 		logrus.WithFields(logrus.Fields{
 			"role":           mapping.RoleARN,
 			"usernameFormat": mapping.UsernameFormat,
@@ -130,7 +130,7 @@ func (c *Server) getHandler() *handler {
 	for _, m := range c.StaticRoleMappings {
 		h.lowercaseRoleMap[strings.ToLower(m.RoleARN)] = m
 	}
-	for _, m := range c.EC2InstanceRoleMappings {
+	for _, m := range c.AssumedRoleMappings {
 		h.lowercaseEC2RoleMap[strings.ToLower(m.RoleARN)] = m
 	}
 	for _, m := range c.StaticUserMappings {
@@ -187,9 +187,12 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	var username string
 	var groups []string
 	if ec2RoleMapping, exists := h.lowercaseEC2RoleMap[arnLower]; exists {
+		// username must be a DNS-1123 hostname matches the regex "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
+		specifiedRole := strings.Replace(identity.SessionName, "@", "-", -1)
 		username = ec2RoleMapping.UsernameFormat
 		username = strings.Replace(username, "{{AccountID}}", identity.AccountID, -1)
 		username = strings.Replace(username, "{{InstanceID}}", identity.SessionName, -1)
+		username = strings.Replace(username, "{{CallerSpecifiedRoleName}}", specifiedRole, -1)
 		groups = ec2RoleMapping.Groups
 	} else if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
 		username = roleMapping.Username
