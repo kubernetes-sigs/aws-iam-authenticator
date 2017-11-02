@@ -76,11 +76,8 @@ func getConfig() (config.Config, error) {
 		GenerateKubeconfigPath: viper.GetString("server.generateKubeconfig"),
 		StateDir:               viper.GetString("server.stateDir"),
 	}
-	if err := viper.UnmarshalKey("server.mapRoles", &config.StaticRoleMappings); err != nil {
+	if err := viper.UnmarshalKey("server.mapRoles", &config.RoleMappings); err != nil {
 		return config, fmt.Errorf("invalid server role mappings: %v", err)
-	}
-	if err := viper.UnmarshalKey("server.mapAssumedRoles", &config.AssumedRoleMappings); err != nil {
-		logrus.WithError(err).Fatal("invalid server EC2 role mappings")
 	}
 	if err := viper.UnmarshalKey("server.mapUsers", &config.StaticUserMappings); err != nil {
 		logrus.WithError(err).Fatal("invalid server user mappings")

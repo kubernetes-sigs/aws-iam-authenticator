@@ -16,34 +16,23 @@ limitations under the License.
 
 package config
 
-// StaticRoleMapping is a static mapping of a single AWS Role ARN to a
+// RoleMapping is a mapping of a single AWS Role ARN to a
 // Kubernetes username and a list of Kubernetes groups
-type StaticRoleMapping struct {
+type RoleMapping struct {
 	// RoleARN is the AWS Resource Name of the role. (e.g., "arn:aws:iam::000000000000:role/Foo").
 	RoleARN string
 
 	// Username is the Kubernetes username this role will authenticate as (e.g., `mycorp:foo`)
 	Username string
 
-	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:masters`)
-	Groups []string
-}
-
-// EC2InstanceRoleMapping is a mapping of a single AWS Role ARN that is trusted
-// to be assumed _only_ by EC2 instances. It maps to dynamic set of Kubernetes
-// usernames based on the provided format. It maps to a static list of
-// Kubernetes groups.
-type EC2InstanceRoleMapping struct {
-	// RoleARN is the AWS Resource Name of the role. (e.g., "arn:aws:iam::000000000000:role/Foo").
-	RoleARN string
-
 	// UsernameFormat is the username pattern that this instances assuming this
 	// role will have in Kubernetes. Can contain two template parameters,
-	// "{{AccountID}}" is the 12 digit AWS ID and "{{InstanceID}}" is the EC2
-	// instance ID (e.g., "i-0123456789abcdef0")
+	// "{{AccountID}}" is the 12 digit AWS ID and "{{SessionName}}" is the EC2
+	// instance ID (e.g., "i-0123456789abcdef0") or the role name specified by the identity provider (e.g., "alice@example.com"
+	// sanitized to "alice-example.com")
 	UsernameFormat string
 
-	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:bootstrappers`)
+	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:masters`)
 	Groups []string
 }
 
@@ -80,14 +69,9 @@ type Config struct {
 	// server webhook configuration doesn't change on restart.
 	StateDir string
 
-	// StaticRoleMappings is a list of static mappings from AWS IAM Role to
+	// RoleMappings is a list of static or dynamic mappings from AWS IAM Role to
 	// Kubernetes username+group.
-	StaticRoleMappings []StaticRoleMapping
-
-	// AssumedRoleMappings is a list of dynamic mappings from AWS IAM Role
-	// that is assumed only by EC2 instances to Kubernetes username pattern
-	// that includes the instance ID.
-	AssumedRoleMappings []EC2InstanceRoleMapping
+	RoleMappings []RoleMapping
 
 	// StaticUserMappings is a list of static mappings from AWS IAM User to
 	// Kubernetes username+group.

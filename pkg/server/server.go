@@ -47,10 +47,9 @@ var tokenReviewDenyJSON = func() []byte {
 // server state (internal)
 type handler struct {
 	http.ServeMux
-	clusterID           string
-	lowercaseRoleMap    map[string]config.StaticRoleMapping
-	lowercaseEC2RoleMap map[string]config.EC2InstanceRoleMapping
-	lowercaseUserMap    map[string]config.StaticUserMapping
+	clusterID        string
+	lowercaseRoleMap map[string]config.RoleMapping
+	lowercaseUserMap map[string]config.StaticUserMapping
 }
 
 // New creates a new server from a config
@@ -62,19 +61,13 @@ func New(config config.Config) *Server {
 
 // Run the authentication webhook server.
 func (c *Server) Run() {
-	for _, mapping := range c.StaticRoleMappings {
-		logrus.WithFields(logrus.Fields{
-			"role":     mapping.RoleARN,
-			"username": mapping.Username,
-			"groups":   mapping.Groups,
-		}).Infof("statically mapping IAM role")
-	}
-	for _, mapping := range c.AssumedRoleMappings {
+	for _, mapping := range c.RoleMappings {
 		logrus.WithFields(logrus.Fields{
 			"role":           mapping.RoleARN,
+			"username":       mapping.Username,
 			"usernameFormat": mapping.UsernameFormat,
 			"groups":         mapping.Groups,
-		}).Infof("mapping EC2 instance role")
+		}).Infof("statically mapping IAM role")
 	}
 	for _, mapping := range c.StaticUserMappings {
 		logrus.WithFields(logrus.Fields{
@@ -122,16 +115,12 @@ func (c *Server) Run() {
 
 func (c *Server) getHandler() *handler {
 	h := &handler{
-		clusterID:           c.ClusterID,
-		lowercaseRoleMap:    make(map[string]config.StaticRoleMapping),
-		lowercaseEC2RoleMap: make(map[string]config.EC2InstanceRoleMapping),
-		lowercaseUserMap:    make(map[string]config.StaticUserMapping),
+		clusterID:        c.ClusterID,
+		lowercaseRoleMap: make(map[string]config.RoleMapping),
+		lowercaseUserMap: make(map[string]config.StaticUserMapping),
 	}
-	for _, m := range c.StaticRoleMappings {
+	for _, m := range c.RoleMappings {
 		h.lowercaseRoleMap[strings.ToLower(m.RoleARN)] = m
-	}
-	for _, m := range c.AssumedRoleMappings {
-		h.lowercaseEC2RoleMap[strings.ToLower(m.RoleARN)] = m
 	}
 	for _, m := range c.StaticUserMappings {
 		h.lowercaseUserMap[strings.ToLower(m.UserARN)] = m
@@ -186,16 +175,16 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	log = log.WithField("arn", identity.CanonicalARN)
 	var username string
 	var groups []string
-	if ec2RoleMapping, exists := h.lowercaseEC2RoleMap[arnLower]; exists {
-		// username must be a DNS-1123 hostname matches the regex "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
-		specifiedRole := strings.Replace(identity.SessionName, "@", "-", -1)
-		username = ec2RoleMapping.UsernameFormat
-		username = strings.Replace(username, "{{AccountID}}", identity.AccountID, -1)
-		username = strings.Replace(username, "{{InstanceID}}", identity.SessionName, -1)
-		username = strings.Replace(username, "{{CallerSpecifiedRoleName}}", specifiedRole, -1)
-		groups = ec2RoleMapping.Groups
-	} else if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
-		username = roleMapping.Username
+	if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
+		if roleMapping.UsernameFormat != "" {
+			// username must be a DNS-1123 hostname matches the regex "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
+			sanitized := strings.Replace(identity.SessionName, "@", "-", -1)
+			username = roleMapping.UsernameFormat
+			username = strings.Replace(username, "{{AccountID}}", identity.AccountID, -1)
+			username = strings.Replace(username, "{{SessionName}}", sanitized, -1)
+		} else {
+			username = roleMapping.Username
+		}
 		groups = roleMapping.Groups
 	} else if userMapping, exists := h.lowercaseUserMap[arnLower]; exists {
 		username = userMapping.Username

@@ -165,26 +165,31 @@ server:
     username: kubernetes-admin
     groups:
     - system:masters
-
-  # mapAssumedRoles is like mapRoles but specifically for roles assumed by EC2 instances
-  # or federated users. Only use this if you trust that the role can only be assumed by
-  # correct instances or users (otherwise, you can't trust the InstanceID or CallerSpecifiedRoleName that comes from the
-  # session name).
-  # When used for an EC2 instance role, it has the benefit of letting you include the EC2
-  # instance ID (e.g., "i-0123456789abcdef0") in the generated username.
-  # When used for a federated user, it is a arbitrary role name like an e-mail address passed by the identity provider.
-  mapAssumedRoles:
-  # e.g., map EC2 instances in my "KubernetesNode" role to users like
+  # e.g. map EC2 instances in my "KubernetesNode" role to users like
   # "aws:000000000000:instance:i-0123456789abcdef0"
+  #
+  # i.e. this has the benefit of letting you include the EC2
+  # instance ID (e.g., "i-0123456789abcdef0") in the generated username.
+  #
+  # Only use this if you trust that the role can only be assumed by
+  # correct EC2 instances. Otherwise, you can't trust the EC2 instance ID that comes from the
+  # session name).
   - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
-    usernameFormat: aws:{{AccountID}}:instance:{{InstanceID}}
+    usernameFormat: aws:{{AccountID}}:instance:{{SessionName}}
     groups:
     - system:bootstrappers
     - aws:instances
-  # e.g., map federated users in my "KubernetesAdmin" role to users like
+  # e.g. map SAML-federated users in my "KubernetesAdmin" role to users like
   # "admin:alice-example.com"
+  #
+  # i.e. this has the benefit of letting you include the specified
+  # role name specified via the identity provider (e.g., "alice@example.com") in the generated username.
+  #
+  # Only use this if you trust that the role can only be assumed by
+  # correct federated users. Otherwise, you can't trust the specified role name that comes from the
+  # session name).
   - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
-    usernameFormat: admin:{{CallerSpecifiedRoleName}}
+    usernameFormat: admin:{{SessionName}}
     groups:
     - system:masters
 
