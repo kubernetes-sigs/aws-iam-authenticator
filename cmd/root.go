@@ -79,7 +79,7 @@ func getConfig() (config.Config, error) {
 	if err := viper.UnmarshalKey("server.mapRoles", &config.RoleMappings); err != nil {
 		return config, fmt.Errorf("invalid server role mappings: %v", err)
 	}
-	if err := viper.UnmarshalKey("server.mapUsers", &config.StaticUserMappings); err != nil {
+	if err := viper.UnmarshalKey("server.mapUsers", &config.UserMappings); err != nil {
 		logrus.WithError(err).Fatal("invalid server user mappings")
 	}
 

@@ -49,7 +49,7 @@ type handler struct {
 	http.ServeMux
 	clusterID        string
 	lowercaseRoleMap map[string]config.RoleMapping
-	lowercaseUserMap map[string]config.StaticUserMapping
+	lowercaseUserMap map[string]config.UserMapping
 }
 
 // New creates a new server from a config
@@ -67,14 +67,14 @@ func (c *Server) Run() {
 			"username":       mapping.Username,
 			"usernameFormat": mapping.UsernameFormat,
 			"groups":         mapping.Groups,
-		}).Infof("statically mapping IAM role")
+		}).Infof("mapping IAM role")
 	}
-	for _, mapping := range c.StaticUserMappings {
+	for _, mapping := range c.UserMappings {
 		logrus.WithFields(logrus.Fields{
 			"user":     mapping.UserARN,
 			"username": mapping.Username,
 			"groups":   mapping.Groups,
-		}).Infof("statically mapping IAM user")
+		}).Infof("mapping IAM user")
 	}
 
 	// we always listen on localhost (and run with host networking)
@@ -117,12 +117,12 @@ func (c *Server) getHandler() *handler {
 	h := &handler{
 		clusterID:        c.ClusterID,
 		lowercaseRoleMap: make(map[string]config.RoleMapping),
-		lowercaseUserMap: make(map[string]config.StaticUserMapping),
+		lowercaseUserMap: make(map[string]config.UserMapping),
 	}
 	for _, m := range c.RoleMappings {
 		h.lowercaseRoleMap[strings.ToLower(m.RoleARN)] = m
 	}
-	for _, m := range c.StaticUserMappings {
+	for _, m := range c.UserMappings {
 		h.lowercaseUserMap[strings.ToLower(m.UserARN)] = m
 	}
 

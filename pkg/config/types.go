@@ -36,9 +36,9 @@ type RoleMapping struct {
 	Groups []string
 }
 
-// StaticUserMapping is a static mapping of a single AWS User ARN to a
+// UserMapping is a static mapping of a single AWS User ARN to a
 // Kubernetes username and a list of Kubernetes groups
-type StaticUserMapping struct {
+type UserMapping struct {
 	// UserARN is the AWS Resource Name of the user. (e.g., "arn:aws:iam::000000000000:user/Test").
 	UserARN string
 
@@ -73,7 +73,7 @@ type Config struct {
 	// Kubernetes username+group.
 	RoleMappings []RoleMapping
 
-	// StaticUserMappings is a list of static mappings from AWS IAM User to
+	// UserMappings is a list of static mappings from AWS IAM User to
 	// Kubernetes username+group.
-	StaticUserMappings []StaticUserMapping
+	UserMappings []UserMapping
 }
