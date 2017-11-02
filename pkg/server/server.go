@@ -176,16 +176,11 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	var username string
 	var groups []string
 	if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
-		if roleMapping.UsernameFormat != "" {
-			// username must be a DNS-1123 hostname matches the regex "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
-			sanitized := strings.Replace(identity.SessionName, "@", "-", -1)
-			username = roleMapping.UsernameFormat
-			username = strings.Replace(username, "{{AccountID}}", identity.AccountID, -1)
-			username = strings.Replace(username, "{{SessionName}}", sanitized, -1)
-		} else {
-			username = roleMapping.Username
+		username = renderTemplate(roleMapping.Username, identity)
+		groups = []string{}
+		for _, groupPattern := range roleMapping.Groups {
+			groups = append(groups, renderTemplate(groupPattern, identity))
 		}
-		groups = roleMapping.Groups
 	} else if userMapping, exists := h.lowercaseUserMap[arnLower]; exists {
 		username = userMapping.Username
 		groups = userMapping.Groups
@@ -218,4 +213,14 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 			},
 		},
 	})
+}
+
+func renderTemplate(template string, identity *token.Identity) string {
+	// usernames and groups must be a DNS-1123 hostname matching the regex
+	// "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
+	sessionName := strings.Replace(identity.SessionName, "@", "-", -1)
+
+	template = strings.Replace(template, "{{AccountID}}", identity.AccountID, -1)
+	template = strings.Replace(template, "{{SessionName}}", sessionName, -1)
+	return template
 }
