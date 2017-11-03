@@ -80,7 +80,7 @@ type Config struct {
 	// Kubernetes username + groups.
 	RoleMappings []RoleMapping
 
-	// StaticUserMappings is a list of static mappings from AWS IAM User to
-	// Kubernetes username+group.
-	StaticUserMappings []StaticUserMapping
+	// UserMappings is a list of mappings from AWS IAM User to
+	// Kubernetes username + groups.
+	UserMappings []UserMapping
 }
