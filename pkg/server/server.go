@@ -63,10 +63,9 @@ func New(config config.Config) *Server {
 func (c *Server) Run() {
 	for _, mapping := range c.RoleMappings {
 		logrus.WithFields(logrus.Fields{
-			"role":           mapping.RoleARN,
-			"username":       mapping.Username,
-			"usernameFormat": mapping.UsernameFormat,
-			"groups":         mapping.Groups,
+			"role":     mapping.RoleARN,
+			"username": mapping.Username,
+			"groups":   mapping.Groups,
 		}).Infof("mapping IAM role")
 	}
 	for _, mapping := range c.UserMappings {
