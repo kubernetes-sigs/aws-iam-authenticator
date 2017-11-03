@@ -50,7 +50,7 @@ aws iam create-role \
 You can also skip this step and use:
  - An existing role (such as a cross-account access role).
  - An IAM user (see `mapUsers` below).
- - An EC2 instance or a federated role (see `mapAssumedRoles` below).
+ - An EC2 instance or a federated role (see `mapRoles` below).
 
 ### 2. Run the server
 The server is meant to run on each of your master nodes as a DaemonSet with host networking so it can expose a localhost port.
