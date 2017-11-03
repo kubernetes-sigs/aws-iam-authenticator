@@ -32,31 +32,41 @@ data:
     # (good choices are a random token or a domain name that will be unique to your cluster)
     clusterID: my-dev-cluster.example.com
     server:
-      # each mapRoles entry maps an IAM role to a static username and set of groups
+      # each mapRoles entry maps an IAM role to a username and set of groups
+      # Each username and group can optionally contain template parameters:
+      #  1) "{{AccountID}}" is the 12 digit AWS ID.
+      #  2) "{{SessionName}}" is the role session name.
       mapRoles:
-      # e.g., map arn:aws:iam::000000000000:role/KubernetesAdmin to a cluster admin
+      # statically map arn:aws:iam::000000000000:role/KubernetesAdmin to a cluster admin
       - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
         username: kubernetes-admin
         groups:
-         - system:masters
+        - system:masters
 
-      # mapEC2InstanceRoles is like mapRoles but specifically for EC2 instance
-      # roles. Only use this if you trust that the role can only be assumed by
-      # EC2 (otherwise, you can't trust the EC2 instance ID that comes from the
-      # session name). It has the benefit of letting you include the EC2
-      # instance ID (e.g., "i-0123456789abcdef0") in the generated username.
-      mapEC2InstanceRoles:
-      # e.g., map EC2 instances in my "KubernetesNode" role to users like
-      # "aws:000000000000:instance:i-0123456789abcdef0"
+      # map EC2 instances in my "KubernetesNode" role to users like
+      # "aws:000000000000:instance:i-0123456789abcdef0". Only use this if you
+      # trust that the role can only be assumed by EC2 instances. If an IAM user
+      # can assume this role directly (with sts:AssumeRole) they can control
+      # SessionName.
       - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
-        usernameFormat: aws:{{AccountID}}:instance:{{InstanceID}}
+        username: aws:{{AccountID}}:instance:{{SessionName}}
         groups:
         - system:bootstrappers
         - aws:instances
 
+      # map federated users in my "KubernetesAdmin" role to users like
+      # "admin:alice-example.com". The SessionName is an arbitrary role name
+      # like an e-mail address passed by the identity provider. Note that if this
+      # role is assumed directly by an IAM User (not via federation), the user
+      # can control the SessionName.
+      - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
+        username: admin:{{SessionName}}
+        groups:
+        - system:masters
+
       # each mapUsers entry maps an IAM role to a static username and set of groups
       mapUsers:
-      # e.g., map user IAM user Alice in 000000000000 to user "alice" in "system:masters"
+      # map user IAM user Alice in 000000000000 to user "alice" in "system:masters"
       - userARN: arn:aws:iam::000000000000:user/Alice
         username: alice
         groups:

@@ -16,40 +16,36 @@ limitations under the License.
 
 package config
 
-// StaticRoleMapping is a static mapping of a single AWS Role ARN to a
-// Kubernetes username and a list of Kubernetes groups
-type StaticRoleMapping struct {
+// RoleMapping is a mapping of an AWS Role ARN to a Kubernetes username and a
+// list of Kubernetes groups. The username and groups are specified as templates
+// that may optionally contain two template parameters:
+//
+//  1) "{{AccountID}}" is the 12 digit AWS ID.
+//  2) "{{SessionName}}" is the role session name.
+//
+// The meaning of SessionName depends on the type of entity assuming the role.
+// In the case of an EC2 instance role this will be the EC2 instance ID. In the
+// case of a federated role it will be the federated identity (controlled by the
+// federated identity provider). In the case of a role assumed directly with
+// sts:AssumeRole it will be user controlled.
+//
+// You can use plain values without parameters to have a more static mapping.
+type RoleMapping struct {
 	// RoleARN is the AWS Resource Name of the role. (e.g., "arn:aws:iam::000000000000:role/Foo").
 	RoleARN string
 
-	// Username is the Kubernetes username this role will authenticate as (e.g., `mycorp:foo`)
+	// Username is the username pattern that this instances assuming this
+	// role will have in Kubernetes.
 	Username string
 
-	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:masters`)
+	// Groups is a list of Kubernetes groups this role will authenticate
+	// as (e.g., `system:masters`). Each group name can include placeholders.
 	Groups []string
 }
 
-// EC2InstanceRoleMapping is a mapping of a single AWS Role ARN that is trusted
-// to be assumed _only_ by EC2 instances. It maps to dynamic set of Kubernetes
-// usernames based on the provided format. It maps to a static list of
-// Kubernetes groups.
-type EC2InstanceRoleMapping struct {
-	// RoleARN is the AWS Resource Name of the role. (e.g., "arn:aws:iam::000000000000:role/Foo").
-	RoleARN string
-
-	// UsernameFormat is the username pattern that this instances assuming this
-	// role will have in Kubernetes. Can contain two template parameters,
-	// "{{AccountID}}" is the 12 digit AWS ID and "{{InstanceID}}" is the EC2
-	// instance ID (e.g., "i-0123456789abcdef0")
-	UsernameFormat string
-
-	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:bootstrappers`)
-	Groups []string
-}
-
-// StaticUserMapping is a static mapping of a single AWS User ARN to a
+// UserMapping is a static mapping of a single AWS User ARN to a
 // Kubernetes username and a list of Kubernetes groups
-type StaticUserMapping struct {
+type UserMapping struct {
 	// UserARN is the AWS Resource Name of the user. (e.g., "arn:aws:iam::000000000000:user/Test").
 	UserARN string
 
@@ -80,14 +76,9 @@ type Config struct {
 	// server webhook configuration doesn't change on restart.
 	StateDir string
 
-	// StaticRoleMappings is a list of static mappings from AWS IAM Role to
-	// Kubernetes username+group.
-	StaticRoleMappings []StaticRoleMapping
-
-	// EC2InstanceRoleMappings is a list of dynamic mappings from AWS IAM Role
-	// that is assumed only by EC2 instances to Kubernetes username pattern
-	// that includes the instance ID.
-	EC2InstanceRoleMappings []EC2InstanceRoleMapping
+	// RoleMappings is a list of mappings from AWS IAM Role to
+	// Kubernetes username + groups.
+	RoleMappings []RoleMapping
 
 	// StaticUserMappings is a list of static mappings from AWS IAM User to
 	// Kubernetes username+group.

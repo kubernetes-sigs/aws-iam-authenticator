@@ -50,7 +50,7 @@ aws iam create-role \
 You can also skip this step and use:
  - An existing role (such as a cross-account access role).
  - An IAM user (see `mapUsers` below).
- - An EC2 instance role (see `mapEC2InstanceRoles` below).
+ - An EC2 instance or a federated role (see `mapAssumedRoles` below).
 
 ### 2. Run the server
 The server is meant to run on each of your master nodes as a DaemonSet with host networking so it can expose a localhost port.
@@ -104,7 +104,7 @@ You can simplify this with an alias or shell wrapper.
 The token is valid for 15 minutes (the shortest value AWS permits) and can be reused multiple times.
 
 You can also omit `-r ROLE_ARN` to sign the token with your existing credentials without assuming a dedicated role.
-This is useful if you want to authenticate as an IAM user directly or if you want to authenticate using an EC2 instance role.
+This is useful if you want to authenticate as an IAM user directly or if you want to authenticate using an EC2 instance role or a federated role.
 
 ## How does it work?
 It works using the AWS [`sts:GetCallerIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html) API endpoint.
@@ -158,32 +158,41 @@ server:
   # output `path` where a generated webhook kubeconfig will be stored.
   generateKubeconfig: /etc/kubernetes/kubernetes-aws-authenticator.kubeconfig # (default)
 
-  # each mapRoles entry maps an IAM role to a static username and set of groups
+  # each mapRoles entry maps an IAM role to a username and set of groups
+  # Each username and group can optionally contain template parameters:
+  #  1) "{{AccountID}}" is the 12 digit AWS ID.
+  #  2) "{{SessionName}}" is the role session name.
   mapRoles:
-  # e.g., map arn:aws:iam::000000000000:role/KubernetesAdmin to a cluster admin
+  # statically map arn:aws:iam::000000000000:role/KubernetesAdmin to cluster admin
   - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
     username: kubernetes-admin
     groups:
     - system:masters
 
-  # mapEC2InstanceRoles is like mapRoles but specifically for EC2 instance
-  # roles. Only use this if you trust that the role can only be assumed by
-  # EC2 (otherwise, you can't trust the EC2 instance ID that comes from the
-  # session name). It has the benefit of letting you include the EC2
-  # instance ID (e.g., "i-0123456789abcdef0") in the generated username.
-  mapEC2InstanceRoles:
-  # e.g., map EC2 instances in my "KubernetesNode" role to users like
-  # "aws:000000000000:instance:i-0123456789abcdef0" in the groups
+  # map EC2 instances in my "KubernetesNode" role to users like
+  # "aws:000000000000:instance:i-0123456789abcdef0". Only use this if you
+  # trust that the role can only be assumed by EC2 instances. If an IAM user
+  # can assume this role directly (with sts:AssumeRole) they can control
+  # SessionName.
   - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
-    usernameFormat: aws:{{AccountID}}:instance:{{InstanceID}}
+    username: aws:{{AccountID}}:instance:{{SessionName}}
     groups:
     - system:bootstrappers
     - aws:instances
 
+  # map federated users in my "KubernetesAdmin" role to users like
+  # "admin:alice-example.com". The SessionName is an arbitrary role name
+  # like an e-mail address passed by the identity provider. Note that if this
+  # role is assumed directly by an IAM User (not via federation), the user
+  # can control the SessionName.
+  - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
+    username: admin:{{SessionName}}
+    groups:
+    - system:masters
+
   # each mapUsers entry maps an IAM role to a static username and set of groups
   mapUsers:
-  # e.g., map user IAM user Alice in 000000000000 to user "alice" in
-  # group "system:masters"
+  # map user IAM user Alice in 000000000000 to user "alice" in group "system:masters"
   - userARN: arn:aws:iam::000000000000:user/Alice
     username: alice
     groups:
