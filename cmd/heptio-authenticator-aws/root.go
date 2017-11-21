@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package main
 
 import (
 	"errors"
 	"fmt"
 	"os"
 
-	"github.com/heptiolabs/kubernetes-aws-authenticator/pkg/config"
+	"github.com/heptio/authenticator/pkg/config"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -31,8 +31,12 @@ import (
 var cfgFile string
 
 var rootCmd = &cobra.Command{
-	Use:   "kubernetes-aws-authenticator",
+	Use:   "heptio-authenticator-aws",
 	Short: "A tool to authenticate to Kubernetes using AWS IAM credentials",
+}
+
+func main() {
+	Execute()
 }
 
 // Execute the CLI entrypoint
@@ -52,7 +56,7 @@ func init() {
 		"cluster-id",
 		"i",
 		"",
-		"Specify the cluster `ID`, a unique-per-cluster identifier for your kubernetes-aws-authenticator installation.",
+		"Specify the cluster `ID`, a unique-per-cluster identifier for your heptio-authenticator-aws installation.",
 	)
 	viper.BindPFlag("clusterID", rootCmd.PersistentFlags().Lookup("cluster-id"))
 	viper.BindEnv("clusterID", "KUBERNETES_AWS_AUTHENTICATOR_CLUSTER_ID")

@@ -17,12 +17,12 @@ limitations under the License.
 package server
 
 import (
-	"github.com/heptiolabs/kubernetes-aws-authenticator/pkg/config"
+	"github.com/heptio/authenticator/pkg/config"
 )
 
 // StaticRoleMapping is a static mapping of a single AWS Role ARN to a
 // Kubernetes username and a list of Kubernetes groups
 type Server struct {
-	// Config is the whole configuration of kubernetes-aws-authenticator used for valid keys and certs, kubeconfig, and so on
+	// Config is the whole configuration of heptio-authenticator-aws used for valid keys and certs, kubeconfig, and so on
 	config.Config
 }

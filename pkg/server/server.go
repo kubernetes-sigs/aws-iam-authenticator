@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/heptiolabs/kubernetes-aws-authenticator/pkg/config"
-	"github.com/heptiolabs/kubernetes-aws-authenticator/pkg/token"
+	"github.com/heptio/authenticator/pkg/config"
+	"github.com/heptio/authenticator/pkg/token"
 
 	"github.com/sirupsen/logrus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
@@ -193,7 +193,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	}
 
 	// use a prefixed UID that includes the AWS account ID and AWS user ID ("AROAAAAAAAAAAAAAAAAAA")
-	uid := fmt.Sprintf("kubernetes-aws-authenticator:%s:%s", identity.AccountID, identity.UserID)
+	uid := fmt.Sprintf("heptio-authenticator-aws:%s:%s", identity.AccountID, identity.UserID)
 
 	// the token is valid and the role is mapped, return success!
 	log.WithFields(logrus.Fields{

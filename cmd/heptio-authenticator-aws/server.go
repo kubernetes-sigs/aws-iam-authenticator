@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package main
 
 import (
-	"github.com/heptiolabs/kubernetes-aws-authenticator/pkg/server"
+	"github.com/heptio/authenticator/pkg/server"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -47,12 +47,12 @@ func init() {
 	viper.SetDefault("server.port", DefaultPort)
 
 	serverCmd.Flags().String("generate-kubeconfig",
-		"/etc/kubernetes/kubernetes-aws-authenticator.kubeconfig",
+		"/etc/kubernetes/heptio-authenticator-aws.kubeconfig",
 		"Output `path` where a generated webhook kubeconfig (for `--authentication-token-webhook-config-file`) will be stored (should be a hostPath mount).")
 	viper.BindPFlag("server.generateKubeconfig", serverCmd.Flags().Lookup("generate-kubeconfig"))
 
 	serverCmd.Flags().String("state-dir",
-		"/var/kubernetes-aws-authenticator",
+		"/var/heptio-authenticator-aws",
 		"State `directory` for generated certificate and private key (should be a hostPath mount).")
 	viper.BindPFlag("server.stateDir", serverCmd.Flags().Lookup("state-dir"))
 

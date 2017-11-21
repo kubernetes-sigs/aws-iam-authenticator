@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package main
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/heptiolabs/kubernetes-aws-authenticator/pkg/token"
+	"github.com/heptio/authenticator/pkg/token"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
