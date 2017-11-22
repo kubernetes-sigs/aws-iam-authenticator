@@ -30,9 +30,11 @@ import (
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mappings/configmap"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/aws/aws-sdk-go/aws"
+	awsarn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -83,6 +85,8 @@ type handler struct {
 	metrics          metrics
 	ec2Provider      EC2Provider
 	featureGates     featuregate.MutableFeatureGate
+	clusterID        string
+	configMap        *configmap.MapStore
 }
 
 // metrics are handles to the collectors for prometheous for the various metrics we are tracking.
@@ -176,12 +180,37 @@ func (c *Server) Run(stopCh <-chan struct{}) {
 		}
 	}
 
+	go func() {
+		http.ListenAndServe(":21363", &healthzHandler{})
+	}()
 	if err := c.httpServer.Serve(c.listener); err != nil {
 		logrus.WithError(err).Fatal("http server exited")
 	}
 }
 
+type healthzHandler struct{}
+
+func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "ok")
+}
+
 func (c *Server) getHandler() *handler {
+	var mapStore *configmap.MapStore
+	if c.UpdateConfigFromConfigMap {
+		ms, err := configmap.New(c.Master, c.Kubeconfig)
+
+		// TODO: Can we handle this?
+		if err != nil {
+			panic(err)
+		}
+		mapStore = ms
+	}
+
+	_, err := awsarn.Parse(c.ServerEC2DescribeInstancesRoleARN)
+	if err != nil {
+		panic(fmt.Sprintf("describeinstancesrole %s is not a valid arn", c.ServerEC2DescribeInstancesRoleARN))
+	}
+
 	h := &handler{
 		lowercaseRoleMap: make(map[string]config.RoleMapping),
 		lowercaseUserMap: make(map[string]config.UserMapping),
@@ -191,6 +220,8 @@ func (c *Server) getHandler() *handler {
 		metrics:          createMetrics(),
 		ec2Provider:      newEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
 		featureGates:     c.FeatureGates,
+		configMap:        mapStore,
+		clusterID:        c.ClusterID,
 	}
 
 	for _, m := range c.RoleMappings {
@@ -216,6 +247,9 @@ func (c *Server) getHandler() *handler {
 
 	h.HandleFunc("/authenticate", h.authenticateEndpoint)
 	h.Handle("/metrics", promhttp.Handler())
+	h.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "ok")
+	})
 	return h
 }
 
@@ -364,28 +398,61 @@ func (h *handler) doMapping(identity *token.Identity) (string, []string, error) 
 				return username, groups, nil
 			}
 		}
-	} else {
-		if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
-			username, err := h.renderTemplate(roleMapping.Username, identity)
-			if err != nil {
-				return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
-			}
+	} else if h.configMap != nil {
+		rm, err := h.configMap.RoleMapping(arnLower)
+		// TODO: Check for non Role/UserNotFound errors
+		if err == nil {
+			var username string
 			groups := []string{}
-			for _, groupPattern := range roleMapping.Groups {
-				group, err := h.renderTemplate(groupPattern, identity)
+			if rm.Username != "" {
+				username, err = h.renderTemplate(rm.Username, identity)
 				if err != nil {
-					return "", nil, fmt.Errorf("failed mapping group: %s", err.Error())
+					return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
 				}
-				groups = append(groups, group)
+			}
+			if len(rm.Groups) > 0 {
+				for _, groupPattern := range rm.Groups {
+					group, err := h.renderTemplate(groupPattern, identity)
+					if err != nil {
+						return "", nil, fmt.Errorf("failed mapping group: %s", err.Error())
+					}
+					groups = append(groups, group)
+				}
 			}
 			return username, groups, nil
 		}
-		if userMapping, exists := h.lowercaseUserMap[arnLower]; exists {
-			return userMapping.Username, userMapping.Groups, nil
+
+		um, err := h.configMap.UserMapping(arnLower)
+		if err == nil {
+			return um.Username, um.Groups, nil
 		}
 	}
 
+	// TODO: upstream does not fallback from CRD to mounted configmap, but downstream does fallback from watched configmap to mounted configmap
+	if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
+		username, err := h.renderTemplate(roleMapping.Username, identity)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
+		}
+		groups := []string{}
+		for _, groupPattern := range roleMapping.Groups {
+			group, err := h.renderTemplate(groupPattern, identity)
+			if err != nil {
+				return "", nil, fmt.Errorf("failed mapping group: %s", err.Error())
+			}
+			groups = append(groups, group)
+		}
+		return username, groups, nil
+	}
+	if userMapping, exists := h.lowercaseUserMap[arnLower]; exists {
+		return userMapping.Username, userMapping.Groups, nil
+	}
+
 	if _, exists := h.accountMap[identity.AccountID]; exists {
+		return identity.CanonicalARN, []string{}, nil
+	}
+
+	if h.configMap != nil && h.configMap.AWSAccount(identity.AccountID) {
 		return identity.CanonicalARN, []string{}, nil
 	}
 	return "", nil, fmt.Errorf("ARN is not mapped: %s (lowercased from %s)", arnLower, identity.CanonicalARN)

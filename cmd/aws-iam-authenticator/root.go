@@ -94,6 +94,7 @@ func getConfig() (config.Config, error) {
 		Kubeconfig:                        viper.GetString("server.kubeconfig"),
 		Master:                            viper.GetString("server.master"),
 		FeatureGates:                      featureGates,
+		UpdateConfigFromConfigMap:         viper.GetBool("server.UpdateConfigFromConfigMap"),
 	}
 	if err := viper.UnmarshalKey("server.mapRoles", &cfg.RoleMappings); err != nil {
 		return cfg, fmt.Errorf("invalid server role mappings: %v", err)

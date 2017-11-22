@@ -1,0 +1,5 @@
+FROM amazonlinux:2
+RUN mkdir -p /var/lib/kubernetes && touch /var/lib/kubernetes/empty
+RUN yum update -y
+COPY heptio-authenticator-aws /kubernetes-aws-authenticator
+ENTRYPOINT ["/kubernetes-aws-authenticator"]

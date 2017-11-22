@@ -120,4 +120,7 @@ type Config struct {
 
 	// FeatureGates stores all the mutable feature gates for controlling how the authenticator works
 	FeatureGates featuregate.MutableFeatureGate
+
+	// UpdateConfigFromConfigMap is set to true to enable loading mappings from the api server configmap.
+	UpdateConfigFromConfigMap bool
 }
