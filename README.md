@@ -95,7 +95,7 @@ This means the `kubeconfig` is entirely public data and can be shared across all
 It may make sense to upload it to a trusted public location such as AWS S3.
 
 Make sure you have the `heptio-authenticator-aws` binary installed.
-You can install it with `go get -u -v github.com/heptio/authenticator`.
+You can install it with `go get -u -v github.com/heptio/authenticator/cmd/heptio-authenticator-aws`.
 
 To authenticate, run `kubectl --kubeconfig /path/to/kubeconfig --token "$(heptio-authenticator-aws token -i CLUSTER_ID -r ROLE_ARN)" [...]`.
 You can simplify this with an alias or shell wrapper.
