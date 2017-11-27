@@ -56,10 +56,10 @@ type UserMapping struct {
 	Groups []string
 }
 
-// Config specifies the configuration for a kubernetes-aws-authenticator server
+// Config specifies the configuration for a heptio-authenticator-aws server
 type Config struct {
 	// ClusterID is a unique-per-cluster identifier for your
-	// kubernetes-aws-authenticator installation.
+	// heptio-authenticator-aws installation.
 	ClusterID string
 
 	// LocalhostPort is the TCP on which to listen for authentication checks

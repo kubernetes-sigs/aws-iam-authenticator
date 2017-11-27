@@ -14,5 +14,5 @@
 
 FROM scratch
 ADD ca-certificates.crt /etc/ssl/certs/
-ADD kubernetes-aws-authenticator /
-ENTRYPOINT ["/kubernetes-aws-authenticator"]
+ADD heptio-authenticator-aws /
+ENTRYPOINT ["/heptio-authenticator-aws"]

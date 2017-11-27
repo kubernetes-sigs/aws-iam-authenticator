@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is an example of how to deploy kubernetes-aws-authenticator.
+# This is an example of how to deploy Heptio Authenticator for AWS.
 #
 # To use this, you'll at least need to edit the role ARNs in the ConfigMap. You
 # may also need to rework other bits to work in your cluster (e.g., node labels).
@@ -23,9 +23,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   namespace: kube-system
-  name: kubernetes-aws-authenticator
+  name: heptio-authenticator-aws
   labels:
-    k8s-app: kubernetes-aws-authenticator
+    k8s-app: heptio-authenticator-aws
 data:
   config.yaml: |
     # a unique-per-cluster identifier to prevent replay attacks
@@ -77,9 +77,9 @@ apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
   namespace: kube-system
-  name: kubernetes-aws-authenticator
+  name: heptio-authenticator-aws
   labels:
-    k8s-app: kubernetes-aws-authenticator
+    k8s-app: heptio-authenticator-aws
 spec:
   updateStrategy:
     type: RollingUpdate
@@ -88,7 +88,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ""
       labels:
-        k8s-app: kubernetes-aws-authenticator
+        k8s-app: heptio-authenticator-aws
     spec:
       # run on the host network (don't depend on CNI)
       hostNetwork: true
@@ -102,18 +102,18 @@ spec:
       - key: CriticalAddonsOnly
         operator: Exists
 
-      # run `kubernetes-aws-authenticator server` with three volumes
-      # - config (mounted from the ConfigMap at /etc/kubernetes-aws-authenticator/config.yaml)
+      # run `heptio-authenticator-aws server` with three volumes
+      # - config (mounted from the ConfigMap at /etc/heptio-authenticator-aws/config.yaml)
       # - state (persisted TLS certificate and keys, mounted from the host)
       # - output (output kubeconfig to plug into your apiserver configuration, mounted from the host)
       containers:
-      - name: kubernetes-aws-authenticator
-        image: gcr.io/heptio-images/kubernetes-aws-authenticator:v0.1.0
+      - name: heptio-authenticator-aws
+        image: gcr.io/heptio-images/authenticator:v0.1.0
         args:
         - server
-        - --config=/etc/kubernetes-aws-authenticator/config.yaml
-        - --state-dir=/var/kubernetes-aws-authenticator
-        - --generate-kubeconfig=/etc/kubernetes/kubernetes-aws-authenticator/kubeconfig.yaml
+        - --config=/etc/heptio-authenticator-aws/config.yaml
+        - --state-dir=/var/heptio-authenticator-aws
+        - --generate-kubeconfig=/etc/kubernetes/heptio-authenticator-aws/kubeconfig.yaml
 
         resources:
           requests:
@@ -125,20 +125,20 @@ spec:
 
         volumeMounts:
         - name: config
-          mountPath: /etc/kubernetes-aws-authenticator/
+          mountPath: /etc/heptio-authenticator-aws/
         - name: state
-          mountPath: /var/kubernetes-aws-authenticator/
+          mountPath: /var/heptio-authenticator-aws/
         - name: output
-          mountPath: /etc/kubernetes/kubernetes-aws-authenticator/
+          mountPath: /etc/kubernetes/heptio-authenticator-aws/
 
       volumes:
       - name: config
         configMap:
-          name: kubernetes-aws-authenticator
+          name: heptio-authenticator-aws
       - name: output
         hostPath:
-          path: /etc/kubernetes/kubernetes-aws-authenticator/
+          path: /etc/kubernetes/heptio-authenticator-aws/
       - name: state
         hostPath:
-          path: /var/kubernetes-aws-authenticator/
+          path: /var/heptio-authenticator-aws/
 

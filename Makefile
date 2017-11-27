@@ -1,17 +1,18 @@
 default: build
 
-REPO ?= gcr.io/heptio-images/kubernetes-aws-authenticator
+CMD_IMPORT ?= github.com/heptio/authenticator/cmd/heptio-authenticator-aws
+REPO ?= gcr.io/heptio-images/authenticator
 VERSION ?= v0.1.0
 
 .PHONY: build push build-container
 
-build: build-container kubernetes-aws-authenticator-osx
+build: build-container heptio-authenticator-aws-osx
 
-kubernetes-aws-authenticator-osx:
-	GOOS=darwin GOARCH=amd64 go build -o kubernetes-aws-authenticator-osx main.go
+heptio-authenticator-aws-osx:
+	GOOS=darwin GOARCH=amd64 go build -o heptio-authenticator-aws-osx $(CMD_IMPORT)
 
 build-container: ca-certificates.crt
-	GOOS=linux GOARCH=amd64 go build -o kubernetes-aws-authenticator main.go
+	GOOS=linux GOARCH=amd64 go build -o heptio-authenticator-aws $(CMD_IMPORT)
 	docker build . -t $(REPO):$(VERSION)
 
 # pull ca-certificates.crt from Alpine

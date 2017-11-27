@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package main
 
 import (
 	"fmt"
@@ -36,7 +36,7 @@ var initCmd = &cobra.Command{
 		}
 
 		localCfg := cfg
-		localCfg.GenerateKubeconfigPath = "kubernetes-aws-authenticator.kubeconfig"
+		localCfg.GenerateKubeconfigPath = "heptio-authenticator-aws.kubeconfig"
 		localCfg.StateDir = "./"
 
 		err = localCfg.GenerateFiles()
@@ -48,7 +48,7 @@ var initCmd = &cobra.Command{
 		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.CertPath(), cfg.CertPath())
 		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.KeyPath(), cfg.KeyPath())
 		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.GenerateKubeconfigPath, cfg.GenerateKubeconfigPath)
-		logrus.Infof("configure your apiserver with `--authentication-token-webhook-config-file=%s` to enable authentication with kubernetes-aws-authenticator", cfg.GenerateKubeconfigPath)
+		logrus.Infof("configure your apiserver with `--authentication-token-webhook-config-file=%s` to enable authentication with heptio-authenticator-aws", cfg.GenerateKubeconfigPath)
 	},
 }
 
