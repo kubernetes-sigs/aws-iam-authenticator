@@ -47,7 +47,7 @@ func init() {
 	viper.SetDefault("server.port", DefaultPort)
 
 	serverCmd.Flags().String("generate-kubeconfig",
-		"/etc/kubernetes/heptio-authenticator-aws.kubeconfig",
+		"/etc/kubernetes/heptio-authenticator-aws/kubeconfig.yaml",
 		"Output `path` where a generated webhook kubeconfig (for `--authentication-token-webhook-config-file`) will be stored (should be a hostPath mount).")
 	viper.BindPFlag("server.generateKubeconfig", serverCmd.Flags().Lookup("generate-kubeconfig"))
 
