@@ -70,11 +70,12 @@ The Kubernetes API integrates with Heptio Authenticator for AWS using a [token a
 When you run `heptio-authenticator-aws server`, it will generate a webhook configuration file and save it onto the host filesystem.
 You'll need to add a single additional flag to your API server configuration:
 ```
---authentication-token-webhook-config-file=/etc/kubernetes/heptio-authenticator-aws.kubeconfig
+--authentication-token-webhook-config-file=/etc/kubernetes/heptio-authenticator-aws/kubeconfig.yaml
 ```
 
 On many clusters, the API server runs as a static pod.
 You can add the flag to `/etc/kubernetes/manifests/kube-apiserver.yaml`.
+Make sure the host directory `/etc/kubernetes/heptio-authenticator-aws/` is mounted into your API server pod.
 You may also need to restart the kubelet daemon on your master node to pick up the updated static pod definition:
 ```
 systemctl restart kubelet.service
