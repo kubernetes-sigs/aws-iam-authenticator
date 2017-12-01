@@ -132,8 +132,24 @@ Some good choices are:
 
 The [Vault documentation](https://www.vaultproject.io/docs/auth/aws.html#iam-authentication-method) also explains this attack (see `X-Vault-AWS-IAM-Server-ID`).
 
-## Building
+## Troubleshooting
 
+If your client fails with an error like `could not get token: AccessDenied [...]`, you can try assuming the role with the AWS CLI directly:
+
+```sh
+# AWS CLI version of `heptio-authenticator-aws token -r arn:aws:iam::ACCOUNT:role/ROLE`:
+$ aws sts assume-role --role-arn arn:aws:iam::ACCOUNT:role/ROLE --role-session-name test
+```
+
+If that fails, there are a few possible problems to check for:
+
+ - Make sure your base AWS credentials are available in your shell (`aws sts get-caller-identity` can help troubleshoot this).
+
+ - Make sure the target role allows your source account access (in the role trust policy).
+
+ - Make sure your source principal (user/role/group) has an IAM policy that allows `sts:AssumeRole` for the target role.
+
+ - Make sure you don't have any explicit deny policies attached to your user, group, or in AWS Organizations that would prevent the `sts:AssumeRole`.
 
 ## Full Configuration Format
 The client and server have the same configuration format.
