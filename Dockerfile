@@ -12,7 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM scratch
-ADD ca-certificates.crt /etc/ssl/certs/
+FROM alpine:3.7
+
+ENV NONPRIV_USER="nobody"
+
 ADD heptio-authenticator-aws /
+RUN chown $NONPRIV_USER:$NONPRIV_USER /heptio-authenticator-aws
+RUN mkdir /var/heptio-authenticator-aws && chown -R $NONPRIV_USER:$NONPRIV_USER /var/heptio-authenticator-aws
+RUN mkdir /etc/heptio-authenticator-aws && chown -R $NONPRIV_USER:$NONPRIV_USER /etc/heptio-authenticator-aws
+RUN mkdir -p /etc/kubernetes/heptio-authenticator-aws && chown -R $NONPRIV_USER:$NONPRIV_USER /etc/kubernetes/heptio-authenticator-aws
+
+USER $NONPRIV_USER
+
 ENTRYPOINT ["/heptio-authenticator-aws"]
