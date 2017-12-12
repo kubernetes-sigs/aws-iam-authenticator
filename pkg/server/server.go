@@ -47,9 +47,9 @@ var tokenReviewDenyJSON = func() []byte {
 // server state (internal)
 type handler struct {
 	http.ServeMux
-	clusterID        string
 	lowercaseRoleMap map[string]config.RoleMapping
 	lowercaseUserMap map[string]config.UserMapping
+	verifier         token.Verifier
 }
 
 // New creates a new server from a config
@@ -114,9 +114,9 @@ func (c *Server) Run() {
 
 func (c *Server) getHandler() *handler {
 	h := &handler{
-		clusterID:        c.ClusterID,
 		lowercaseRoleMap: make(map[string]config.RoleMapping),
 		lowercaseUserMap: make(map[string]config.UserMapping),
+		verifier:         token.NewVerifier(c.ClusterID),
 	}
 	for _, m := range c.RoleMappings {
 		h.lowercaseRoleMap[strings.ToLower(m.RoleARN)] = m
@@ -161,7 +161,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	// if the token is invalid, reject with a 403
-	identity, err := token.Verify(tokenReview.Spec.Token, h.clusterID)
+	identity, err := h.verifier.Verify(tokenReview.Spec.Token)
 	if err != nil {
 		log.WithError(err).Warn("access denied")
 		w.WriteHeader(http.StatusForbidden)

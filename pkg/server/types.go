@@ -20,8 +20,7 @@ import (
 	"github.com/heptio/authenticator/pkg/config"
 )
 
-// StaticRoleMapping is a static mapping of a single AWS Role ARN to a
-// Kubernetes username and a list of Kubernetes groups
+// Server for the authentication webhook.
 type Server struct {
 	// Config is the whole configuration of heptio-authenticator-aws used for valid keys and certs, kubeconfig, and so on
 	config.Config

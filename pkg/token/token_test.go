@@ -1,0 +1,191 @@
+package token
+
+import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func validationErrorTest(t *testing.T, token string, expectedErr string) {
+	_, err := tokenVerifier{}.Verify(token)
+	errorContains(t, err, expectedErr)
+}
+
+func errorContains(t *testing.T, err error, expectedErr string) {
+	if err == nil || !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("err should have contained '%s' was '%s'", expectedErr, err)
+	}
+}
+
+const validURL = "https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-expires=60"
+
+var validToken = toToken(validURL)
+
+func toToken(url string) string {
+	return v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(url))
+}
+
+func newVerifier(statusCode int, body string, err error) Verifier {
+	var rc io.ReadCloser
+	if body != "" {
+		rc = ioutil.NopCloser(bytes.NewReader([]byte(body)))
+	}
+	return tokenVerifier{
+		client: &http.Client{
+			Transport: &roundTripper{
+				err: err,
+				resp: &http.Response{
+					StatusCode: statusCode,
+					Body:       rc,
+				},
+			},
+		},
+	}
+}
+
+type roundTripper struct {
+	err  error
+	resp *http.Response
+}
+
+type errorReadCloser struct {
+}
+
+func (r errorReadCloser) Read(b []byte) (int, error) {
+	return 0, errors.New("An Error")
+}
+
+func (r errorReadCloser) Close() error {
+	return nil
+}
+
+func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return rt.resp, rt.err
+}
+
+func jsonResponse(arn, account, userid string) string {
+	response := getCallerIdentityWrapper{}
+	response.GetCallerIdentityResponse.GetCallerIdentityResult.Account = account
+	response.GetCallerIdentityResponse.GetCallerIdentityResult.Arn = arn
+	response.GetCallerIdentityResponse.GetCallerIdentityResult.UserID = userid
+	data, _ := json.Marshal(response)
+	return string(data)
+}
+
+func TestVerifyTokenPreSTSValidations(t *testing.T) {
+	b := make([]byte, maxTokenLenBytes+1, maxTokenLenBytes+1)
+	s := string(b)
+	validationErrorTest(t, s, "token is too large")
+	validationErrorTest(t, "k8s-aws-v2.asdfasdfa", "token is missing expected \"k8s-aws-v1.\" prefix")
+	validationErrorTest(t, "k8s-aws-v1.decodingerror", "illegal base64 data")
+	validationErrorTest(t, toToken(":ab:cd.af:/asda"), "missing protocol scheme")
+	validationErrorTest(t, toToken("http://"), "unexpected scheme")
+	validationErrorTest(t, toToken("https://google.com"), "unexpected hostname in pre-signed URL")
+	validationErrorTest(t, toToken("https://sts.amazonaws.com/abc"), "unexpected path in pre-signed URL")
+	validationErrorTest(t, toToken("https://sts.amazonaws.com/?NoInWhiteList=abc"), "non-whitelisted query parameter")
+	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=get&action=post"), "query parameter with multiple values not supported")
+	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=NotGetCallerIdenity"), "unexpected action parameter in pre-signed URL")
+	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=abc%3bx-k8s-aws-i%3bdef"), "client did not sign the x-k8s-aws-id header in the pre-signed URL")
+	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-expires=70"), "invalid X-Amz-Expires parameter in pre-signed URL")
+}
+
+func TestVerifyHTTPError(t *testing.T) {
+	_, err := newVerifier(0, "", errors.New("an error")).Verify(validToken)
+	errorContains(t, err, "error during GET: an error")
+}
+
+func TestVerifyHTTP403(t *testing.T) {
+	_, err := newVerifier(403, " ", nil).Verify(validToken)
+	errorContains(t, err, "error from AWS (expected 200, got")
+}
+
+func TestVerifyBodyReadError(t *testing.T) {
+	verifier := tokenVerifier{
+		client: &http.Client{
+			Transport: &roundTripper{
+				err: nil,
+				resp: &http.Response{
+					StatusCode: 200,
+					Body:       errorReadCloser{},
+				},
+			},
+		},
+	}
+	_, err := verifier.Verify(validToken)
+	errorContains(t, err, "error reading HTTP result")
+}
+
+func TestVerifyUnmarshalJSONError(t *testing.T) {
+	_, err := newVerifier(200, "xxxx", nil).Verify(validToken)
+	errorContains(t, err, "invalid character")
+}
+
+func TestVerifyInvalidCanonicalARNError(t *testing.T) {
+	_, err := newVerifier(200, jsonResponse("arn", "1000", "userid"), nil).Verify(validToken)
+	errorContains(t, err, "malformed ARN")
+}
+
+func TestVerifyInvalidUserIDError(t *testing.T) {
+	_, err := newVerifier(200, jsonResponse("arn:aws:iam::123456789012:user/Alice", "123456789012", "not:vailid:userid"), nil).Verify(validToken)
+	errorContains(t, err, "malformed UserID")
+}
+
+func TestVerifyNoSession(t *testing.T) {
+	arn := "arn:aws:iam::123456789012:user/Alice"
+	account := "123456789012"
+	userID := "Alice"
+	identity, err := newVerifier(200, jsonResponse(arn, account, userID), nil).Verify(validToken)
+	if err != nil {
+		t.Errorf("expected error to be nil was %q", err)
+	}
+	if identity.ARN != arn {
+		t.Errorf("expected ARN to be %q but was %q", arn, identity.ARN)
+	}
+	if identity.CanonicalARN != arn {
+		t.Errorf("expected CannonicalARN to be %q but was %q", arn, identity.CanonicalARN)
+	}
+	if identity.UserID != userID {
+		t.Errorf("expected Username to be %q but was %q", userID, identity.UserID)
+	}
+}
+
+func TestVerifySessionName(t *testing.T) {
+	arn := "arn:aws:iam::123456789012:user/Alice"
+	account := "123456789012"
+	userID := "Alice"
+	session := "session-name"
+	identity, err := newVerifier(200, jsonResponse(arn, account, userID+":"+session), nil).Verify(validToken)
+	if err != nil {
+		t.Errorf("expected error to be nil was %q", err)
+	}
+	if identity.UserID != userID {
+		t.Errorf("expected Username to be %q but was %q", userID, identity.UserID)
+	}
+	if identity.SessionName != session {
+		t.Errorf("expected Session to be %q but was %q", session, identity.SessionName)
+	}
+}
+
+func TestVerifyCanonicalARN(t *testing.T) {
+	arn := "arn:aws:sts::123456789012:assumed-role/Alice/extra"
+	canonicalARN := "arn:aws:iam::123456789012:role/Alice"
+	account := "123456789012"
+	userID := "Alice"
+	session := "session-name"
+	identity, err := newVerifier(200, jsonResponse(arn, account, userID+":"+session), nil).Verify(validToken)
+	if err != nil {
+		t.Errorf("expected error to be nil was %q", err)
+	}
+	if identity.ARN != arn {
+		t.Errorf("expected ARN to be %q but was %q", arn, identity.ARN)
+	}
+	if identity.CanonicalARN != canonicalARN {
+		t.Errorf("expected CannonicalARN to be %q but was %q", canonicalARN, identity.CanonicalARN)
+	}
+}

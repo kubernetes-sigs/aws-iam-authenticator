@@ -42,12 +42,17 @@ var tokenCmd = &cobra.Command{
 
 		var tok string
 		var err error
+		gen, err := token.NewGenerator()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
+			os.Exit(1)
+		}
 		if roleARN != "" {
 			// if a role was provided, assume that role for the token
-			tok, err = token.GetWithRole(clusterID, roleARN)
+			tok, err = gen.GetWithRole(clusterID, roleARN)
 		} else {
 			// otherwise sign the token with immediately available credentials
-			tok, err = token.Get(clusterID)
+			tok, err = gen.Get(clusterID)
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)

@@ -64,7 +64,7 @@ type Identity struct {
 const (
 	v1Prefix         = "k8s-aws-v1."
 	maxTokenLenBytes = 1024 * 4
-	serverIDHeader   = "x-k8s-aws-id"
+	clusterIDHeader  = "x-k8s-aws-id"
 )
 
 var parameterWhitelist = map[string]bool{
@@ -93,15 +93,31 @@ type getCallerIdentityWrapper struct {
 	} `json:"GetCallerIdentityResponse"`
 }
 
+// Generator provides new tokens for the heptio authenticator.
+type Generator interface {
+	// Get a token using credentials in the default credentials chain.
+	Get(string) (string, error)
+	// GetWithRole creates a token by assuming the provided role, using the credentials in the default chain.
+	GetWithRole(clusterID, roleARN string) (string, error)
+}
+
+type generator struct {
+}
+
+// NewGenerator creates a Generator and returns it.
+func NewGenerator() (Generator, error) {
+	return generator{}, nil
+}
+
 // Get uses the directly available AWS credentials to return a token valid for
-// serverID. It follows the default AWS credential handling behavior.
-func Get(serverID string) (string, error) {
-	return GetWithRole(serverID, "")
+// clusterID. It follows the default AWS credential handling behavior.
+func (g generator) Get(clusterID string) (string, error) {
+	return g.GetWithRole(clusterID, "")
 }
 
 // GetWithRole assumes the given AWS IAM role and returns a token valid for
-// serverID. If roleARN is empty, behaves like Get (does not assume a role).
-func GetWithRole(serverID string, roleARN string) (string, error) {
+// clusterID. If roleARN is empty, behaves like Get (does not assume a role).
+func (g generator) GetWithRole(clusterID string, roleARN string) (string, error) {
 	// create a session with the "base" credentials available
 	// (from environment variable, profile files, EC2 metadata, etc)
 	sess, err := session.NewSessionWithOptions(session.Options{
@@ -124,9 +140,9 @@ func GetWithRole(serverID string, roleARN string) (string, error) {
 		stsAPI = sts.New(sess, &aws.Config{Credentials: creds})
 	}
 
-	// generate an sts:GetCallerIdentity request and add our custom server ID header
+	// generate an sts:GetCallerIdentity request and add our custom cluster ID header
 	request, _ := stsAPI.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
-	request.HTTPRequest.Header.Add(serverIDHeader, serverID)
+	request.HTTPRequest.Header.Add(clusterIDHeader, clusterID)
 
 	// sign the request
 	presignedURLString, err := request.Presign(60 * time.Second)
@@ -138,10 +154,28 @@ func GetWithRole(serverID string, roleARN string) (string, error) {
 	return v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), nil
 }
 
-// Verify a token is valid for the specified serverID. On success, returns an
+// Verifier validates tokens by calling STS and returning the associated identity.
+type Verifier interface {
+	Verify(token string) (*Identity, error)
+}
+
+type tokenVerifier struct {
+	client    *http.Client
+	clusterID string
+}
+
+// NewVerifier creates a Verifier that is bound to the clusterID and uses the default http client.
+func NewVerifier(clusterID string) Verifier {
+	return tokenVerifier{
+		client:    http.DefaultClient,
+		clusterID: clusterID,
+	}
+}
+
+// Verify a token is valid for the specified clusterID. On success, returns an
 // Identity that contains information about the AWS principal that created the
 // token. On failure, returns nil and a non-nil error.
-func Verify(token string, serverID string) (*Identity, error) {
+func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	if len(token) > maxTokenLenBytes {
 		return nil, fmt.Errorf("token is too large")
 	}
@@ -189,8 +223,8 @@ func Verify(token string, serverID string) (*Identity, error) {
 		return nil, fmt.Errorf("unexpected action parameter in pre-signed URL")
 	}
 
-	if !hasSignedServerIDHeader(&queryParamsLower) {
-		return nil, fmt.Errorf("client did not sign the %s header in the pre-signed URL", serverIDHeader)
+	if !hasSignedClusterIDHeader(&queryParamsLower) {
+		return nil, fmt.Errorf("client did not sign the %s header in the pre-signed URL", clusterIDHeader)
 	}
 
 	expires, err := strconv.Atoi(queryParamsLower.Get("x-amz-expires"))
@@ -199,10 +233,10 @@ func Verify(token string, serverID string) (*Identity, error) {
 	}
 
 	req, err := http.NewRequest("GET", parsedURL.String(), nil)
-	req.Header.Set(serverIDHeader, serverID)
+	req.Header.Set(clusterIDHeader, v.clusterID)
 	req.Header.Set("accept", "application/json")
 
-	response, err := http.DefaultClient.Do(req)
+	response, err := v.client.Do(req)
 	if err != nil {
 		// special case to avoid printing the full URL if possible
 		if urlErr, ok := err.(*url.Error); ok {
@@ -254,10 +288,10 @@ func Verify(token string, serverID string) (*Identity, error) {
 	return id, nil
 }
 
-func hasSignedServerIDHeader(paramsLower *url.Values) bool {
+func hasSignedClusterIDHeader(paramsLower *url.Values) bool {
 	signedHeaders := strings.Split(paramsLower.Get("x-amz-signedheaders"), ";")
 	for _, hdr := range signedHeaders {
-		if strings.ToLower(hdr) == strings.ToLower(serverIDHeader) {
+		if strings.ToLower(hdr) == strings.ToLower(clusterIDHeader) {
 			return true
 		}
 	}
