@@ -36,9 +36,10 @@ var initCmd = &cobra.Command{
 		}
 
 		localCfg := cfg
+    /*
 		localCfg.GenerateKubeconfigPath = "heptio-authenticator-aws.kubeconfig"
 		localCfg.StateDir = "./"
-
+    */
 		err = localCfg.GenerateFiles()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not initialize: %v\n", err)
