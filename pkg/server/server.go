@@ -27,6 +27,8 @@ import (
 	"github.com/heptio/authenticator/pkg/config"
 	"github.com/heptio/authenticator/pkg/token"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
 )
@@ -50,7 +52,23 @@ type handler struct {
 	lowercaseRoleMap map[string]config.RoleMapping
 	lowercaseUserMap map[string]config.UserMapping
 	verifier         token.Verifier
+	metrics          metrics
 }
+
+// metrics are handles to the collectors for prometheous for the various metrics we are tracking.
+type metrics struct {
+	latency      prometheus.Histogram
+	malformed    prometheus.Counter
+	requests     prometheus.Counter
+	invalidToken prometheus.Counter
+	unknownUser  prometheus.Counter
+	success      prometheus.Counter
+}
+
+// namespace for the heptio authenticators metrics
+const (
+	metricNS = "heptio_authenticator_aws"
+)
 
 // New creates a new server from a config
 func New(config config.Config) *Server {
@@ -117,6 +135,7 @@ func (c *Server) getHandler() *handler {
 		lowercaseRoleMap: make(map[string]config.RoleMapping),
 		lowercaseUserMap: make(map[string]config.UserMapping),
 		verifier:         token.NewVerifier(c.ClusterID),
+		metrics:          createMetrics(),
 	}
 	for _, m := range c.RoleMappings {
 		h.lowercaseRoleMap[strings.ToLower(m.RoleARN)] = m
@@ -126,10 +145,56 @@ func (c *Server) getHandler() *handler {
 	}
 
 	h.HandleFunc("/authenticate", h.authenticateEndpoint)
+	h.Handle("/metrics", promhttp.Handler())
 	return h
 }
 
+func createMetrics() metrics {
+	m := metrics{
+		latency: prometheus.NewHistogram(prometheus.HistogramOpts{
+			Namespace: metricNS,
+			Name:      "authenticate_latency_seconds",
+			Help:      "The latency for authenticate call",
+		}),
+		malformed: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: metricNS,
+			Name:      "authenticate_malformed_requests",
+			Help:      "The number of requests that are received that are not correctly formed",
+		}),
+		requests: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: metricNS,
+			Name:      "authenticate_requests",
+			Help:      "The number of authenticate requests",
+		}),
+		invalidToken: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: metricNS,
+			Name:      "authenticate_invalid_token",
+			Help:      "The token provided in the request did not resolved to an IAM identity",
+		}),
+		unknownUser: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: metricNS,
+			Name:      "authenticate_unknown_user",
+			Help:      "The IAM user was not mapped to a kubernetes user",
+		}),
+		success: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: metricNS,
+			Name:      "authenticate_success",
+			Help:      "The user was able to successfully authenticate",
+		}),
+	}
+	prometheus.MustRegister(m.latency)
+	prometheus.MustRegister(m.malformed)
+	prometheus.MustRegister(m.requests)
+	prometheus.MustRegister(m.invalidToken)
+	prometheus.MustRegister(m.unknownUser)
+	prometheus.MustRegister(m.success)
+	return m
+}
+
 func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request) {
+	h.metrics.requests.Inc()
+	latency := prometheus.NewTimer(h.metrics.latency)
+	defer latency.ObserveDuration()
 	log := logrus.WithFields(logrus.Fields{
 		"path":   req.URL.Path,
 		"client": req.RemoteAddr,
@@ -139,11 +204,13 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	if req.Method != http.MethodPost {
 		log.Error("unexpected request method")
 		http.Error(w, "expected POST", http.StatusMethodNotAllowed)
+		h.metrics.malformed.Inc()
 		return
 	}
 	if req.Body == nil {
 		log.Error("empty request body")
 		http.Error(w, "expected a request body", http.StatusBadRequest)
+		h.metrics.malformed.Inc()
 		return
 	}
 	defer req.Body.Close()
@@ -152,6 +219,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	if err := json.NewDecoder(req.Body).Decode(&tokenReview); err != nil {
 		log.WithError(err).Error("could not parse request body")
 		http.Error(w, "expected a request body to be a TokenReview", http.StatusBadRequest)
+		h.metrics.malformed.Inc()
 		return
 	}
 
@@ -163,6 +231,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	// if the token is invalid, reject with a 403
 	identity, err := h.verifier.Verify(tokenReview.Spec.Token)
 	if err != nil {
+		h.metrics.invalidToken.Inc()
 		log.WithError(err).Warn("access denied")
 		w.WriteHeader(http.StatusForbidden)
 		w.Write(tokenReviewDenyJSON)
@@ -186,6 +255,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	} else {
 		// if the token has a valid signature but the role is not mapped,
 		// deny with a 403 but print a more useful log message
+		h.metrics.unknownUser.Inc()
 		log.Warn("access denied because ARN is not mapped")
 		w.WriteHeader(http.StatusForbidden)
 		w.Write(tokenReviewDenyJSON)
@@ -201,6 +271,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 		"uid":      uid,
 		"groups":   groups,
 	}).Info("access granted")
+	h.metrics.success.Inc()
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(authenticationv1beta1.TokenReview{
 		Status: authenticationv1beta1.TokenReviewStatus{
