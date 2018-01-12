@@ -1,0 +1,32 @@
+# Configuration for https://goreleaser.com/
+project_name: authenticator
+
+builds:
+  - binary: heptio-authenticator-aws
+    main: ./cmd/heptio-authenticator-aws/root.go
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+
+dockers:
+  - image: gcr.io/heptio-images/authenticator
+    extra_files:
+      - ca-certificates.crt
+
+snapshot:
+  name_template: "git-{{.Commit}}"
+
+archive:
+  format: binary
+
+release:
+  github:
+    owner: heptio
+    name: authenticator
+  draft: true
+  prerelease: true
+  name_template: "v{{.Version}}"
