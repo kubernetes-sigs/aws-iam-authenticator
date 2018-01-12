@@ -14,8 +14,6 @@ builds:
 
 dockers:
   - image: gcr.io/heptio-images/authenticator
-    extra_files:
-      - ca-certificates.crt
 
 snapshot:
   name_template: "git-{{.Commit}}"
