@@ -121,7 +121,8 @@ func (g generator) GetWithRole(clusterID string, roleARN string) (string, error)
 	// create a session with the "base" credentials available
 	// (from environment variable, profile files, EC2 metadata, etc)
 	sess, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
+		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+		SharedConfigState:       session.SharedConfigEnable,
 	})
 	if err != nil {
 		return "", fmt.Errorf("could not create session: %v", err)
