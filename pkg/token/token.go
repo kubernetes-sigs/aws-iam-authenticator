@@ -67,6 +67,32 @@ const (
 	clusterIDHeader  = "x-k8s-aws-id"
 )
 
+// FormatError is returned when there is a problem with token that is
+// an encoded sts request.  This can include the url, data, action or anything
+// else that prevents the sts call from being made.
+type FormatError struct {
+	message string
+}
+
+func (e FormatError) Error() string {
+	return "input token was not properly formatted: " + e.message
+}
+
+// STSError is returned when there was either an error calling STS or a problem
+// processing the data returned from STS.
+type STSError struct {
+	message string
+}
+
+func (e STSError) Error() string {
+	return "sts getCallerIdentity failed: " + e.message
+}
+
+// NewSTSError creates a error of type STS.
+func NewSTSError(m string) STSError {
+	return STSError{message: m}
+}
+
 var parameterWhitelist = map[string]bool{
 	"action":               true,
 	"version":              true,
@@ -177,59 +203,59 @@ func NewVerifier(clusterID string) Verifier {
 // token. On failure, returns nil and a non-nil error.
 func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	if len(token) > maxTokenLenBytes {
-		return nil, fmt.Errorf("token is too large")
+		return nil, FormatError{"token is too large"}
 	}
 
 	if !strings.HasPrefix(token, v1Prefix) {
-		return nil, fmt.Errorf("token is missing expected %q prefix", v1Prefix)
+		return nil, FormatError{fmt.Sprintf("token is missing expected %q prefix", v1Prefix)}
 	}
 
 	// TODO: this may need to be a constant-time base64 decoding
 	tokenBytes, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(token, v1Prefix))
 	if err != nil {
-		return nil, err
+		return nil, FormatError{err.Error()}
 	}
 
 	parsedURL, err := url.Parse(string(tokenBytes))
 	if err != nil {
-		return nil, err
+		return nil, FormatError{err.Error()}
 	}
 
 	if parsedURL.Scheme != "https" {
-		return nil, fmt.Errorf("unexpected scheme %q in pre-signed URL", parsedURL.Scheme)
+		return nil, FormatError{fmt.Sprintf("unexpected scheme %q in pre-signed URL", parsedURL.Scheme)}
 	}
 
 	if parsedURL.Host != "sts.amazonaws.com" {
-		return nil, fmt.Errorf("unexpected hostname in pre-signed URL")
+		return nil, FormatError{"unexpected hostname in pre-signed URL"}
 	}
 
 	if parsedURL.Path != "/" {
-		return nil, fmt.Errorf("unexpected path in pre-signed URL")
+		return nil, FormatError{"unexpected path in pre-signed URL"}
 	}
 
 	queryParamsLower := make(url.Values)
 	queryParams := parsedURL.Query()
 	for key, values := range queryParams {
 		if !parameterWhitelist[strings.ToLower(key)] {
-			return nil, fmt.Errorf("non-whitelisted query parameter %q", key)
+			return nil, FormatError{fmt.Sprintf("non-whitelisted query parameter %q", key)}
 		}
 		if len(values) != 1 {
-			return nil, fmt.Errorf("query parameter with multiple values not supported")
+			return nil, FormatError{"query parameter with multiple values not supported"}
 		}
 		queryParamsLower.Set(strings.ToLower(key), values[0])
 	}
 
 	if queryParamsLower.Get("action") != "GetCallerIdentity" {
-		return nil, fmt.Errorf("unexpected action parameter in pre-signed URL")
+		return nil, FormatError{"unexpected action parameter in pre-signed URL"}
 	}
 
 	if !hasSignedClusterIDHeader(&queryParamsLower) {
-		return nil, fmt.Errorf("client did not sign the %s header in the pre-signed URL", clusterIDHeader)
+		return nil, FormatError{fmt.Sprintf("client did not sign the %s header in the pre-signed URL", clusterIDHeader)}
 	}
 
 	expires, err := strconv.Atoi(queryParamsLower.Get("x-amz-expires"))
 	if err != nil || expires < 0 || expires > 60 {
-		return nil, fmt.Errorf("invalid X-Amz-Expires parameter in pre-signed URL")
+		return nil, FormatError{"invalid X-Amz-Expires parameter in pre-signed URL"}
 	}
 
 	req, err := http.NewRequest("GET", parsedURL.String(), nil)
@@ -240,25 +266,25 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	if err != nil {
 		// special case to avoid printing the full URL if possible
 		if urlErr, ok := err.(*url.Error); ok {
-			return nil, fmt.Errorf("error during GET: %v", urlErr.Err)
+			return nil, NewSTSError(fmt.Sprintf("error during GET: %v", urlErr.Err))
 		}
-		return nil, fmt.Errorf("error during GET: %v", err)
+		return nil, NewSTSError(fmt.Sprintf("error during GET: %v", err))
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("error from AWS (expected 200, got %d)", response.StatusCode)
+		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d)", response.StatusCode))
 	}
 
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error reading HTTP result: %v", err)
+		return nil, NewSTSError(fmt.Sprintf("error reading HTTP result: %v", err))
 	}
 
 	var callerIdentity getCallerIdentityWrapper
 	err = json.Unmarshal(responseBody, &callerIdentity)
 	if err != nil {
-		return nil, err
+		return nil, NewSTSError(err.Error())
 	}
 
 	// parse the response into an Identity
@@ -268,7 +294,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	}
 	id.CanonicalARN, err = canonicalizeARN(id.ARN)
 	if err != nil {
-		return nil, err
+		return nil, NewSTSError(err.Error())
 	}
 
 	// The user ID is either UserID:SessionName (for assumed roles) or just
@@ -280,9 +306,9 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	} else if len(userIDParts) == 1 {
 		id.UserID = userIDParts[0]
 	} else {
-		return nil, fmt.Errorf(
+		return nil, STSError{fmt.Sprintf(
 			"malformed UserID %q",
-			callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.UserID)
+			callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.UserID)}
 	}
 
 	return id, nil
