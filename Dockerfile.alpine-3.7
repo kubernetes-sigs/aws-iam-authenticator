@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM scratch
-ADD ca-certificates.crt /etc/ssl/certs/
-ADD heptio-authenticator-aws /
+FROM alpine:3.7
+RUN adduser -D -u 10000 heptio-authenticator-aws
+RUN apk add --update ca-certificates
+COPY heptio-authenticator-aws /
+USER heptio-authenticator-aws
 ENTRYPOINT ["/heptio-authenticator-aws"]
