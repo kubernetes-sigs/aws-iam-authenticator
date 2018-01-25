@@ -9,15 +9,11 @@ VERSION ?= v0.1.0
 build: build-container heptio-authenticator-aws-osx
 
 heptio-authenticator-aws-osx:
-	GOOS=darwin GOARCH=amd64 go build -o heptio-authenticator-aws-osx $(CMD_IMPORT)
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o heptio-authenticator-aws $(CMD_IMPORT)
 
-build-container: ca-certificates.crt
-	GOOS=linux GOARCH=amd64 go build -o heptio-authenticator-aws $(CMD_IMPORT)
+build-container:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o heptio-authenticator-aws $(CMD_IMPORT)
 	docker build . -t $(REPO):$(VERSION)
-
-# pull ca-certificates.crt from Alpine
-ca-certificates.crt:
-	docker run -v "$$PWD":/out --rm --tty -i alpine:latest /bin/sh -c "apk add --update ca-certificates && cp /etc/ssl/certs/ca-certificates.crt /out/"
 
 push:
 	docker push $(REPO):$(VERSION)
