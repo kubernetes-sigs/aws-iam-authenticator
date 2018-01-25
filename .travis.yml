@@ -3,11 +3,15 @@ go_import_path: github.com/heptio/authenticator
 go:
   - 1.9.x
 
-sudo: false
+sudo: required
+
+services:
+  - docker
 
 install:
-  - go get -u github.com/golang/dep/cmd/dep
-    && dep ensure -vendor-only -v
+  - curl -s -L -o /tmp/goreleaser.tgz https://github.com/goreleaser/goreleaser/releases/download/v0.45.1/goreleaser_Linux_x86_64.tar.gz
+  - tar -xzvf /tmp/goreleaser.tgz -C /tmp/
+  - sudo mv /tmp/goreleaser /usr/local/bin
 
 script:
-  - go install -v ./... && go test ./...
+  - make build test
