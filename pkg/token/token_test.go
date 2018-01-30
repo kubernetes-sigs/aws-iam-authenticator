@@ -141,7 +141,7 @@ func TestVerifyUnmarshalJSONError(t *testing.T) {
 
 func TestVerifyInvalidCanonicalARNError(t *testing.T) {
 	_, err := newVerifier(200, jsonResponse("arn", "1000", "userid"), nil).Verify(validToken)
-	errorContains(t, err, "malformed ARN")
+	errorContains(t, err, "arn 'arn' is invalid:")
 	assertSTSError(t, err)
 }
 
