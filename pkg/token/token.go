@@ -52,6 +52,9 @@ type Identity struct {
 	// UserID is the unique user/role ID (e.g., "AROAAAAAAAAAAAAAAAAAA").
 	UserID string
 
+	// IAM user or role name
+	Name string
+
 	// SessionName is the STS session name (or "" if this is not a
 	// session-based identity). For EC2 instance roles, this will be the EC2
 	// instance ID (e.g., "i-0123456789abcdef0"). You should only rely on it
@@ -271,6 +274,11 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, err
 	}
 
+	id.Name, err = nameFromCanonicalARN(id.CanonicalARN)
+	if err != nil {
+		return nil, err
+	}
+
 	// The user ID is either UserID:SessionName (for assumed roles) or just
 	// UserID (for IAM User principals).
 	userIDParts := strings.Split(callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.UserID, ":")
@@ -320,5 +328,14 @@ func canonicalizeARN(arn string) (string, error) {
 	}
 
 	// otherwise we don't understand this ARN format so return an error
+	return "", fmt.Errorf("malformed ARN %q", arn)
+}
+
+func nameFromCanonicalARN(arn string) (string, error) {
+	arnSlice := strings.Split(arn, "/")
+	name := arnSlice[len(arnSlice)-1]
+	if name != "" {
+		return name, nil
+	}
 	return "", fmt.Errorf("malformed ARN %q", arn)
 }

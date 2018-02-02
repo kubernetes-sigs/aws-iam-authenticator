@@ -83,4 +83,8 @@ type Config struct {
 	// UserMappings is a list of mappings from AWS IAM User to
 	// Kubernetes username + groups.
 	UserMappings []UserMapping
+
+	// AWS Accounts that are allowed without an explicit user/role mapping
+	// The IAM ARN maps to the user or role name automatically.
+	MappedAccounts []string
 }
