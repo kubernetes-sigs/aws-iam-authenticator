@@ -119,7 +119,7 @@ The Heptio Authenticator for AWS server validates all the parameters of the pre-
 It then submits the request to the real `https://sts.amazonaws.com` server, which validates the client's HMAC signature and returns information about the user.
 Now that the server knows the AWS identity of the client, it translates this identity into a Kubernetes user and groups via a simple static mapping.
 
-This mechanism is borrowed with a few changes from [Vault](https://www.vaultproject.io/docs/auth/aws.html#iam-authentication-method).
+This mechanism is borrowed with a few changes from [Vault](https://www.vaultproject.io/docs/auth/aws.html#iam-auth-method).
 
 ## What is a cluster ID?
 The Authenticator cluster ID is a unique-per-cluster identifier that prevents certain replay attacks.
@@ -130,7 +130,7 @@ Some good choices are:
  - A random ID such as from `openssl rand 16 -hex`
  - The domain name of your Kubernetes API server
 
-The [Vault documentation](https://www.vaultproject.io/docs/auth/aws.html#iam-authentication-method) also explains this attack (see `X-Vault-AWS-IAM-Server-ID`).
+The [Vault documentation](https://www.vaultproject.io/docs/auth/aws.html#iam-auth-method) also explains this attack (see `X-Vault-AWS-IAM-Server-ID`).
 
 ## Troubleshooting
 
