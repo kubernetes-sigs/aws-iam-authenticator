@@ -235,7 +235,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 		groups = userMapping.Groups
 	} else if _, exists := h.accountMap[identity.AccountID]; exists {
 		groups = []string{}
-		username = identity.Name
+		username = identity.CanonicalARN
 	} else {
 		// if the token has a valid signature but the role is not mapped,
 		// deny with a 403 but print a more useful log message
