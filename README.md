@@ -212,4 +212,11 @@ server:
     username: alice
     groups:
     - system:masters
+
+  # automatically map IAM ARN from these accounts to username.
+  # NOTE: Always use quotes to avoid the account numbers being recognized as numbers
+  # instead of strings by the yaml parser.
+  mapAccounts:
+  - "012345678901"
+  - "456789012345"
 ```
