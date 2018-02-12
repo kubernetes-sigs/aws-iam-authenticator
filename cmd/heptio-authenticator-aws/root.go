@@ -86,7 +86,7 @@ func getConfig() (config.Config, error) {
 	if err := viper.UnmarshalKey("server.mapUsers", &config.UserMappings); err != nil {
 		logrus.WithError(err).Fatal("invalid server user mappings")
 	}
-	if err := viper.UnmarshalKey("server.mapAccounts", &config.MappedAccounts); err != nil {
+	if err := viper.UnmarshalKey("server.mapAccounts", &config.AutoMappedAWSAccounts); err != nil {
 		logrus.WithError(err).Fatal("invalid server account mappings")
 	}
 

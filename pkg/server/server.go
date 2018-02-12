@@ -94,7 +94,7 @@ func (c *Server) Run() {
 			"groups":   mapping.Groups,
 		}).Infof("mapping IAM user")
 	}
-	for _, account := range c.MappedAccounts {
+	for _, account := range c.AutoMappedAWSAccounts {
 		logrus.WithField("accountID", account).Infof("mapping IAM Account")
 	}
 
@@ -149,7 +149,7 @@ func (c *Server) getHandler() *handler {
 		h.lowercaseUserMap[strings.ToLower(m.UserARN)] = m
 	}
 
-	for _, m := range c.MappedAccounts {
+	for _, m := range c.AutoMappedAWSAccounts {
 		h.accountMap[m] = true
 	}
 
