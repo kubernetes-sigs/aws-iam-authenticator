@@ -52,6 +52,7 @@ type handler struct {
 	http.ServeMux
 	lowercaseRoleMap map[string]config.RoleMapping
 	lowercaseUserMap map[string]config.UserMapping
+	accountMap       map[string]bool
 	verifier         token.Verifier
 	metrics          metrics
 }
@@ -92,6 +93,9 @@ func (c *Server) Run() {
 			"username": mapping.Username,
 			"groups":   mapping.Groups,
 		}).Infof("mapping IAM user")
+	}
+	for _, account := range c.AutoMappedAWSAccounts {
+		logrus.WithField("accountID", account).Infof("mapping IAM Account")
 	}
 
 	// we always listen on localhost (and run with host networking)
@@ -134,6 +138,7 @@ func (c *Server) getHandler() *handler {
 	h := &handler{
 		lowercaseRoleMap: make(map[string]config.RoleMapping),
 		lowercaseUserMap: make(map[string]config.UserMapping),
+		accountMap:       make(map[string]bool),
 		verifier:         token.NewVerifier(c.ClusterID),
 		metrics:          createMetrics(),
 	}
@@ -142,6 +147,10 @@ func (c *Server) getHandler() *handler {
 	}
 	for _, m := range c.UserMappings {
 		h.lowercaseUserMap[strings.ToLower(m.UserARN)] = m
+	}
+
+	for _, m := range c.AutoMappedAWSAccounts {
+		h.accountMap[m] = true
 	}
 
 	h.HandleFunc("/authenticate", h.authenticateEndpoint)
@@ -224,6 +233,9 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	} else if userMapping, exists := h.lowercaseUserMap[arnLower]; exists {
 		username = userMapping.Username
 		groups = userMapping.Groups
+	} else if _, exists := h.accountMap[identity.AccountID]; exists {
+		groups = []string{}
+		username = identity.CanonicalARN
 	} else {
 		// if the token has a valid signature but the role is not mapped,
 		// deny with a 403 but print a more useful log message

@@ -86,6 +86,9 @@ func getConfig() (config.Config, error) {
 	if err := viper.UnmarshalKey("server.mapUsers", &config.UserMappings); err != nil {
 		logrus.WithError(err).Fatal("invalid server user mappings")
 	}
+	if err := viper.UnmarshalKey("server.mapAccounts", &config.AutoMappedAWSAccounts); err != nil {
+		logrus.WithError(err).Fatal("invalid server account mappings")
+	}
 
 	if config.ClusterID == "" {
 		return config, errors.New("cluster ID cannot be empty")

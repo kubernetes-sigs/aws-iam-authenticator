@@ -287,3 +287,63 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 	verifyAuthResult(t, resp, tokenReview("TestUser", "heptio-authenticator-aws:0123456789012:Test", []string{"sys:admin", "listers"}))
 	validateMetrics(t, validateOpts{success: 1})
 }
+
+func TestAuthenticateVerifierAccountMappingForUser(t *testing.T) {
+	resp := httptest.NewRecorder()
+
+	data, err := json.Marshal(authenticationv1beta1.TokenReview{
+		Spec: authenticationv1beta1.TokenReviewSpec{
+			Token: "token",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Could not marshal in put data: %v", err)
+	}
+	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
+	h := setup(&testVerifier{err: nil, identity: &token.Identity{
+		ARN:          "arn:aws:iam::0123456789012:user/Test",
+		CanonicalARN: "arn:aws:iam::0123456789012:user/Test",
+		AccountID:    "0123456789012",
+		UserID:       "Test",
+		SessionName:  "",
+	}})
+	defer cleanup(h.metrics)
+	h.accountMap = make(map[string]bool)
+	h.accountMap["0123456789012"] = true
+	h.authenticateEndpoint(resp, req)
+	if resp.Code != http.StatusOK {
+		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
+	}
+	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:user/Test", "heptio-authenticator-aws:0123456789012:Test", nil))
+	validateMetrics(t, validateOpts{success: 1})
+}
+
+func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
+	resp := httptest.NewRecorder()
+
+	data, err := json.Marshal(authenticationv1beta1.TokenReview{
+		Spec: authenticationv1beta1.TokenReviewSpec{
+			Token: "token",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Could not marshal in put data: %v", err)
+	}
+	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
+	h := setup(&testVerifier{err: nil, identity: &token.Identity{
+		ARN:          "arn:aws:iam::0123456789012:assumed-role/Test/extra",
+		CanonicalARN: "arn:aws:iam::0123456789012:role/Test",
+		AccountID:    "0123456789012",
+		UserID:       "Test",
+		SessionName:  "",
+	}})
+	defer cleanup(h.metrics)
+	h.accountMap = make(map[string]bool)
+	h.accountMap["0123456789012"] = true
+	h.authenticateEndpoint(resp, req)
+	if resp.Code != http.StatusOK {
+		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
+	}
+	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:role/Test", "heptio-authenticator-aws:0123456789012:Test", nil))
+	validateMetrics(t, validateOpts{success: 1})
+}
