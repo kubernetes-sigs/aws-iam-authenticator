@@ -67,6 +67,7 @@ const (
 	metricNS        = "heptio_authenticator_aws"
 	metricMalformed = "malformed_request"
 	metricInvalid   = "invalid_token"
+	metricSTSError  = "sts_error"
 	metricUnknown   = "uknown_user"
 	metricSuccess   = "success"
 )
@@ -212,7 +213,11 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	// if the token is invalid, reject with a 403
 	identity, err := h.verifier.Verify(tokenReview.Spec.Token)
 	if err != nil {
-		h.metrics.latency.WithLabelValues(metricInvalid).Observe(duration(start))
+		if _, ok := err.(token.STSError); ok {
+			h.metrics.latency.WithLabelValues(metricSTSError).Observe(duration(start))
+		} else {
+			h.metrics.latency.WithLabelValues(metricInvalid).Observe(duration(start))
+		}
 		log.WithError(err).Warn("access denied")
 		w.WriteHeader(http.StatusForbidden)
 		w.Write(tokenReviewDenyJSON)

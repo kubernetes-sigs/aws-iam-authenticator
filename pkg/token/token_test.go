@@ -13,13 +13,22 @@ import (
 )
 
 func validationErrorTest(t *testing.T, token string, expectedErr string) {
+	t.Helper()
 	_, err := tokenVerifier{}.Verify(token)
 	errorContains(t, err, expectedErr)
 }
 
 func errorContains(t *testing.T, err error, expectedErr string) {
+	t.Helper()
 	if err == nil || !strings.Contains(err.Error(), expectedErr) {
 		t.Errorf("err should have contained '%s' was '%s'", expectedErr, err)
+	}
+}
+
+func assertSTSError(t *testing.T, err error) {
+	t.Helper()
+	if _, ok := err.(STSError); !ok {
+		t.Errorf("Expected err %v to be an STSError but was not", err)
 	}
 }
 
@@ -98,11 +107,13 @@ func TestVerifyTokenPreSTSValidations(t *testing.T) {
 func TestVerifyHTTPError(t *testing.T) {
 	_, err := newVerifier(0, "", errors.New("an error")).Verify(validToken)
 	errorContains(t, err, "error during GET: an error")
+	assertSTSError(t, err)
 }
 
 func TestVerifyHTTP403(t *testing.T) {
 	_, err := newVerifier(403, " ", nil).Verify(validToken)
 	errorContains(t, err, "error from AWS (expected 200, got")
+	assertSTSError(t, err)
 }
 
 func TestVerifyBodyReadError(t *testing.T) {
@@ -119,21 +130,25 @@ func TestVerifyBodyReadError(t *testing.T) {
 	}
 	_, err := verifier.Verify(validToken)
 	errorContains(t, err, "error reading HTTP result")
+	assertSTSError(t, err)
 }
 
 func TestVerifyUnmarshalJSONError(t *testing.T) {
 	_, err := newVerifier(200, "xxxx", nil).Verify(validToken)
 	errorContains(t, err, "invalid character")
+	assertSTSError(t, err)
 }
 
 func TestVerifyInvalidCanonicalARNError(t *testing.T) {
 	_, err := newVerifier(200, jsonResponse("arn", "1000", "userid"), nil).Verify(validToken)
 	errorContains(t, err, "malformed ARN")
+	assertSTSError(t, err)
 }
 
 func TestVerifyInvalidUserIDError(t *testing.T) {
 	_, err := newVerifier(200, jsonResponse("arn:aws:iam::123456789012:user/Alice", "123456789012", "not:vailid:userid"), nil).Verify(validToken)
 	errorContains(t, err, "malformed UserID")
+	assertSTSError(t, err)
 }
 
 func TestVerifyNoSession(t *testing.T) {

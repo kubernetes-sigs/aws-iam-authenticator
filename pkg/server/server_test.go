@@ -71,7 +71,7 @@ func cleanup(m metrics) {
 // Count of expected metrics
 type validateOpts struct {
 	// The expected number of latency entries for each label.
-	malformed, invalidToken, unknownUser, success uint64
+	malformed, invalidToken, unknownUser, success, stsError uint64
 }
 
 func checkHistogramSampleCount(t *testing.T, name string, actual, expected uint64) {
@@ -89,7 +89,7 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 	}
 	for _, m := range metrics {
 		if strings.HasPrefix(m.GetName(), "heptio_authenticator_aws_authenticate_latency_seconds") {
-			var actualSuccess, actualMalformed, actualInvalid, actualUnknown uint64
+			var actualSuccess, actualMalformed, actualInvalid, actualUnknown, actualSTSError uint64
 			for _, metric := range m.GetMetric() {
 				if len(metric.Label) != 1 {
 					t.Fatalf("Expected 1 label for metric.  Got %+v", metric.Label)
@@ -107,6 +107,8 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 					actualInvalid = metric.GetHistogram().GetSampleCount()
 				case metricUnknown:
 					actualUnknown = metric.GetHistogram().GetSampleCount()
+				case metricSTSError:
+					actualSTSError = metric.GetHistogram().GetSampleCount()
 				default:
 					t.Errorf("Unknown result for latency label: %s", *label.Value)
 
@@ -116,6 +118,7 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 			checkHistogramSampleCount(t, metricMalformed, actualMalformed, opts.malformed)
 			checkHistogramSampleCount(t, metricInvalid, actualInvalid, opts.invalidToken)
 			checkHistogramSampleCount(t, metricUnknown, actualUnknown, opts.unknownUser)
+			checkHistogramSampleCount(t, metricSTSError, actualSTSError, opts.stsError)
 		}
 	}
 }
@@ -190,6 +193,28 @@ func TestAuthenticateVerifierError(t *testing.T) {
 	}
 	verifyBodyContains(t, resp, string(tokenReviewDenyJSON))
 	validateMetrics(t, validateOpts{invalidToken: 1})
+}
+
+func TestAuthenticateVerifierSTSError(t *testing.T) {
+	resp := httptest.NewRecorder()
+
+	data, err := json.Marshal(authenticationv1beta1.TokenReview{
+		Spec: authenticationv1beta1.TokenReviewSpec{
+			Token: "token",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Could not marshal in put data: %v", err)
+	}
+	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
+	h := setup(&testVerifier{err: token.NewSTSError("There was an error")})
+	defer cleanup(h.metrics)
+	h.authenticateEndpoint(resp, req)
+	if resp.Code != http.StatusForbidden {
+		t.Errorf("Expected status code %d, was %d", http.StatusForbidden, resp.Code)
+	}
+	verifyBodyContains(t, resp, string(tokenReviewDenyJSON))
+	validateMetrics(t, validateOpts{stsError: 1})
 }
 
 func TestAuthenticateVerifierNotMapped(t *testing.T) {
