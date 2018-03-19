@@ -3,7 +3,7 @@ project_name: authenticator
 
 builds:
   - binary: heptio-authenticator-aws
-    main: ./cmd/heptio-authenticator-aws/root.go
+    main: ./cmd/heptio-authenticator-aws/
     goos:
       - darwin
       - linux
