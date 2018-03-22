@@ -56,6 +56,17 @@ type UserMapping struct {
 	Groups []string
 }
 
+// NodeMapping is a mapping of an AWS Role ARN that is used by a Kubernetes node
+// to a generated Username that matches the string "system:node:NodeName"
+// where NodeName is the private DNS of the calling EC2 instance.
+type NodeMapping struct {
+	// RoleARN is the AWS Resource Name of the EC2 Instance Role. (e.g., "arn:aws:iam::000000000000:role/Foo").
+	RoleARN string
+
+	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:nodes`)
+	Groups []string
+}
+
 // Config specifies the configuration for a heptio-authenticator-aws server
 type Config struct {
 	// ClusterID is a unique-per-cluster identifier for your
@@ -89,7 +100,17 @@ type Config struct {
 	// Kubernetes username + groups.
 	UserMappings []UserMapping
 
+	// NodeMappings is a list of mappings from AWS IAM Role to
+	// Kubernetes node name (i.e. system:node:NodeName).
+	NodeMappings []NodeMapping
+
 	// AutoMappedAWSAccounts is a list of AWS accounts that are allowed without an explicit user/role mapping.
 	// IAM ARN from these accounts automatically maps to the Kubernetes username.
 	AutoMappedAWSAccounts []string
+
+	// DefaultEC2DescribeInstancesRoleARN is an optional AWS Resource Name for an IAM Role to be assumed
+	// before calling ec2:DescribeInstances to determine the private DNS of the calling kubelet (EC2 Instance).
+	// If nil, defaults to using the IAM Role attached to the instance where heptio-authenticator-aws is
+	// running.
+	DefaultEC2DescribeInstancesRoleARN string
 }

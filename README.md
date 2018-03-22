@@ -219,4 +219,17 @@ server:
   mapAccounts:
   - "012345678901"
   - "456789012345"
+
+  # map nodes that should conform to the username "system:node:<private-DNS>".  This
+  # requires the authenticator to query the EC2 API in order to discover the private
+  # DNS of the EC2 instance originating the authentication request.  Optionally, you
+  # may specify a role that should be assumed before querying the EC2 API with the
+  # top level key "defaultEC2DescribeInstancesRoleARN"
+  defaultEC2DescribeInstancesRoleARN: arn:aws:iam::000000000000:role/DescribeInstancesRole
+  mapNodes:
+  - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
+    groups:
+    - system:nodes
+    - system:bootstrappers
+
 ```

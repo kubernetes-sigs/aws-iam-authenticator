@@ -29,4 +29,7 @@ const (
 
 	// certLifetime is the lifetime of the CA certificate (100 years)
 	certLifetime = time.Hour * 24 * 365 * 100
+
+	// nodeNamePrefix is the username prefix that the apiserver expects of kubelet
+	NodeNamePrefix = "system:node:"
 )

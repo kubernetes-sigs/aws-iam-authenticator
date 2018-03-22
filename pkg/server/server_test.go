@@ -57,6 +57,20 @@ func tokenReview(username, uid string, groups []string) authenticationv1beta1.To
 	}
 }
 
+type testNodeNameProvider struct {
+	name string
+}
+
+func (p *testNodeNameProvider) GetNodeName(id string) (string, error) {
+	return p.name, nil
+}
+
+func newTestNodeNameProvider(name string) NodeNameProvider {
+	return &testNodeNameProvider{
+		name: name,
+	}
+}
+
 func setup(verifier token.Verifier) *handler {
 	return &handler{
 		verifier: verifier,
@@ -371,4 +385,39 @@ func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
 	}
 	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:role/Test", "heptio-authenticator-aws:0123456789012:Test", nil))
 	validateMetrics(t, validateOpts{success: 1})
+}
+
+func TestAuthenticateVerifierNodeMapping(t *testing.T) {
+	resp := httptest.NewRecorder()
+
+	data, err := json.Marshal(authenticationv1beta1.TokenReview{
+		Spec: authenticationv1beta1.TokenReviewSpec{
+			Token: "token",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Could not marshal in put data: %v", err)
+	}
+	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
+	h := setup(&testVerifier{err: nil, identity: &token.Identity{
+		ARN:          "arn:aws:iam::0123456789012:role/TestNodeRole",
+		CanonicalARN: "arn:aws:iam::0123456789012:role/TestNodeRole",
+		AccountID:    "0123456789012",
+		UserID:       "TestNodeRole",
+		SessionName:  "i-0c6f21bf1f24f9708",
+	}})
+	defer cleanup(h.metrics)
+	h.nodeNameProvider = newTestNodeNameProvider("system:node:ip-172-31-27-14")
+	h.lowercaseNodeMap = make(map[string]config.NodeMapping)
+	h.lowercaseNodeMap["arn:aws:iam::0123456789012:role/testnoderole"] = config.NodeMapping{
+		RoleARN: "arn:aws:iam::0123456789012:role/TestNodeRole",
+		Groups:  []string{"system:nodes", "system:bootstrappers"},
+	}
+	h.authenticateEndpoint(resp, req)
+	if resp.Code != http.StatusOK {
+		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
+	}
+	verifyAuthResult(t, resp, tokenReview("system:node:ip-172-31-27-14", "heptio-authenticator-aws:0123456789012:TestNodeRole", []string{"system:nodes", "system:bootstrappers"}))
+	validateMetrics(t, validateOpts{success: 1})
+
 }

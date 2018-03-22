@@ -19,16 +19,25 @@ package server
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/heptio/authenticator/pkg/arn"
 	"github.com/heptio/authenticator/pkg/config"
 	"github.com/heptio/authenticator/pkg/token"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -53,9 +62,11 @@ type handler struct {
 	http.ServeMux
 	lowercaseRoleMap map[string]config.RoleMapping
 	lowercaseUserMap map[string]config.UserMapping
+	lowercaseNodeMap map[string]config.NodeMapping
 	accountMap       map[string]bool
 	verifier         token.Verifier
 	metrics          metrics
+	nodeNameProvider NodeNameProvider
 }
 
 // metrics are handles to the collectors for prometheous for the various metrics we are tracking.
@@ -95,6 +106,12 @@ func (c *Server) Run() {
 			"username": mapping.Username,
 			"groups":   mapping.Groups,
 		}).Infof("mapping IAM user")
+	}
+	for _, mapping := range c.NodeMappings {
+		logrus.WithFields(logrus.Fields{
+			"role":   mapping.RoleARN,
+			"groups": mapping.Groups,
+		}).Infof("mapping Node role")
 	}
 	for _, account := range c.AutoMappedAWSAccounts {
 		logrus.WithField("accountID", account).Infof("mapping IAM Account")
@@ -142,9 +159,11 @@ func (c *Server) getHandler() *handler {
 	h := &handler{
 		lowercaseRoleMap: make(map[string]config.RoleMapping),
 		lowercaseUserMap: make(map[string]config.UserMapping),
+		lowercaseNodeMap: make(map[string]config.NodeMapping),
 		accountMap:       make(map[string]bool),
 		verifier:         token.NewVerifier(c.ClusterID),
 		metrics:          createMetrics(),
+		nodeNameProvider: NewNodeNameEC2PrivateDNSProvider(c.DefaultEC2DescribeInstancesRoleARN),
 	}
 	for _, m := range c.RoleMappings {
 		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
@@ -162,7 +181,9 @@ func (c *Server) getHandler() *handler {
 		}
 		h.lowercaseUserMap[canonicalizedARN] = m
 	}
-
+	for _, m := range c.NodeMappings {
+		h.lowercaseNodeMap[strings.ToLower(m.RoleARN)] = m
+	}
 	for _, m := range c.AutoMappedAWSAccounts {
 		h.accountMap[m] = true
 	}
@@ -242,7 +263,17 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	log = log.WithField("arn", identity.CanonicalARN)
 	var username string
 	var groups []string
-	if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
+	if nodeMapping, exists := h.lowercaseNodeMap[arnLower]; exists {
+		nodeName, err := h.nodeNameProvider.GetNodeName(identity.SessionName)
+		if err != nil {
+			log.WithError(err).Warn("access denied because node private DNS was not found")
+			w.WriteHeader(http.StatusForbidden)
+			w.Write(tokenReviewDenyJSON)
+			return
+		}
+		username = nodeName
+		groups = nodeMapping.Groups
+	} else if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
 		username = renderTemplate(roleMapping.Username, identity)
 		groups = []string{}
 		for _, groupPattern := range roleMapping.Groups {
@@ -285,6 +316,103 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 			},
 		},
 	})
+}
+
+type NodeNameProvider interface {
+	// Get a node name from instance ID
+	GetNodeName(string) (string, error)
+}
+
+type nodeNameEC2PrivateDNSProvider struct {
+	sess          *session.Session
+	nodeNameCache map[string]string
+	lock          sync.Mutex
+}
+
+func NewNodeNameEC2PrivateDNSProvider(roleARN string) NodeNameProvider {
+	return &nodeNameEC2PrivateDNSProvider{
+		sess:          newSession(roleARN),
+		nodeNameCache: make(map[string]string),
+	}
+}
+
+func newSession(roleARN string) *session.Session {
+	// Initial credentials loaded from SDK's default credential chain, such as
+	// the environment, shared credentials (~/.aws/credentials), or EC2 Instance
+	// Role.
+
+	sess := session.Must(session.NewSession())
+	if aws.StringValue(sess.Config.Region) == "" {
+		ec2metadata := ec2metadata.New(sess)
+		regionFound, err := ec2metadata.Region()
+		if err != nil {
+			logrus.WithError(err).Fatal("Region not found in shared credentials, environment variable, or instance metadata.")
+		}
+		sess.Config.Region = aws.String(regionFound)
+	}
+
+	if roleARN != "" {
+		logrus.WithFields(logrus.Fields{
+			"roleARN": roleARN,
+		}).Infof("Using assumed role for EC2 API")
+
+		ap := &stscreds.AssumeRoleProvider{
+			Client:   sts.New(sess),
+			RoleARN:  roleARN,
+			Duration: time.Duration(60) * time.Minute,
+		}
+
+		sess.Config.Credentials = credentials.NewCredentials(ap)
+	}
+	return sess
+}
+
+func (p *nodeNameEC2PrivateDNSProvider) getPrivateDNSName(id string) (string, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	name, ok := p.nodeNameCache[id]
+	if ok {
+		return name, nil
+	}
+	return "", errors.New("instance id not found")
+}
+
+func (p *nodeNameEC2PrivateDNSProvider) setPrivateDNSName(id string, privateDNSName string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.nodeNameCache[id] = privateDNSName
+}
+
+// getNodeName looks up the private DNS from the EC2 API
+// and returns a username for the node matching the format that
+// kubelet uses: "system:node:<private-DNS>"
+func (p *nodeNameEC2PrivateDNSProvider) GetNodeName(id string) (string, error) {
+	privateDNSName, err := p.getPrivateDNSName(id)
+	if err == nil {
+		return config.NodeNamePrefix + privateDNSName, nil
+	}
+
+	// Look up instance from EC2 API
+	instanceIds := []*string{&id}
+	ec2Service := ec2.New(p.sess)
+	output, err := ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
+		InstanceIds: instanceIds,
+	})
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("failed querying private DNS from EC2 API for node %s: %s", id, err.Error()))
+	}
+	for _, reservation := range output.Reservations {
+		for _, instance := range reservation.Instances {
+			if aws.StringValue(instance.InstanceId) == id {
+				privateDNSName = aws.StringValue(instance.PrivateDnsName)
+				p.setPrivateDNSName(id, privateDNSName)
+			}
+		}
+	}
+	if privateDNSName == "" {
+		return "", errors.New(fmt.Sprintf("failed to find private DNS Name for node %s", id))
+	}
+	return config.NodeNamePrefix + privateDNSName, nil
 }
 
 func renderTemplate(template string, identity *token.Identity) string {
