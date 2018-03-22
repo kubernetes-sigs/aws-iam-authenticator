@@ -173,6 +173,9 @@ server:
   # output `path` where a generated webhook kubeconfig will be stored.
   generateKubeconfig: /etc/kubernetes/heptio-authenticator-aws.kubeconfig # (default)
 
+  # role to assume before querying EC2 API in order to discover metadata like EC2 private DNS Name
+  ec2DescribeInstancesRoleARN: arn:aws:iam::000000000000:role/DescribeInstancesRole
+
   # each mapRoles entry maps an IAM role to a username and set of groups
   # Each username and group can optionally contain template parameters:
   #  1) "{{AccountID}}" is the 12 digit AWS ID.
@@ -194,6 +197,17 @@ server:
     groups:
     - system:bootstrappers
     - aws:instances
+
+  # map nodes that should conform to the username "system:node:<private-DNS>".  This
+  # requires the authenticator to query the EC2 API in order to discover the private
+  # DNS of the EC2 instance originating the authentication request.  Optionally, you
+  # may specify a role that should be assumed before querying the EC2 API with the
+  # top level key "defaultEC2DescribeInstancesRoleARN".
+  - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
+    username: system:node:{{EC2PrivateDNSName}}
+    groups:
+    - system:nodes
+    - system:bootstrappers
 
   # map federated users in my "KubernetesAdmin" role to users like
   # "admin:alice-example.com". The SessionName is an arbitrary role name
@@ -219,4 +233,5 @@ server:
   mapAccounts:
   - "012345678901"
   - "456789012345"
+
 ```

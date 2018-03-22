@@ -92,4 +92,10 @@ type Config struct {
 	// AutoMappedAWSAccounts is a list of AWS accounts that are allowed without an explicit user/role mapping.
 	// IAM ARN from these accounts automatically maps to the Kubernetes username.
 	AutoMappedAWSAccounts []string
+
+	// ServerEC2DescribeInstancesRoleARN is an optional AWS Resource Name for an IAM Role to be assumed
+	// before calling ec2:DescribeInstances to determine the private DNS of the calling kubelet (EC2 Instance).
+	// If nil, defaults to using the IAM Role attached to the instance where heptio-authenticator-aws is
+	// running.
+	ServerEC2DescribeInstancesRoleARN string
 }

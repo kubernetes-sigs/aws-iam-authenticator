@@ -19,16 +19,26 @@ package server
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/heptio/authenticator/pkg/arn"
 	"github.com/heptio/authenticator/pkg/config"
 	"github.com/heptio/authenticator/pkg/token"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -48,6 +58,12 @@ var tokenReviewDenyJSON = func() []byte {
 	return res
 }()
 
+// Pattern to match EC2 instance IDs
+var (
+	instanceIDPattern = regexp.MustCompile("^i-(\\w{8}|\\w{17})$")
+	dns1123Pattern    = regexp.MustCompile("[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*")
+)
+
 // server state (internal)
 type handler struct {
 	http.ServeMux
@@ -56,6 +72,7 @@ type handler struct {
 	accountMap       map[string]bool
 	verifier         token.Verifier
 	metrics          metrics
+	ec2Provider      EC2Provider
 }
 
 // metrics are handles to the collectors for prometheous for the various metrics we are tracking.
@@ -145,6 +162,7 @@ func (c *Server) getHandler() *handler {
 		accountMap:       make(map[string]bool),
 		verifier:         token.NewVerifier(c.ClusterID),
 		metrics:          createMetrics(),
+		ec2Provider:      newEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
 	}
 	for _, m := range c.RoleMappings {
 		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
@@ -162,7 +180,6 @@ func (c *Server) getHandler() *handler {
 		}
 		h.lowercaseUserMap[canonicalizedARN] = m
 	}
-
 	for _, m := range c.AutoMappedAWSAccounts {
 		h.accountMap[m] = true
 	}
@@ -240,25 +257,11 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	// look up the ARN in each of our mappings to fill in the username and groups
 	arnLower := strings.ToLower(identity.CanonicalARN)
 	log = log.WithField("arn", identity.CanonicalARN)
-	var username string
-	var groups []string
-	if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
-		username = renderTemplate(roleMapping.Username, identity)
-		groups = []string{}
-		for _, groupPattern := range roleMapping.Groups {
-			groups = append(groups, renderTemplate(groupPattern, identity))
-		}
-	} else if userMapping, exists := h.lowercaseUserMap[arnLower]; exists {
-		username = userMapping.Username
-		groups = userMapping.Groups
-	} else if _, exists := h.accountMap[identity.AccountID]; exists {
-		groups = []string{}
-		username = identity.CanonicalARN
-	} else {
-		// if the token has a valid signature but the role is not mapped,
-		// deny with a 403 but print a more useful log message
+
+	username, groups, err := h.doMapping(identity, arnLower)
+	if err != nil {
 		h.metrics.latency.WithLabelValues(metricUnknown).Observe(duration(start))
-		log.Warn("access denied because ARN is not mapped")
+		log.WithError(err).Warn("access denied")
 		w.WriteHeader(http.StatusForbidden)
 		w.Write(tokenReviewDenyJSON)
 		return
@@ -287,12 +290,149 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	})
 }
 
-func renderTemplate(template string, identity *token.Identity) string {
+func (h *handler) doMapping(identity *token.Identity, arn string) (string, []string, error) {
+	if roleMapping, exists := h.lowercaseRoleMap[arn]; exists {
+		username, err := h.renderTemplate(roleMapping.Username, identity)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
+		}
+		groups := []string{}
+		for _, groupPattern := range roleMapping.Groups {
+			group, err := h.renderTemplate(groupPattern, identity)
+			if err != nil {
+				return "", nil, fmt.Errorf("failed mapping group: %s", err.Error())
+			}
+			groups = append(groups, group)
+		}
+		return username, groups, nil
+	}
+	if userMapping, exists := h.lowercaseUserMap[arn]; exists {
+		return userMapping.Username, userMapping.Groups, nil
+	}
+	if _, exists := h.accountMap[identity.AccountID]; exists {
+		return identity.CanonicalARN, []string{}, nil
+	}
+	return "", nil, fmt.Errorf("ARN is not mapped: %s", arn)
+}
+
+func (h *handler) renderTemplate(template string, identity *token.Identity) (string, error) {
+
+	// Private DNS requires EC2 API call
+	if strings.Contains(template, "{{EC2PrivateDNSName}}") {
+		if !instanceIDPattern.MatchString(identity.SessionName) {
+			return "", fmt.Errorf("SessionName did not contain an instance id")
+		}
+		privateDNSName, err := h.ec2Provider.getPrivateDNSName(identity.SessionName)
+		if err != nil {
+			return "", err
+		}
+		template = strings.Replace(template, "{{EC2PrivateDNSName}}", privateDNSName, -1)
+	}
+
+	template = strings.Replace(template, "{{AccountID}}", identity.AccountID, -1)
+
 	// usernames and groups must be a DNS-1123 hostname matching the regex
 	// "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
 	sessionName := strings.Replace(identity.SessionName, "@", "-", -1)
-
-	template = strings.Replace(template, "{{AccountID}}", identity.AccountID, -1)
 	template = strings.Replace(template, "{{SessionName}}", sessionName, -1)
-	return template
+	if !dns1123Pattern.MatchString(template) {
+		return "", fmt.Errorf("username or group is not a DNS-1123 hostname")
+	}
+
+	return template, nil
+}
+
+type EC2Provider interface {
+	// Get a node name from instance ID
+	getPrivateDNSName(string) (string, error)
+}
+
+type ec2ProviderImpl struct {
+	sess            *session.Session
+	privateDNSCache map[string]string
+	lock            sync.Mutex
+}
+
+func newEC2Provider(roleARN string) EC2Provider {
+	return &ec2ProviderImpl{
+		sess:            newSession(roleARN),
+		privateDNSCache: make(map[string]string),
+	}
+}
+
+func newSession(roleARN string) *session.Session {
+	// Initial credentials loaded from SDK's default credential chain, such as
+	// the environment, shared credentials (~/.aws/credentials), or EC2 Instance
+	// Role.
+
+	sess := session.Must(session.NewSession())
+	if aws.StringValue(sess.Config.Region) == "" {
+		ec2metadata := ec2metadata.New(sess)
+		regionFound, err := ec2metadata.Region()
+		if err != nil {
+			logrus.WithError(err).Fatal("Region not found in shared credentials, environment variable, or instance metadata.")
+		}
+		sess.Config.Region = aws.String(regionFound)
+	}
+
+	if roleARN != "" {
+		logrus.WithFields(logrus.Fields{
+			"roleARN": roleARN,
+		}).Infof("Using assumed role for EC2 API")
+
+		ap := &stscreds.AssumeRoleProvider{
+			Client:   sts.New(sess),
+			RoleARN:  roleARN,
+			Duration: time.Duration(60) * time.Minute,
+		}
+
+		sess.Config.Credentials = credentials.NewCredentials(ap)
+	}
+	return sess
+}
+
+func (p *ec2ProviderImpl) getPrivateDNSNameCache(id string) (string, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	name, ok := p.privateDNSCache[id]
+	if ok {
+		return name, nil
+	}
+	return "", errors.New("instance id not found")
+}
+
+func (p *ec2ProviderImpl) setPrivateDNSNameCache(id string, privateDNSName string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.privateDNSCache[id] = privateDNSName
+}
+
+// GetPrivateDNS looks up the private DNS from the EC2 API
+func (p *ec2ProviderImpl) getPrivateDNSName(id string) (string, error) {
+	privateDNSName, err := p.getPrivateDNSNameCache(id)
+	if err == nil {
+		return privateDNSName, nil
+	}
+
+	// Look up instance from EC2 API
+	instanceIds := []*string{&id}
+	ec2Service := ec2.New(p.sess)
+	output, err := ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
+		InstanceIds: instanceIds,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed querying private DNS from EC2 API for node %s: %s", id, err.Error())
+	}
+	for _, reservation := range output.Reservations {
+		for _, instance := range reservation.Instances {
+			if aws.StringValue(instance.InstanceId) == id {
+				privateDNSName = aws.StringValue(instance.PrivateDnsName)
+				p.setPrivateDNSNameCache(id, privateDNSName)
+			}
+		}
+	}
+	if privateDNSName == "" {
+		return "", fmt.Errorf("failed to find node %s", id)
+	}
+	return privateDNSName, nil
 }
