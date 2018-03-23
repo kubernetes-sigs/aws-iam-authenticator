@@ -108,8 +108,10 @@ func (c *Server) Run() {
 		logrus.WithError(err).Fatalf("could not load/generate a certificate")
 	}
 
-	if err := c.CreateKubeconfig(); err != nil {
-		logrus.WithError(err).Fatalf("could not create kubeconfig")
+	if !c.KubeconfigPregenerated {
+		if err := c.CreateKubeconfig(); err != nil {
+			logrus.WithError(err).Fatalf("could not create kubeconfig")
+		}
 	}
 
 	// start a TLS listener with our custom certs
