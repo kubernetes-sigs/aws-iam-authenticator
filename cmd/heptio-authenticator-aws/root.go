@@ -75,17 +75,21 @@ func initConfig() {
 
 func getConfig() (config.Config, error) {
 	config := config.Config{
-		ClusterID:              viper.GetString("clusterID"),
-		LocalhostPort:          viper.GetInt("server.port"),
-		GenerateKubeconfigPath: viper.GetString("server.generateKubeconfig"),
-		KubeconfigPregenerated: viper.GetBool("server.kubeconfigPregenerated"),
-		StateDir:               viper.GetString("server.stateDir"),
+		ClusterID:                          viper.GetString("clusterID"),
+		DefaultEC2DescribeInstancesRoleARN: viper.GetString("defaultEC2DescribeInstancesRoleARN"),
+		LocalhostPort:                      viper.GetInt("server.port"),
+		GenerateKubeconfigPath:             viper.GetString("server.generateKubeconfig"),
+		KubeconfigPregenerated:             viper.GetBool("server.kubeconfigPregenerated"),
+		StateDir:                           viper.GetString("server.stateDir"),
 	}
 	if err := viper.UnmarshalKey("server.mapRoles", &config.RoleMappings); err != nil {
 		return config, fmt.Errorf("invalid server role mappings: %v", err)
 	}
 	if err := viper.UnmarshalKey("server.mapUsers", &config.UserMappings); err != nil {
 		logrus.WithError(err).Fatal("invalid server user mappings")
+	}
+	if err := viper.UnmarshalKey("server.mapNodes", &config.NodeMappings); err != nil {
+		logrus.WithError(err).Fatal("invalid server node mappings")
 	}
 	if err := viper.UnmarshalKey("server.mapAccounts", &config.AutoMappedAWSAccounts); err != nil {
 		logrus.WithError(err).Fatal("invalid server account mappings")
