@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/heptio/authenticator/pkg/arn"
 	"github.com/heptio/authenticator/pkg/config"
 	"github.com/heptio/authenticator/pkg/token"
 
@@ -146,10 +147,20 @@ func (c *Server) getHandler() *handler {
 		metrics:          createMetrics(),
 	}
 	for _, m := range c.RoleMappings {
-		h.lowercaseRoleMap[strings.ToLower(m.RoleARN)] = m
+		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
+		if err != nil {
+			logrus.Errorf("Error canonicalizing ARN: %v", err)
+			continue
+		}
+		h.lowercaseRoleMap[canonicalizedARN] = m
 	}
 	for _, m := range c.UserMappings {
-		h.lowercaseUserMap[strings.ToLower(m.UserARN)] = m
+		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
+		if err != nil {
+			logrus.Errorf("Error canonicalizing ARN: %v", err)
+			continue
+		}
+		h.lowercaseUserMap[canonicalizedARN] = m
 	}
 
 	for _, m := range c.AutoMappedAWSAccounts {

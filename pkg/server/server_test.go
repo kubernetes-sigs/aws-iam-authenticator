@@ -96,7 +96,7 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 				}
 				label := metric.Label[0]
 				if *label.Name != "result" {
-					t.Fatalf("Expected label to have name 'result' was %s", label.Name)
+					t.Fatalf("Expected label to have name 'result' was %s", *label.Name)
 				}
 				switch *label.Value {
 				case metricSuccess:

@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -32,6 +31,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/heptio/authenticator/pkg/arn"
 )
 
 // Identity is returned on successful Verify() results. It contains a parsed
@@ -292,7 +292,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		ARN:       callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.Arn,
 		AccountID: callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.Account,
 	}
-	id.CanonicalARN, err = canonicalizeARN(id.ARN)
+	id.CanonicalARN, err = arn.Canonicalize(id.ARN)
 	if err != nil {
 		return nil, NewSTSError(err.Error())
 	}
@@ -322,29 +322,4 @@ func hasSignedClusterIDHeader(paramsLower *url.Values) bool {
 		}
 	}
 	return false
-}
-
-var assumedRoleARNPattern = regexp.MustCompile(
-	`\Aarn:aws:sts::([\d]{12}):assumed-role/([\w+=,.@-]+)/([\w+=,.@-]*)\z`,
-)
-
-var userARNPattern = regexp.MustCompile(
-	`\Aarn:aws:iam::([\d]{12}):user/([\w+=,.@-]+)\z`,
-)
-
-func canonicalizeARN(arn string) (string, error) {
-	// we'll say that user ARNs are already canonical
-	if userARNPattern.MatchString(arn) {
-		return arn, nil
-	}
-
-	// convert assumed-role ARNs to the more common arn:aws:iam::ACCOUNT:role/NAME format
-	parts := assumedRoleARNPattern.FindStringSubmatch(arn)
-	if parts != nil && len(parts) == 4 {
-		accountID, roleName := parts[1], parts[2]
-		return fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName), nil
-	}
-
-	// otherwise we don't understand this ARN format so return an error
-	return "", fmt.Errorf("malformed ARN %q", arn)
 }
