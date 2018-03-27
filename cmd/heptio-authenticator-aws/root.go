@@ -75,11 +75,12 @@ func initConfig() {
 
 func getConfig() (config.Config, error) {
 	config := config.Config{
-		ClusterID:              viper.GetString("clusterID"),
-		LocalhostPort:          viper.GetInt("server.port"),
-		GenerateKubeconfigPath: viper.GetString("server.generateKubeconfig"),
-		KubeconfigPregenerated: viper.GetBool("server.kubeconfigPregenerated"),
-		StateDir:               viper.GetString("server.stateDir"),
+		ClusterID:                         viper.GetString("clusterID"),
+		ServerEC2DescribeInstancesRoleARN: viper.GetString("server.ec2DescribeInstancesRoleARN"),
+		LocalhostPort:                     viper.GetInt("server.port"),
+		GenerateKubeconfigPath:            viper.GetString("server.generateKubeconfig"),
+		KubeconfigPregenerated:            viper.GetBool("server.kubeconfigPregenerated"),
+		StateDir:                          viper.GetString("server.stateDir"),
 	}
 	if err := viper.UnmarshalKey("server.mapRoles", &config.RoleMappings); err != nil {
 		return config, fmt.Errorf("invalid server role mappings: %v", err)
