@@ -202,7 +202,7 @@ server:
   # requires the authenticator to query the EC2 API in order to discover the private
   # DNS of the EC2 instance originating the authentication request.  Optionally, you
   # may specify a role that should be assumed before querying the EC2 API with the
-  # top level key "defaultEC2DescribeInstancesRoleARN".
+  # key "server.ec2DescribeInstancesRoleARN" (see above).
   - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
     username: system:node:{{EC2PrivateDNSName}}
     groups:
