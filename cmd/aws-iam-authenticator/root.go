@@ -48,9 +48,10 @@ func Execute() {
 }
 
 func init() {
-	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "Load configuration from `filename`")
+
+	rootCmd.PersistentFlags().StringP("log-format", "l", "text", "Specify log format to use when logging to stderr [text or json]")
 
 	rootCmd.PersistentFlags().StringP(
 		"cluster-id",
@@ -63,6 +64,7 @@ func init() {
 }
 
 func initConfig() {
+	logrus.SetFormatter(getLogFormatter())
 	if cfgFile == "" {
 		return
 	}
@@ -97,4 +99,16 @@ func getConfig() (config.Config, error) {
 	}
 
 	return config, nil
+}
+
+func getLogFormatter() logrus.Formatter {
+	format, _ := rootCmd.PersistentFlags().GetString("log-format")
+
+	if format == "json" {
+		return &logrus.JSONFormatter{}
+	} else if format != "text" {
+		logrus.Warnf("Unknown log format specified (%s), will use default text formatter instead.", format)
+	}
+
+	return &logrus.TextFormatter{FullTimestamp: true}
 }
