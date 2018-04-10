@@ -58,9 +58,7 @@ var tokenCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
 			os.Exit(1)
 		}
-
-		enc := gen.FormatJSON(tok)
-		fmt.Println(enc)
+		fmt.Println(gen.FormatJSON(tok))
 	},
 }
 
