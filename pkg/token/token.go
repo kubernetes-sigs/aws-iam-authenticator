@@ -127,7 +127,7 @@ type Generator interface {
 	Get(string) (string, error)
 	// GetWithRole creates a token by assuming the provided role, using the credentials in the default chain.
 	GetWithRole(clusterID, roleARN string) (string, error)
-	// FormatJSON returns the client auth formatted json for the execcredential auth
+	// FormatJSON returns the client auth formatted json for the ExecCredential auth
 	FormatJSON(string) string
 }
 
@@ -184,7 +184,7 @@ func (g generator) GetWithRole(clusterID string, roleARN string) (string, error)
 	return v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), nil
 }
 
-// FormatJSON formats the json to support 1.10 external authProvider
+// FormatJSON formats the json to support ExecCredential authentication
 func (g generator) FormatJSON(token string) string {
 	execInput := &clientauthv1alpha1.ExecCredential{
 		TypeMeta: metav1.TypeMeta{
