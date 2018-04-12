@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -141,13 +142,20 @@ func (g generator) Get(clusterID string) (string, error) {
 	return g.GetWithRole(clusterID, "")
 }
 
+func StdinStderrTokenProvider() (string, error) {
+	var v string
+	fmt.Fprint(os.Stderr, "Assume Role MFA token code: ")
+	_, err := fmt.Scanln(&v)
+	return v, err
+}
+
 // GetWithRole assumes the given AWS IAM role and returns a token valid for
 // clusterID. If roleARN is empty, behaves like Get (does not assume a role).
 func (g generator) GetWithRole(clusterID string, roleARN string) (string, error) {
 	// create a session with the "base" credentials available
 	// (from environment variable, profile files, EC2 metadata, etc)
 	sess, err := session.NewSessionWithOptions(session.Options{
-		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+		AssumeRoleTokenProvider: StdinStderrTokenProvider,
 		SharedConfigState:       session.SharedConfigEnable,
 	})
 	if err != nil {
