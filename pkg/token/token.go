@@ -33,6 +33,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/heptio/authenticator/pkg/arn"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 )
 
 // Identity is returned on successful Verify() results. It contains a parsed
@@ -126,6 +128,8 @@ type Generator interface {
 	Get(string) (string, error)
 	// GetWithRole creates a token by assuming the provided role, using the credentials in the default chain.
 	GetWithRole(clusterID, roleARN string) (string, error)
+	// FormatJSON returns the client auth formatted json for the ExecCredential auth
+	FormatJSON(string) string
 }
 
 type generator struct {
@@ -187,6 +191,21 @@ func (g generator) GetWithRole(clusterID string, roleARN string) (string, error)
 
 	// TODO: this may need to be a constant-time base64 encoding
 	return v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), nil
+}
+
+// FormatJSON formats the json to support ExecCredential authentication
+func (g generator) FormatJSON(token string) string {
+	execInput := &clientauthv1alpha1.ExecCredential{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "client.authentication.k8s.io/v1alpha1",
+			Kind:       "ExecCredential",
+		},
+		Status: &clientauthv1alpha1.ExecCredentialStatus{
+			Token: token,
+		},
+	}
+	enc, _ := json.Marshal(execInput)
+	return string(enc)
 }
 
 // Verifier validates tokens by calling STS and returning the associated identity.

@@ -35,7 +35,7 @@ var tokenCmd = &cobra.Command{
 		clusterID := viper.GetString("clusterID")
 
 		if clusterID == "" {
-			fmt.Fprintf(os.Stderr, "error: cluster ID not specified\n")
+			fmt.Fprintf(os.Stderr, "Error: cluster ID not specified\n")
 			cmd.Usage()
 			os.Exit(1)
 		}
@@ -58,7 +58,7 @@ var tokenCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println(tok)
+		fmt.Println(gen.FormatJSON(tok))
 	},
 }
 

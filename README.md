@@ -82,13 +82,26 @@ systemctl restart kubelet.service
 ```
 
 ### 4. Set up kubectl to use Heptio Authenticator for AWS tokens
+
+> This requires a 1.10+ `kubectl` binary to work. If you receive `Please enter Username:` when trying to use `kubectl` you need to update to the latest `kubectl`
+
 Finally, once the server is set up you'll want to authenticate!
 You will still need a `kubeconfig` that has the public data about your cluster (cluster CA certificate, endpoint address).
-The `users` section of your configuration, however, can be mostly blank:
+The `users` section of your configuration, however, should include an exec section ([refer to the v1.10 docs](https://kubernetes.io/docs/admin/authentication/#client-go-credential-plugins))::
 ```yaml
 # [...]
 users:
 - name: kubernetes-admin
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1alpha1
+      command: heptio-authenticator-aws
+      args:
+        - "token"
+        - "-i"
+        - "CLUSTER_ID"
+        - "-r"
+        - "ROLE_ARN"
   # no client certificate/key needed here!
 ```
 
@@ -98,8 +111,8 @@ It may make sense to upload it to a trusted public location such as AWS S3.
 Make sure you have the `heptio-authenticator-aws` binary installed.
 You can install it with `go get -u -v github.com/heptio/authenticator/cmd/heptio-authenticator-aws`.
 
-To authenticate, run `kubectl --kubeconfig /path/to/kubeconfig --token "$(heptio-authenticator-aws token -i CLUSTER_ID -r ROLE_ARN)" [...]`.
-You can simplify this with an alias or shell wrapper.
+To authenticate, run `kubectl --kubeconfig /path/to/kubeconfig" [...]`.
+kubectl will `exec` the `heptio-authenticator-aws` binary with the supplied params in your kubeconfig which will generate a token and pass it to the apiserver.
 The token is valid for 15 minutes (the shortest value AWS permits) and can be reused multiple times.
 
 You can also omit `-r ROLE_ARN` to sign the token with your existing credentials without assuming a dedicated role.
