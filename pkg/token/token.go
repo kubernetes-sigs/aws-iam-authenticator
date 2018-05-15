@@ -212,13 +212,13 @@ func Verify(token string, serverID string) (*Identity, error) {
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("error from AWS (expected 200, got %d)", response.StatusCode)
-	}
-
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading HTTP result: %v", err)
+	}
+
+	if response.StatusCode != 200 {
+		return nil, fmt.Errorf("error from AWS (expected 200, got %d), %s", response.StatusCode, responseBody)
 	}
 
 	var callerIdentity getCallerIdentityWrapper
