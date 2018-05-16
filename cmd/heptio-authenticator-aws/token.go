@@ -33,6 +33,7 @@ var tokenCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		roleARN := viper.GetString("role")
 		clusterID := viper.GetString("clusterID")
+		duration := viper.GetInt("duration")
 
 		if clusterID == "" {
 			fmt.Fprintf(os.Stderr, "Error: cluster ID not specified\n")
@@ -49,10 +50,10 @@ var tokenCmd = &cobra.Command{
 		}
 		if roleARN != "" {
 			// if a role was provided, assume that role for the token
-			tok, err = gen.GetWithRole(clusterID, roleARN)
+			tok, err = gen.GetWithRole(clusterID, roleARN, duration)
 		} else {
 			// otherwise sign the token with immediately available credentials
-			tok, err = gen.Get(clusterID)
+			tok, err = gen.Get(clusterID, duration)
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
@@ -67,4 +68,6 @@ func init() {
 	tokenCmd.Flags().StringP("role", "r", "", "Assume an IAM Role ARN before signing this token")
 	viper.BindPFlag("role", tokenCmd.Flags().Lookup("role"))
 	viper.BindEnv("role", "DEFAULT_ROLE")
+	tokenCmd.Flags().IntP("duration", "d", 15, "Seconds that the token is valid for.")
+	viper.BindPFlag("duration", tokenCmd.Flags().Lookup("duration"))
 }
