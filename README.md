@@ -192,6 +192,53 @@ Some good choices are:
 
 The [Vault documentation](https://www.vaultproject.io/docs/auth/aws.html#iam-auth-method) also explains this attack (see `X-Vault-AWS-IAM-Server-ID`).
 
+## Specifying Credentials & Using AWS Profiles
+Credentials can be specified for use with `heptio-authenticator-aws` via any of the methods available to the
+[AWS SDK for Go](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
+This includes specifying AWS credentials with enviroment variables or by utilizing a credentials file.
+
+AWS [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html) are supported by `heptio-authenticator-aws`
+via the `AWS_PROFILE` environment variable. For example, to authenticate with credentials specified in the _dev_ profile the `AWS_PROFILE` can
+be exported or specified explictly (e.g., `AWS_PROFILE=dev kubectl get all`). If no `AWS_PROFILE` is set, the _default_ profile is used.
+
+The `AWS_PROFILE` can also be specified directly in the kubeconfig file
+[as part of the `exec` flow](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuration). For example, to specify
+that credentials from the _dev_ named profile should always be used by `heptio-authenticator-aws`, your kubeconfig would include an `env`
+key thats sets the profile:
+
+```yaml
+apiVersion: v1
+clusters:
+- cluster:
+    server: ${server}
+    certificate-authority-data: ${cert}
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: aws
+  name: aws
+current-context: aws
+kind: Config
+preferences: {}
+users:
+- name: aws
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1alpha1
+      command: heptio-authenticator-aws
+      env:
+      - name: "AWS_PROFILE"
+        value: "dev"
+      args:
+        - "token"
+        - "-i"
+        - "mycluster"
+```
+
+This method allows the appropriate profile to be used implicitly. Note that any environment variables set as part of the `exec` flow will
+take precedence over what's already set in your environment.
+
 ## Troubleshooting
 
 If your client fails with an error like `could not get token: AccessDenied [...]`, you can try assuming the role with the AWS CLI directly:
