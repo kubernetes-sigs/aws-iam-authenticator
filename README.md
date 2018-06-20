@@ -1,18 +1,19 @@
-# Heptio Authenticator for AWS
+# AWS IAM Authenticator for Kubernetes
 
-A tool for using AWS IAM credentials to authenticate to a Kubernetes cluster.
+A tool to use AWS IAM credentials to authenticate to a Kubernetes cluster.
+The initial work on this tool was driven by Heptio. The project recieves contributions from multiple community engineers and is currently maintained by Heptio and Amazon EKS OSS Engineers.
 
 ## Why do I want this?
-If you are an administrator running a Kubernetes cluster on AWS, you already need to manage AWS credentials for provisioning and updating the cluster.
-By using Heptio Authenticator for AWS, you avoid having to manage a separate credential for Kubernetes access.
+If you are an administrator running a Kubernetes cluster on AWS, you already need to manage AWS IAM credentials to provision and update the cluster.
+By using AWS IAM Authenticator for Kubernetes, you avoid having to manage a separate credential for Kubernetes access.
 AWS IAM also provides a number of nice properties such as an out of band audit trail (via CloudTrail) and 2FA/MFA enforcement.
 
-If you are building a Kubernetes installer on AWS, Heptio Authenticator for AWS can simplify your bootstrap process.
+If you are building a Kubernetes installer on AWS, AWS IAM Authenticator for Kubernetes can simplify your bootstrap process.
 You won't need to somehow smuggle your initial admin credential securely out of your newly installed cluster.
 Instead, you can create a dedicated `KubernetesAdmin` role at cluster provisioning time and set up Authenticator to allow cluster administrator logins.
 
 ## How do I use it?
-Assuming you have a cluster running in AWS and you want to add Heptio Authenticator for AWS support, you need to:
+Assuming you have a cluster running in AWS and you want to add AWS IAM Authenticator for Kubernetes support, you need to:
  1. Create an IAM role you'll use to identify users.
  2. Run the Authenticator server as a DaemonSet.
  3. Configure your API server to talk to Authenticator.
@@ -39,7 +40,7 @@ POLICY=$(echo -n '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Princi
 # create a role named KubernetesAdmin (will print the new role's ARN)
 aws iam create-role \
   --role-name KubernetesAdmin \
-  --description "Kubernetes administrator role (for Heptio Authenticator for AWS)." \
+  --description "Kubernetes administrator role (for AWS IAM Authenticator for Kubernetes)." \
   --assume-role-policy-document "$POLICY" \
   --output text \
   --query 'Role.Arn'
@@ -66,7 +67,7 @@ If you do not pre-generate files, `heptio-authenticator-aws server` will generat
 This works but requires that you restart your Kubernetes API server after installation.
 
 ### 3. Configure your API server to talk to the server
-The Kubernetes API integrates with Heptio Authenticator for AWS using a [token authentication webhook](https://kubernetes.io/docs/admin/authentication/#webhook-token-authentication).
+The Kubernetes API integrates with AWS IAM Authenticator for Kubernetes using a [token authentication webhook](https://kubernetes.io/docs/admin/authentication/#webhook-token-authentication).
 When you run `heptio-authenticator-aws server`, it will generate a webhook configuration file and save it onto the host filesystem.
 You'll need to add a single additional flag to your API server configuration:
 ```
@@ -81,7 +82,7 @@ You may also need to restart the kubelet daemon on your master node to pick up t
 systemctl restart kubelet.service
 ```
 
-### 4. Set up kubectl to use Heptio Authenticator for AWS tokens
+### 4. Set up kubectl to use authentication tokens provided by AWS IAM Authenticator for Kubernetes
 
 > This requires a 1.10+ `kubectl` binary to work. If you receive `Please enter Username:` when trying to use `kubectl` you need to update to the latest `kubectl`
 
@@ -146,7 +147,7 @@ Perform the following steps to setup Authenticator on a Kops cluster:
        roles: [Master]
        manifest: |
          [Unit]
-         Description=Download Heptio AWS Authenticator configs from S3
+         Description=Download AWS Authenticator configs from S3
          [Service]
          Type=oneshot
          ExecStart=/bin/mkdir -p /srv/kubernetes/heptio-authenticator-aws
@@ -170,12 +171,12 @@ It works using the AWS [`sts:GetCallerIdentity`](https://docs.aws.amazon.com/STS
 This endpoint returns information about whatever AWS IAM credentials you use to connect to it.
 
 #### Client side (`heptio-authenticator-aws token`)
-We use this API in a somewhat unusual way by having the Heptio Authenticator for AWS client generate and pre-sign a request to the endpoint.
+We use this API in a somewhat unusual way by having the Authenticator client generate and pre-sign a request to the endpoint.
 We serialize that request into a token that can pass through the Kubernetes authentication system.
 
 #### Server side (`heptio-authenticator-aws server`)
-The token is passed through the Kubernetes API server and into the Heptio Authenticator for AWS server's `/authenticate` endpoint via a webhook configuration.
-The Heptio Authenticator for AWS server validates all the parameters of the pre-signed request to make sure nothing looks funny.
+The token is passed through the Kubernetes API server and into the Authenticator server's `/authenticate` endpoint via a webhook configuration.
+The Authenticator server validates all the parameters of the pre-signed request to make sure nothing looks funny.
 It then submits the request to the real `https://sts.amazonaws.com` server, which validates the client's HMAC signature and returns information about the user.
 Now that the server knows the AWS identity of the client, it translates this identity into a Kubernetes user and groups via a simple static mapping.
 
