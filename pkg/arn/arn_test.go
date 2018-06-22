@@ -16,6 +16,7 @@ var arnTests = []struct {
 	{"arn:aws:sts::123456789012:assumed-role/Admin/Session", "arn:aws:iam::123456789012:role/Admin", nil},
 	{"arn:aws:sts::123456789012:federated-user/Bob", "arn:aws:sts::123456789012:federated-user/Bob", nil},
 	{"arn:aws:iam::123456789012:root", "arn:aws:iam::123456789012:root", nil},
+	{"arn:aws:sts::123456789012:assumed-role/Org/Team/Admin/Session", "arn:aws:iam::123456789012:role/Org/Team/Admin", nil},
 }
 
 func TestUserARN(t *testing.T) {
