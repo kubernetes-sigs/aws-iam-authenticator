@@ -151,7 +151,10 @@ Perform the following steps to setup Authenticator on a Kops cluster:
          [Service]
          Type=oneshot
          ExecStart=/bin/mkdir -p /srv/kubernetes/heptio-authenticator-aws
-         ExecStart=/usr/local/bin/aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/heptio-authenticator-aws/
+         ExecStart=/bin/bash -c "/usr/local/bin/aws s3 \
+          cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator \
+          /srv/kubernetes/heptio-authenticator-aws/ && \
+          /bin/chmod a+w /srv/kubernetes/heptio-authenticator-aws/kubeconfig.yaml"
    ```
   If using a non-default AMI that does not have the AWS CLI, replace the second ExecStart statement with
 
