@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/heptio/authenticator/pkg/config"
+	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/config"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -31,7 +31,7 @@ import (
 var cfgFile string
 
 var rootCmd = &cobra.Command{
-	Use:   "heptio-authenticator-aws",
+	Use:   "aws-iam-authenticator",
 	Short: "A tool to authenticate to Kubernetes using AWS IAM credentials",
 }
 
@@ -56,7 +56,7 @@ func init() {
 		"cluster-id",
 		"i",
 		"",
-		"Specify the cluster `ID`, a unique-per-cluster identifier for your heptio-authenticator-aws installation.",
+		"Specify the cluster `ID`, a unique-per-cluster identifier for your aws-iam-authenticator installation.",
 	)
 	viper.BindPFlag("clusterID", rootCmd.PersistentFlags().Lookup("cluster-id"))
 	viper.BindEnv("clusterID", "KUBERNETES_AWS_AUTHENTICATOR_CLUSTER_ID")

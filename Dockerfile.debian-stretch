@@ -19,10 +19,10 @@ RUN adduser \
     --uid 10000 \
     --disabled-password \
     --disabled-login \
-    heptio-authenticator-aws && \
+    aws-iam-authenticator && \
     apt-get update && \
     apt-get install -y ca-certificates && \
     rm -rf /var/lib/apt/lists/*
-COPY heptio-authenticator-aws /
-USER heptio-authenticator-aws
-ENTRYPOINT ["/heptio-authenticator-aws"]
+COPY aws-iam-authenticator /
+USER aws-iam-authenticator
+ENTRYPOINT ["/aws-iam-authenticator"]

@@ -13,8 +13,8 @@ import (
 
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
 
-	"github.com/heptio/authenticator/pkg/config"
-	"github.com/heptio/authenticator/pkg/token"
+	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/config"
+	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/token"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -289,7 +289,7 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("TestUser", "heptio-authenticator-aws:0123456789012:Test", []string{"sys:admin", "listers"}))
+	verifyAuthResult(t, resp, tokenReview("TestUser", "aws-iam-authenticator:0123456789012:Test", []string{"sys:admin", "listers"}))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -323,7 +323,7 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("TestUser", "heptio-authenticator-aws:0123456789012:Test", []string{"sys:admin", "listers"}))
+	verifyAuthResult(t, resp, tokenReview("TestUser", "aws-iam-authenticator:0123456789012:Test", []string{"sys:admin", "listers"}))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -353,7 +353,7 @@ func TestAuthenticateVerifierAccountMappingForUser(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:user/Test", "heptio-authenticator-aws:0123456789012:Test", nil))
+	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:user/Test", "aws-iam-authenticator:0123456789012:Test", nil))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -383,7 +383,7 @@ func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:role/Test", "heptio-authenticator-aws:0123456789012:Test", nil))
+	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:role/Test", "aws-iam-authenticator:0123456789012:Test", nil))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -418,7 +418,7 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("system:node:ip-172-31-27-14", "heptio-authenticator-aws:0123456789012:TestNodeRole", []string{"system:nodes", "system:bootstrappers"}))
+	verifyAuthResult(t, resp, tokenReview("system:node:ip-172-31-27-14", "aws-iam-authenticator:0123456789012:TestNodeRole", []string{"system:nodes", "system:bootstrappers"}))
 	validateMetrics(t, validateOpts{success: 1})
 
 }

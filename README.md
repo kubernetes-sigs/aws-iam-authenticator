@@ -57,26 +57,26 @@ The server is meant to run on each of your master nodes as a DaemonSet with host
 For a sample ConfigMap and DaemonSet configuration, see [`example.yaml`](./example.yaml).
 
 #### (Optional) Pre-generate a certificate, key, and kubeconfig
-If you're building an automated installer, you can also pre-generate the certificate, key, and webhook kubeconfig files easily using `heptio-authenticator-aws init`.
+If you're building an automated installer, you can also pre-generate the certificate, key, and webhook kubeconfig files easily using `aws-iam-authenticator init`.
 This command will generate files and place them in the configured output directories.
 
 You can run this on each master node prior to starting the API server.
 You could also generate them before provisioning master nodes and install them in the appropriate host paths.
 
-If you do not pre-generate files, `heptio-authenticator-aws server` will generate them on demand.
+If you do not pre-generate files, `aws-iam-authenticator server` will generate them on demand.
 This works but requires that you restart your Kubernetes API server after installation.
 
 ### 3. Configure your API server to talk to the server
 The Kubernetes API integrates with AWS IAM Authenticator for Kubernetes using a [token authentication webhook](https://kubernetes.io/docs/admin/authentication/#webhook-token-authentication).
-When you run `heptio-authenticator-aws server`, it will generate a webhook configuration file and save it onto the host filesystem.
+When you run `aws-iam-authenticator server`, it will generate a webhook configuration file and save it onto the host filesystem.
 You'll need to add a single additional flag to your API server configuration:
 ```
---authentication-token-webhook-config-file=/etc/kubernetes/heptio-authenticator-aws/kubeconfig.yaml
+--authentication-token-webhook-config-file=/etc/kubernetes/aws-iam-authenticator/kubeconfig.yaml
 ```
 
 On many clusters, the API server runs as a static pod.
 You can add the flag to `/etc/kubernetes/manifests/kube-apiserver.yaml`.
-Make sure the host directory `/etc/kubernetes/heptio-authenticator-aws/` is mounted into your API server pod.
+Make sure the host directory `/etc/kubernetes/aws-iam-authenticator/` is mounted into your API server pod.
 You may also need to restart the kubelet daemon on your master node to pick up the updated static pod definition:
 ```
 systemctl restart kubelet.service
@@ -96,7 +96,7 @@ users:
   user:
     exec:
       apiVersion: client.authentication.k8s.io/v1alpha1
-      command: heptio-authenticator-aws
+      command: aws-iam-authenticator
       args:
         - "token"
         - "-i"
@@ -109,11 +109,11 @@ users:
 This means the `kubeconfig` is entirely public data and can be shared across all Authenticator users.
 It may make sense to upload it to a trusted public location such as AWS S3.
 
-Make sure you have the `heptio-authenticator-aws` binary installed.
-You can install it with `go get -u -v github.com/heptio/authenticator/cmd/heptio-authenticator-aws`.
+Make sure you have the `aws-iam-authenticator` binary installed.
+You can install it with `go get -u -v github.com/kubernetes-sigs/aws-iam-authenticator/cmd/aws-iam-authenticator`.
 
 To authenticate, run `kubectl --kubeconfig /path/to/kubeconfig" [...]`.
-kubectl will `exec` the `heptio-authenticator-aws` binary with the supplied params in your kubeconfig which will generate a token and pass it to the apiserver.
+kubectl will `exec` the `aws-iam-authenticator` binary with the supplied params in your kubeconfig which will generate a token and pass it to the apiserver.
 The token is valid for 15 minutes (the shortest value AWS permits) and can be reused multiple times.
 
 You can also omit `-r ROLE_ARN` to sign the token with your existing credentials without assuming a dedicated role.
@@ -125,10 +125,10 @@ Both single and HA master cluster configurations are supported.
 Perform the following steps to setup Authenticator on a Kops cluster:
 1. Pre-generate the certificate, key, and kubeconfig and upload them to the kops state store.
    ```
-   heptio-authenticator-aws init -i $CLUSTER_NAME
+   aws-iam-authenticator init -i $CLUSTER_NAME
    aws s3 cp cert.pem ${KOPS_STATE_STORE}/${CLUSTER_NAME}/addons/authenticator/cert.pem;
    aws s3 cp key.pem ${KOPS_STATE_STORE}/${CLUSTER_NAME}/addons/authenticator/key.pem;
-   aws s3 cp heptio-authenticator-aws.kubeconfig ${KOPS_STATE_STORE}/${CLUSTER_NAME}/addons/authenticator/kubeconfig.yaml;
+   aws s3 cp aws-iam-authenticator.kubeconfig ${KOPS_STATE_STORE}/${CLUSTER_NAME}/addons/authenticator/kubeconfig.yaml;
    ```
 2. Add the following sections to the cluster spec, either using `kops edit cluster ${CLUSTER_NAME}` or editing the manifest yaml file.
    Be sure to replace `KOPS_STATE_STORE` and `CLUSTER_NAME` with their appropriate values since those environment variables are not available at runtime.
@@ -139,7 +139,7 @@ Perform the following steps to setup Authenticator on a Kops cluster:
    kind: Cluster
    spec:
      kubeAPIServer:
-       authenticationTokenWebhookConfigFile: /srv/kubernetes/heptio-authenticator-aws/kubeconfig.yaml
+       authenticationTokenWebhookConfigFile: /srv/kubernetes/aws-iam-authenticator/kubeconfig.yaml
      hooks:
      - name: kops-hook-authenticator-config.service
        before:
@@ -150,17 +150,17 @@ Perform the following steps to setup Authenticator on a Kops cluster:
          Description=Download AWS Authenticator configs from S3
          [Service]
          Type=oneshot
-         ExecStart=/bin/mkdir -p /srv/kubernetes/heptio-authenticator-aws
-         ExecStart=/usr/local/bin/aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/heptio-authenticator-aws/
+         ExecStart=/bin/mkdir -p /srv/kubernetes/aws-iam-authenticator
+         ExecStart=/usr/local/bin/aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/aws-iam-authenticator/
    ```
   If using a non-default AMI that does not have the AWS CLI, replace the second ExecStart statement with
 
   ```
-  ExecStart=/usr/bin/docker run --net=host --rm -v /srv/kubernetes/heptio-authenticator-aws:/srv/kubernetes/heptio-authenticator-aws quay.io/coreos/awscli@sha256:7b893bfb22ac582587798b011024f40871cd7424b9026595fd99c2b69492791d aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/heptio-authenticator-aws/
+  ExecStart=/usr/bin/docker run --net=host --rm -v /srv/kubernetes/aws-iam-authenticator:/srv/kubernetes/aws-iam-authenticator quay.io/coreos/awscli@sha256:7b893bfb22ac582587798b011024f40871cd7424b9026595fd99c2b69492791d aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/aws-iam-authenticator/
   ```
 3. Apply the changes with `kops update cluster ${CLUSTER_NAME}`.
    If the cluster already exists, roll the cluster with `kops rolling-update cluster ${CLUSTER_NAME}` in order to recreate the master nodes.
-4. Update the Authenticator DaemonSet's state and output volumes to both use `/srv/kubernetes/heptio-authenticator-aws/` for their `hostPath`s.
+4. Update the Authenticator DaemonSet's state and output volumes to both use `/srv/kubernetes/aws-iam-authenticator/` for their `hostPath`s.
 5. Apply the DaemonSet and ConfigMap resource manifests to launch the Authenticator server on the cluster.
 
 *Note:* Certain Kops commands will overwrite the `ExecCredential` in kubeconfig so it may need to be restored manually. See [kubernetes/kops#5051](https://github.com/kubernetes/kops/issues/5051) for more information.
@@ -170,11 +170,11 @@ Perform the following steps to setup Authenticator on a Kops cluster:
 It works using the AWS [`sts:GetCallerIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html) API endpoint.
 This endpoint returns information about whatever AWS IAM credentials you use to connect to it.
 
-#### Client side (`heptio-authenticator-aws token`)
+#### Client side (`aws-iam-authenticator token`)
 We use this API in a somewhat unusual way by having the Authenticator client generate and pre-sign a request to the endpoint.
 We serialize that request into a token that can pass through the Kubernetes authentication system.
 
-#### Server side (`heptio-authenticator-aws server`)
+#### Server side (`aws-iam-authenticator server`)
 The token is passed through the Kubernetes API server and into the Authenticator server's `/authenticate` endpoint via a webhook configuration.
 The Authenticator server validates all the parameters of the pre-signed request to make sure nothing looks funny.
 It then submits the request to the real `https://sts.amazonaws.com` server, which validates the client's HMAC signature and returns information about the user.
@@ -194,17 +194,17 @@ Some good choices are:
 The [Vault documentation](https://www.vaultproject.io/docs/auth/aws.html#iam-auth-method) also explains this attack (see `X-Vault-AWS-IAM-Server-ID`).
 
 ## Specifying Credentials & Using AWS Profiles
-Credentials can be specified for use with `heptio-authenticator-aws` via any of the methods available to the
+Credentials can be specified for use with `aws-iam-authenticator` via any of the methods available to the
 [AWS SDK for Go](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
 This includes specifying AWS credentials with enviroment variables or by utilizing a credentials file.
 
-AWS [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html) are supported by `heptio-authenticator-aws`
+AWS [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html) are supported by `aws-iam-authenticator`
 via the `AWS_PROFILE` environment variable. For example, to authenticate with credentials specified in the _dev_ profile the `AWS_PROFILE` can
 be exported or specified explictly (e.g., `AWS_PROFILE=dev kubectl get all`). If no `AWS_PROFILE` is set, the _default_ profile is used.
 
 The `AWS_PROFILE` can also be specified directly in the kubeconfig file
 [as part of the `exec` flow](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuration). For example, to specify
-that credentials from the _dev_ named profile should always be used by `heptio-authenticator-aws`, your kubeconfig would include an `env`
+that credentials from the _dev_ named profile should always be used by `aws-iam-authenticator`, your kubeconfig would include an `env`
 key thats sets the profile:
 
 ```yaml
@@ -227,7 +227,7 @@ users:
   user:
     exec:
       apiVersion: client.authentication.k8s.io/v1alpha1
-      command: heptio-authenticator-aws
+      command: aws-iam-authenticator
       env:
       - name: "AWS_PROFILE"
         value: "dev"
@@ -245,7 +245,7 @@ take precedence over what's already set in your environment.
 If your client fails with an error like `could not get token: AccessDenied [...]`, you can try assuming the role with the AWS CLI directly:
 
 ```sh
-# AWS CLI version of `heptio-authenticator-aws token -r arn:aws:iam::ACCOUNT:role/ROLE`:
+# AWS CLI version of `aws-iam-authenticator token -r arn:aws:iam::ACCOUNT:role/ROLE`:
 $ aws sts assume-role --role-arn arn:aws:iam::ACCOUNT:role/ROLE --role-session-name test
 ```
 
@@ -267,7 +267,7 @@ They can share the same exact configuration file, since there are no secrets sto
 # a unique-per-cluster identifier to prevent replay attacks (see above)
 clusterID: my-dev-cluster.example.com
 
-# default IAM role to assume for `heptio-authenticator-aws token`
+# default IAM role to assume for `aws-iam-authenticator token`
 defaultRole: arn:aws:iam::000000000000:role/KubernetesAdmin
 
 # server listener configuration
@@ -276,10 +276,10 @@ server:
   port: 21362 # (default)
 
   # state directory for generated TLS certificate and private keys
-  stateDir: /var/heptio-authenticator-aws # (default)
+  stateDir: /var/aws-iam-authenticator # (default)
 
   # output `path` where a generated webhook kubeconfig will be stored.
-  generateKubeconfig: /etc/kubernetes/heptio-authenticator-aws.kubeconfig # (default)
+  generateKubeconfig: /etc/kubernetes/aws-iam-authenticator.kubeconfig # (default)
 
   # role to assume before querying EC2 API in order to discover metadata like EC2 private DNS Name
   ec2DescribeInstancesRoleARN: arn:aws:iam::000000000000:role/DescribeInstancesRole

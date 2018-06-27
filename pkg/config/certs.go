@@ -129,7 +129,7 @@ func selfSignCertificate() ([]byte, []byte, error) {
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			CommonName: "heptio-authenticator-aws",
+			CommonName: "aws-iam-authenticator",
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
