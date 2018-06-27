@@ -150,13 +150,17 @@ Perform the following steps to setup Authenticator on a Kops cluster:
          Description=Download AWS Authenticator configs from S3
          [Service]
          Type=oneshot
-         ExecStart=/bin/mkdir -p /srv/kubernetes/heptio-authenticator-aws
-         ExecStart=/usr/local/bin/aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/heptio-authenticator-aws/
+         ExecStartPre=/bin/mkdir -p /srv/kubernetes/heptio-authenticator-aws
+         ExecStart=/bin/bash -c "/usr/local/bin/aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/heptio-authenticator-aws/ && \
+           /bin/chown 10000 /srv/kubernetes/heptio-authenticator-aws/* && \
+           /bin/chmod 600 /srv/kubernetes/heptio-authenticator-aws/*.pem"
    ```
-  If using a non-default AMI that does not have the AWS CLI, replace the second ExecStart statement with
+  If using a non-default AMI that does not have the AWS CLI, replace the ExecStart statement with
 
   ```
-  ExecStart=/usr/bin/docker run --net=host --rm -v /srv/kubernetes/heptio-authenticator-aws:/srv/kubernetes/heptio-authenticator-aws quay.io/coreos/awscli@sha256:7b893bfb22ac582587798b011024f40871cd7424b9026595fd99c2b69492791d aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/heptio-authenticator-aws/
+  ExecStart=/bin/bash -c "/usr/bin/docker run --net=host --rm -v /srv/kubernetes/heptio-authenticator-aws:/srv/kubernetes/heptio-authenticator-aws quay.io/coreos/awscli@sha256:7b893bfb22ac582587798b011024f40871cd7424b9026595fd99c2b69492791d aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/heptio-authenticator-aws/ && \
+    /bin/chown 10000 /srv/kubernetes/heptio-authenticator-aws/* && \
+    /bin/chmod 600 /srv/kubernetes/heptio-authenticator-aws/*.pem"
   ```
 3. Apply the changes with `kops update cluster ${CLUSTER_NAME}`.
    If the cluster already exists, roll the cluster with `kops rolling-update cluster ${CLUSTER_NAME}` in order to recreate the master nodes.
