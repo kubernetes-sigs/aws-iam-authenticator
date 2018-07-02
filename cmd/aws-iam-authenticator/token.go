@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/heptio/authenticator/pkg/token"
+	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/token"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

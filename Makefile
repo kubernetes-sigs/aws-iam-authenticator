@@ -1,6 +1,6 @@
 default: build
 
-GITHUB_REPO ?= github.com/heptio/authenticator
+GITHUB_REPO ?= github.com/kubernetes-sigs/aws-iam-authenticator
 GORELEASER := $(shell command -v goreleaser 2> /dev/null)
 
 .PHONY: build test format

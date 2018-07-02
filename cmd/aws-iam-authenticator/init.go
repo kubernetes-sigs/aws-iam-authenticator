@@ -36,7 +36,7 @@ var initCmd = &cobra.Command{
 		}
 
 		localCfg := cfg
-		localCfg.GenerateKubeconfigPath = "heptio-authenticator-aws.kubeconfig"
+		localCfg.GenerateKubeconfigPath = "aws-iam-authenticator.kubeconfig"
 		localCfg.StateDir = "./"
 
 		err = localCfg.GenerateFiles()
@@ -48,7 +48,7 @@ var initCmd = &cobra.Command{
 		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.CertPath(), cfg.CertPath())
 		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.KeyPath(), cfg.KeyPath())
 		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.GenerateKubeconfigPath, cfg.GenerateKubeconfigPath)
-		logrus.Infof("configure your apiserver with `--authentication-token-webhook-config-file=%s` to enable authentication with heptio-authenticator-aws", cfg.GenerateKubeconfigPath)
+		logrus.Infof("configure your apiserver with `--authentication-token-webhook-config-file=%s` to enable authentication with aws-iam-authenticator", cfg.GenerateKubeconfigPath)
 	},
 }
 
