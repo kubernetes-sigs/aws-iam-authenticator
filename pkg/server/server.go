@@ -117,8 +117,7 @@ func (c *Server) Run() {
 		logrus.WithField("accountID", account).Infof("mapping IAM Account")
 	}
 
-	// we always listen on localhost (and run with host networking)
-	listenAddr := fmt.Sprintf("127.0.0.1:%d", c.LocalhostPort)
+	listenAddr := fmt.Sprintf("%s:%d", c.Address, c.HostPort)
 	listenURL := fmt.Sprintf("https://%s/authenticate", listenAddr)
 
 	cert, err := c.GetOrCreateCertificate()
@@ -342,6 +341,7 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 	return template, nil
 }
 
+// EC2Provider configures a DNS resolving function for nodes
 type EC2Provider interface {
 	// Get a node name from instance ID
 	getPrivateDNSName(string) (string, error)
