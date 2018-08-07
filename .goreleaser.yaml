@@ -1,6 +1,9 @@
 # Configuration for https://goreleaser.com/
 project_name: authenticator
 
+git:
+  short_hash: true
+
 builds:
   - binary: aws-iam-authenticator
     main: ./cmd/aws-iam-authenticator/
@@ -12,6 +15,8 @@ builds:
       - amd64
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - "-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}"
 
 dockers:
   - image: gcr.io/heptio-images/authenticator
