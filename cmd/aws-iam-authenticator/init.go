@@ -22,6 +22,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var initCmd = &cobra.Command{
@@ -53,5 +54,17 @@ var initCmd = &cobra.Command{
 }
 
 func init() {
+	initCmd.Flags().String(
+		"hostname",
+		"localhost",
+		"Hostname that should be used for writing into the selfsigned certificates")
+	viper.BindPFlag("server.hostname", initCmd.Flags().Lookup("hostname"))
+
+	initCmd.Flags().String(
+		"address",
+		"127.0.0.1",
+		"IP Address to bind the server to listen to. (should be a 127.0.0.1 or 0.0.0.0)")
+	viper.BindPFlag("server.address", initCmd.Flags().Lookup("address"))
+
 	rootCmd.AddCommand(initCmd)
 }

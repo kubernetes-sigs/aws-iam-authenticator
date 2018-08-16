@@ -67,9 +67,11 @@ type Config struct {
 	// `server` shouldn't unnecessarily re-generate a new one.
 	KubeconfigPregenerated bool
 
-	// LocalhostPort is the TCP on which to listen for authentication checks
-	// (on localhost).
-	LocalhostPort int
+	// HostPort is the TCP Port on which to listen for authentication checks.
+	HostPort int
+
+	// Hostname is the hostname that the server bind to.
+	Hostname string
 
 	// GenerateKubeconfigPath is the output path where a generated webhook
 	// kubeconfig (for `--authentication-token-webhook-config-file`) will be
@@ -98,4 +100,8 @@ type Config struct {
 	// If nil, defaults to using the IAM Role attached to the instance where aws-iam-authenticator is
 	// running.
 	ServerEC2DescribeInstancesRoleARN string
+
+	// Address defines the hostname or IP Address to bind the HTTPS server to listen to. This is useful when creating
+	// a local server to handle the authentication request for development.
+	Address string
 }
