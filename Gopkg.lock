@@ -53,6 +53,12 @@
   revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/christopherhein/go-version"
+  packages = ["."]
+  revision = "fee8dd1f7c24da23508e26347694be0acce5631b"
+
+[[projects]]
   name = "github.com/emicklei/go-restful"
   packages = [
     ".",
@@ -376,6 +382,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "10414834174a87ee92d8503de766220911531a7c1e7d3c251889923abe26c80e"
+  inputs-digest = "51715b2ad17974bbee0c156f1813a871098e9faec6a68074caabde91a4f6fe91"
   solver-name = "gps-cdcl"
   solver-version = 1
