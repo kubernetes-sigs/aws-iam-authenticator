@@ -240,6 +240,18 @@ users:
 This method allows the appropriate profile to be used implicitly. Note that any environment variables set as part of the `exec` flow will
 take precedence over what's already set in your environment.
 
+#### Note for federated users:
+Federated AWS users often will have a "meaningful" attribute mapped onto their assumed role, such as an email address, through the account's AWS configuration.
+These assumed sessions have [a few parts](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#principaltable), the `role id`
+and `caller-specified-role-name`. By default, when a federated user uses the `--role` option of `aws-iam-authenticator` to assume a new role the
+`caller-specified-role-name` will be converted to a random token and the `role id` carries through to the newly assumed role.
+
+Using `aws-iam-authenticator token ... --forward-session-name` will map the original `caller-specified-role-name` attribute onto the new STS assumed session.
+This can be helpful for quickly attempting to associate "who performed action X on the K8 cluster".
+
+Please note, **this should not be considered definitive** and needs to be cross referenced via the `role id` (which remains consistent) with CloudTrail logs
+as a user could potentially change this on the client side.
+
 ## Troubleshooting
 
 If your client fails with an error like `could not get token: AccessDenied [...]`, you can try assuming the role with the AWS CLI directly:

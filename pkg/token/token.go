@@ -137,11 +137,14 @@ type Generator interface {
 }
 
 type generator struct {
+	forwardSessionName bool
 }
 
 // NewGenerator creates a Generator and returns it.
-func NewGenerator() (Generator, error) {
-	return generator{}, nil
+func NewGenerator(forwardSessionName bool) (Generator, error) {
+	return generator{
+		forwardSessionName: forwardSessionName,
+	}, nil
 }
 
 // Get uses the directly available AWS credentials to return a token valid for
@@ -181,7 +184,7 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 
 	// if a roleARN was specified, replace the STS client with one that uses
 	// temporary credentials from that role.
-	if roleARN != "" {
+	if roleARN != "" && g.forwardSessionName {
 		// Determine if the current session is already a federated identity.  If so,
 		// we carry through this session name onto the new session to provide better
 		// aduiting capabilities
