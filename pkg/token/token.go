@@ -184,24 +184,27 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 
 	// if a roleARN was specified, replace the STS client with one that uses
 	// temporary credentials from that role.
-	if roleARN != "" && g.forwardSessionName {
-		// Determine if the current session is already a federated identity.  If so,
-		// we carry through this session name onto the new session to provide better
-		// aduiting capabilities
-		//
-		// NOTE: I couldn't figure out a more `direct` way of indicating if the
-		// current Caller Identity's PrincipalType is `Federated`
-		// (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#principaltable)
-		// If there is a more direct approach I would be interested in understanding
-		resp, err := stsAPI.GetCallerIdentity(&sts.GetCallerIdentityInput{})
-		if err != nil {
-			return "", err
-		}
+	if roleARN != "" {
+		sessionSetter := func(provider *stscreds.AssumeRoleProvider) {}
+		if g.forwardSessionName {
+			// Determine if the current session is already a federated identity.  If so,
+			// we carry through this session name onto the new session to provide better
+			// aduiting capabilities
+			//
+			// NOTE: I couldn't figure out a more `direct` way of indicating if the
+			// current Caller Identity's PrincipalType is `Federated`
+			// (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#principaltable)
+			// If there is a more direct approach I would be interested in understanding
+			resp, err := stsAPI.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+			if err != nil {
+				return "", err
+			}
 
-		userIDParts := strings.Split(*resp.UserId, ":")
-		sessionSetter := func(provider *stscreds.AssumeRoleProvider) {
-			if len(userIDParts) == 2 {
-				provider.RoleSessionName = userIDParts[1]
+			userIDParts := strings.Split(*resp.UserId, ":")
+			sessionSetter = func(provider *stscreds.AssumeRoleProvider) {
+				if len(userIDParts) == 2 {
+					provider.RoleSessionName = userIDParts[1]
+				}
 			}
 		}
 
