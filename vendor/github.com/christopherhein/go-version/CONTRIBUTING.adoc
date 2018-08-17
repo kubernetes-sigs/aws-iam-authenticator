@@ -1,0 +1,31 @@
+= Contributing
+
+⭐️⭐️⭐️⭐️⭐️ First off thanks for taking the time to contribute ⭐️⭐️⭐️⭐️⭐️
+
+This project is extremely simple and gives a generic way to get a version out of
+your `goreleaser` and `cobra` projects. All the code is contained in a single
+package `version.go`.
+
+== Roadmap
+
+If you are interested in contributing to this project here are a couple things
+that I would like to add.
+
+1. **Issue: link:https://github.com/christopherhein/go-version/issues/1[#1]**
+   Support for custom attributes `-X main.foobar=<blah>` and updating
+   `goVersion.New()` to take a splat or map of addition params.
+2. **Issue: https://github.com/christopherhein/go-version/issues/2[#2]**
+   Ability to Output to `yaml`
+3. **Issue: https://github.com/christopherhein/go-version/issues/3[#3]**
+   Func for taking in a type string and outputting the right response
++
+**Example:**
++
+[source,go]
+----
+info := goVersion.New(...)
+info.Output('json')
+----
+4. **Issue: https://github.com/christopherhein/go-version/issues/4[#4]**
+   Tests 😳
+
