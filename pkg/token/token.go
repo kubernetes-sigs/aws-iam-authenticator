@@ -187,14 +187,9 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 	if roleARN != "" {
 		sessionSetter := func(provider *stscreds.AssumeRoleProvider) {}
 		if g.forwardSessionName {
-			// Determine if the current session is already a federated identity.  If so,
-			// we carry through this session name onto the new session to provide better
-			// aduiting capabilities
-			//
-			// NOTE: I couldn't figure out a more `direct` way of indicating if the
-			// current Caller Identity's PrincipalType is `Federated`
-			// (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#principaltable)
-			// If there is a more direct approach I would be interested in understanding
+			// If the current session is already a federated identity, carry through 
+			// this session name onto the new session to provide better debugging
+			// capabilities
 			resp, err := stsAPI.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 			if err != nil {
 				return "", err
