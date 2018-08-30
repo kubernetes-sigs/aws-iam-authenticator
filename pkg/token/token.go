@@ -137,11 +137,14 @@ type Generator interface {
 }
 
 type generator struct {
+	forwardSessionName bool
 }
 
 // NewGenerator creates a Generator and returns it.
-func NewGenerator() (Generator, error) {
-	return generator{}, nil
+func NewGenerator(forwardSessionName bool) (Generator, error) {
+	return generator{
+		forwardSessionName: forwardSessionName,
+	}, nil
 }
 
 // Get uses the directly available AWS credentials to return a token valid for
@@ -182,8 +185,26 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 	// if a roleARN was specified, replace the STS client with one that uses
 	// temporary credentials from that role.
 	if roleARN != "" {
+		sessionSetter := func(provider *stscreds.AssumeRoleProvider) {}
+		if g.forwardSessionName {
+			// If the current session is already a federated identity, carry through 
+			// this session name onto the new session to provide better debugging
+			// capabilities
+			resp, err := stsAPI.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+			if err != nil {
+				return "", err
+			}
+
+			userIDParts := strings.Split(*resp.UserId, ":")
+			sessionSetter = func(provider *stscreds.AssumeRoleProvider) {
+				if len(userIDParts) == 2 {
+					provider.RoleSessionName = userIDParts[1]
+				}
+			}
+		}
+
 		// create STS-based credentials that will assume the given role
-		creds := stscreds.NewCredentials(sess, roleARN)
+		creds := stscreds.NewCredentials(sess, roleARN, sessionSetter)
 
 		// create an STS API interface that uses the assumed role's temporary credentials
 		stsAPI = sts.New(sess, &aws.Config{Credentials: creds})
