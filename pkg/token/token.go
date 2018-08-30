@@ -138,6 +138,20 @@ type getCallerIdentityWrapper struct {
 	} `json:"GetCallerIdentityResponse"`
 }
 
+func getCacheFile(clusterID string, roleARN string) (string, error) {
+	cacheDir := os.Getenv("XDG_CACHE_HOME")
+	if cacheDir == "" {
+		cacheDir = os.ExpandEnv("$HOME/.cache")
+	}
+	cacheDir = cacheDir + "/aws-iam-authenticator"
+	err := os.MkdirAll(cacheDir, 0700)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s/%s-%s.json", cacheDir, clusterID, roleARN), nil
+}
+
 // Generator provides new tokens for the heptio authenticator.
 type Generator interface {
 	// Get a token using credentials in the default credentials chain.
@@ -147,19 +161,22 @@ type Generator interface {
 	// GetWithRoleForSession creates a token by assuming the provided role, using the provided session.
 	GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (Token, error)
 	// GetWithSTS returns a token valid for clusterID using the given STS client.
-	GetWithSTS(clusterID string, stsAPI *sts.STS) (Token, error)
+	GetWithSTS(clusterID string, roleARN string, stsAPI *sts.STS) (Token, error)
 	// FormatJSON returns the client auth formatted json for the ExecCredential auth
 	FormatJSON(Token) string
 }
 
 type generator struct {
 	forwardSessionName bool
+	// useCache determines whether credentials will be stored for later
+	useCache bool
 }
 
 // NewGenerator creates a Generator and returns it.
-func NewGenerator(forwardSessionName bool) (Generator, error) {
+func NewGenerator(forwardSessionName bool, useCache bool) (Generator, error) {
 	return generator{
-		forwardSessionName: forwardSessionName,
+		forwardSessionName,
+		useCache,
 	}, nil
 }
 
@@ -176,9 +193,42 @@ func StdinStderrTokenProvider() (string, error) {
 	return v, err
 }
 
+// GetWithCache tries to fetch a token from cache. It returns false in case of
+// failure because fallback behaviour should always be to fetch a fresh token.
+func (g generator) GetWithCache(clusterID string, roleARN string) (Token, bool) {
+	cacheFile, err := getCacheFile(clusterID, roleARN)
+	if err != nil {
+		return Token{}, false
+	}
+
+	data, err := ioutil.ReadFile(cacheFile)
+	if err != nil {
+		return Token{}, false
+	}
+
+	var token Token
+
+	err = json.Unmarshal(data, &token)
+	if err != nil {
+		return Token{}, false
+	}
+
+	if time.Since(token.Expiration) > 0 {
+		return Token{}, false
+	}
+
+	return token, true
+}
+
 // GetWithRole assumes the given AWS IAM role and returns a token valid for
 // clusterID. If roleARN is empty, behaves like Get (does not assume a role).
 func (g generator) GetWithRole(clusterID string, roleARN string) (Token, error) {
+	if g.useCache {
+		if tok, ok := g.GetWithCache(clusterID, roleARN); ok {
+			return tok, nil
+		}
+	}
+
 	// create a session with the "base" credentials available
 	// (from environment variable, profile files, EC2 metadata, etc)
 	sess, err := session.NewSessionWithOptions(session.Options{
@@ -226,11 +276,11 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 		stsAPI = sts.New(sess, &aws.Config{Credentials: creds})
 	}
 
-	return g.GetWithSTS(clusterID, stsAPI)
+	return g.GetWithSTS(clusterID, roleARN, stsAPI)
 }
 
 // GetWithSTS returns a token valid for clusterID using the given STS client.
-func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (Token, error) {
+func (g generator) GetWithSTS(clusterID string, roleARN string, stsAPI *sts.STS) (Token, error) {
 	// generate an sts:GetCallerIdentity request and add our custom cluster ID header
 	request, _ := stsAPI.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
 	request.HTTPRequest.Header.Add(clusterIDHeader, clusterID)
@@ -242,6 +292,7 @@ func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (Token, error) 
 	// 0 and 60 on the server side).
 	// https://github.com/aws/aws-sdk-go/issues/2167
 	presignedURLString, err := request.Presign(requestPresignParam)
+
 	if err != nil {
 		return Token{}, err
 	}
@@ -249,7 +300,26 @@ func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (Token, error) 
 	// Set token expiration to 1 minute before the presigned URL expires for some cushion
 	tokenExpiration := time.Now().Local().Add(presignedURLExpiration - 1*time.Minute)
 	// TODO: this may need to be a constant-time base64 encoding
-	return Token{v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), tokenExpiration}, nil
+	tok := Token{v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), tokenExpiration}
+
+	if g.useCache {
+		cacheFile, err := getCacheFile(clusterID, roleARN)
+		if err != nil {
+			return tok, nil
+		}
+
+		file, err := os.Create(cacheFile)
+		if err != nil {
+			return tok, nil
+		}
+
+		defer file.Close()
+
+		encoder := json.NewEncoder(file)
+		encoder.Encode(tok)
+	}
+
+	return tok, nil
 }
 
 // FormatJSON formats the json to support ExecCredential authentication
