@@ -33,6 +33,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/arn"
+	awspkg "github.com/kubernetes-sigs/aws-iam-authenticator/pkg/aws"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 )
@@ -229,15 +230,17 @@ type Verifier interface {
 }
 
 type tokenVerifier struct {
-	client    *http.Client
-	clusterID string
+	client      *http.Client
+	clusterID   string
+	iamProvider awspkg.IAMProvider
 }
 
 // NewVerifier creates a Verifier that is bound to the clusterID and uses the default http client.
-func NewVerifier(clusterID string) Verifier {
+func NewVerifier(clusterID string, iamProvider awspkg.IAMProvider) Verifier {
 	return tokenVerifier{
-		client:    http.DefaultClient,
-		clusterID: clusterID,
+		client:      http.DefaultClient,
+		clusterID:   clusterID,
+		iamProvider: iamProvider,
 	}
 }
 
@@ -335,7 +338,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		ARN:       callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.Arn,
 		AccountID: callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.Account,
 	}
-	id.CanonicalARN, err = arn.Canonicalize(id.ARN)
+	id.CanonicalARN, err = arn.Canonicalize(id.ARN, v.iamProvider)
 	if err != nil {
 		return nil, NewSTSError(err.Error())
 	}

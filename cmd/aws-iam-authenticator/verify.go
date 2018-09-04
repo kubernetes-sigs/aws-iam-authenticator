@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/aws"
 	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/token"
 
 	"github.com/spf13/cobra"
@@ -48,7 +49,8 @@ var verifyCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		id, err := token.NewVerifier(clusterID).Verify(tok)
+		iamProvider := aws.NewIAMProvider("")
+		id, err := token.NewVerifier(clusterID, iamProvider).Verify(tok)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not verify token: %v\n", err)
 			os.Exit(1)

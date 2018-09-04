@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -40,12 +41,29 @@ func toToken(url string) string {
 	return v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(url))
 }
 
+type testIAMProvider struct {
+	roles map[string]string
+}
+
+func (p *testIAMProvider) GetRoleArn(roleName string) (string, error) {
+	arn, ok := p.roles[roleName]
+	if !ok {
+		return "", fmt.Errorf("unknown role")
+	}
+	return arn, nil
+}
+
 func newVerifier(statusCode int, body string, err error) Verifier {
 	var rc io.ReadCloser
 	if body != "" {
 		rc = ioutil.NopCloser(bytes.NewReader([]byte(body)))
 	}
 	return tokenVerifier{
+		iamProvider: &testIAMProvider{
+			roles: map[string]string{
+				"Alice": "arn:aws:iam::123456789012:role/Alice",
+			},
+		},
 		client: &http.Client{
 			Transport: &roundTripper{
 				err: err,

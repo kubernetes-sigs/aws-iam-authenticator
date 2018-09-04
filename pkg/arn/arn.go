@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/aws"
+
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
@@ -17,7 +19,7 @@ import (
 //   * IAM role: arn:aws:iam::123456789012:role/S3Access
 //   * IAM Assumed role: arn:aws:sts::123456789012:assumed-role/Accounting-Role/Mary (converted to IAM role)
 //   * Federated user: arn:aws:sts::123456789012:federated-user/Bob
-func Canonicalize(arn string) (string, error) {
+func Canonicalize(arn string, iamProvider aws.IAMProvider) (string, error) {
 	parsed, err := awsarn.Parse(arn)
 	if err != nil {
 		return "", fmt.Errorf("arn '%s' is invalid: '%v'", arn, err)
@@ -40,8 +42,12 @@ func Canonicalize(arn string) (string, error) {
 				return "", fmt.Errorf("assumed-role arn '%s' does not have a role", arn)
 			}
 			// IAM ARNs can contain paths, part[0] is resource, parts[len(parts)] is the SessionName.
-			role := strings.Join(parts[1:len(parts)-1], "/")
-			return fmt.Sprintf("arn:%s:iam::%s:role/%s", parsed.Partition, parsed.AccountID, role), nil
+			roleName := strings.Join(parts[1:len(parts)-1], "/")
+			arn, err := iamProvider.GetRoleArn(roleName)
+			if err != nil {
+				return "", err
+			}
+			return arn, nil
 		default:
 			return "", fmt.Errorf("unrecognized resource %s for service sts", parsed.Resource)
 		}

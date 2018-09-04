@@ -101,6 +101,12 @@ type Config struct {
 	// running.
 	ServerEC2DescribeInstancesRoleARN string
 
+	// ServerIAMGetRoleRoleARN is an optional AWS Resource Name for an IAM Role to be assumed before calling
+	// iam:GetRole to determine the role ARN for assumed roles.
+	// If nil, defaults to using the IAM Role attached to the instance where aws-iam-authenticator is
+	// running.
+	ServerIAMGetRoleRoleARN string
+
 	// Address defines the hostname or IP Address to bind the HTTPS server to listen to. This is useful when creating
 	// a local server to handle the authentication request for development.
 	Address string

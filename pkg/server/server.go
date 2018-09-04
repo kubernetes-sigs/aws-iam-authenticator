@@ -19,26 +19,18 @@ package server
 import (
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/arn"
+	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/aws"
 	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/config"
 	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/token"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -72,7 +64,8 @@ type handler struct {
 	accountMap       map[string]bool
 	verifier         token.Verifier
 	metrics          metrics
-	ec2Provider      EC2Provider
+	ec2Provider      aws.EC2Provider
+	iamProvider      aws.IAMProvider
 }
 
 // metrics are handles to the collectors for prometheous for the various metrics we are tracking.
@@ -155,16 +148,18 @@ func (c *Server) Run() {
 }
 
 func (c *Server) getHandler() *handler {
+	iamProvider := aws.NewIAMProvider(c.ServerIAMGetRoleRoleARN)
 	h := &handler{
 		lowercaseRoleMap: make(map[string]config.RoleMapping),
 		lowercaseUserMap: make(map[string]config.UserMapping),
 		accountMap:       make(map[string]bool),
-		verifier:         token.NewVerifier(c.ClusterID),
+		verifier:         token.NewVerifier(c.ClusterID, iamProvider),
 		metrics:          createMetrics(),
-		ec2Provider:      newEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
+		ec2Provider:      aws.NewEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
+		iamProvider:      iamProvider,
 	}
 	for _, m := range c.RoleMappings {
-		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
+		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN), h.iamProvider)
 		if err != nil {
 			logrus.Errorf("Error canonicalizing ARN: %v", err)
 			continue
@@ -172,7 +167,7 @@ func (c *Server) getHandler() *handler {
 		h.lowercaseRoleMap[canonicalizedARN] = m
 	}
 	for _, m := range c.UserMappings {
-		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
+		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN), h.iamProvider)
 		if err != nil {
 			logrus.Errorf("Error canonicalizing ARN: %v", err)
 			continue
@@ -321,7 +316,7 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 		if !instanceIDPattern.MatchString(identity.SessionName) {
 			return "", fmt.Errorf("SessionName did not contain an instance id")
 		}
-		privateDNSName, err := h.ec2Provider.getPrivateDNSName(identity.SessionName)
+		privateDNSName, err := h.ec2Provider.GetPrivateDNSName(identity.SessionName)
 		if err != nil {
 			return "", err
 		}
@@ -339,100 +334,4 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 	}
 
 	return template, nil
-}
-
-// EC2Provider configures a DNS resolving function for nodes
-type EC2Provider interface {
-	// Get a node name from instance ID
-	getPrivateDNSName(string) (string, error)
-}
-
-type ec2ProviderImpl struct {
-	sess            *session.Session
-	privateDNSCache map[string]string
-	lock            sync.Mutex
-}
-
-func newEC2Provider(roleARN string) EC2Provider {
-	return &ec2ProviderImpl{
-		sess:            newSession(roleARN),
-		privateDNSCache: make(map[string]string),
-	}
-}
-
-func newSession(roleARN string) *session.Session {
-	// Initial credentials loaded from SDK's default credential chain, such as
-	// the environment, shared credentials (~/.aws/credentials), or EC2 Instance
-	// Role.
-
-	sess := session.Must(session.NewSession())
-	if aws.StringValue(sess.Config.Region) == "" {
-		ec2metadata := ec2metadata.New(sess)
-		regionFound, err := ec2metadata.Region()
-		if err != nil {
-			logrus.WithError(err).Fatal("Region not found in shared credentials, environment variable, or instance metadata.")
-		}
-		sess.Config.Region = aws.String(regionFound)
-	}
-
-	if roleARN != "" {
-		logrus.WithFields(logrus.Fields{
-			"roleARN": roleARN,
-		}).Infof("Using assumed role for EC2 API")
-
-		ap := &stscreds.AssumeRoleProvider{
-			Client:   sts.New(sess),
-			RoleARN:  roleARN,
-			Duration: time.Duration(60) * time.Minute,
-		}
-
-		sess.Config.Credentials = credentials.NewCredentials(ap)
-	}
-	return sess
-}
-
-func (p *ec2ProviderImpl) getPrivateDNSNameCache(id string) (string, error) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	name, ok := p.privateDNSCache[id]
-	if ok {
-		return name, nil
-	}
-	return "", errors.New("instance id not found")
-}
-
-func (p *ec2ProviderImpl) setPrivateDNSNameCache(id string, privateDNSName string) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.privateDNSCache[id] = privateDNSName
-}
-
-// GetPrivateDNS looks up the private DNS from the EC2 API
-func (p *ec2ProviderImpl) getPrivateDNSName(id string) (string, error) {
-	privateDNSName, err := p.getPrivateDNSNameCache(id)
-	if err == nil {
-		return privateDNSName, nil
-	}
-
-	// Look up instance from EC2 API
-	instanceIds := []*string{&id}
-	ec2Service := ec2.New(p.sess)
-	output, err := ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
-		InstanceIds: instanceIds,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed querying private DNS from EC2 API for node %s: %s", id, err.Error())
-	}
-	for _, reservation := range output.Reservations {
-		for _, instance := range reservation.Instances {
-			if aws.StringValue(instance.InstanceId) == id {
-				privateDNSName = aws.StringValue(instance.PrivateDnsName)
-				p.setPrivateDNSNameCache(id, privateDNSName)
-			}
-		}
-	}
-	if privateDNSName == "" {
-		return "", fmt.Errorf("failed to find node %s", id)
-	}
-	return privateDNSName, nil
 }
