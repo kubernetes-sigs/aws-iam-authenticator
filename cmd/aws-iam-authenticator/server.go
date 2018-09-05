@@ -17,6 +17,8 @@ limitations under the License.
 package main
 
 import (
+	"time"
+
 	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/server"
 
 	"github.com/sirupsen/logrus"
@@ -27,19 +29,23 @@ import (
 // DefaultPort is the default localhost port (chosen randomly).
 const DefaultPort = 21362
 
+// defaultReloadPeriod is the default reload period (chosen randomly).
+const defaultReloadPeriod = 60
+
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Run a webhook validation server suitable that validates tokens using AWS IAM",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		config, err := getConfig()
-
+		cng, err := getConfig()
 		if err != nil {
 			logrus.Fatalf("%s", err)
 		}
 
-		server.New(config).Run()
+		s := server.New(cng)
+		go watchConfig(s)
+		s.Run()
 	},
 }
 
@@ -68,5 +74,48 @@ func init() {
 		"IP Address to bind the server to listen to. (should be 127.0.0.1 or 0.0.0.0)")
 	viper.BindPFlag("server.bind", serverCmd.Flags().Lookup("bind"))
 
+	serverCmd.Flags().BoolP(
+		"reload-enabled",
+		"r",
+		false,
+		"Reload is the flag to listen for config change.")
+	viper.BindPFlag("server.reload.enabled", serverCmd.Flags().Lookup("reload-enabled"))
+
+	serverCmd.Flags().Int64P(
+		"reload-period",
+		"p",
+		defaultReloadPeriod,
+		"Specifies how often the files are checked for changes (Unit: second). Default is 60.")
+	viper.BindPFlag("server.reload.period", serverCmd.Flags().Lookup("reload-period"))
+
 	rootCmd.AddCommand(serverCmd)
+}
+
+func watchConfig(s *server.Server) {
+	if !viper.GetBool("server.reload.enabled") {
+		logrus.Infof("Automatically reload configuration is disabled")
+		return
+	}
+
+	t := time.Tick(time.Duration(max(defaultReloadPeriod, viper.GetInt64("server.reload.period"))) * time.Second)
+	for range t {
+		if err := viper.ReadInConfig(); err != nil {
+			logrus.Errorf("Can't read configuration file %q: %v", cfgFile, err)
+		}
+		logrus.Infof("Reload configuration...")
+		cng, err := getConfig()
+		if err != nil {
+			logrus.Errorf("%s", err)
+			continue
+		}
+		logrus.Infof("Reload configuration...", cng)
+		s.OnConfigChange(cng)
+	}
+}
+
+func max(x, y int64) int64 {
+	if x > y {
+		return x
+	}
+	return y
 }
