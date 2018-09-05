@@ -26,6 +26,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -33,6 +34,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/arn"
+	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 )
@@ -272,25 +274,37 @@ func (g generator) FormatJSON(token Token) string {
 // Verifier validates tokens by calling STS and returning the associated identity.
 type Verifier interface {
 	Verify(token string) (*Identity, error)
+	ReloadConfig(c config.Config)
 }
 
 type tokenVerifier struct {
+	lock      sync.RWMutex
 	client    *http.Client
 	clusterID string
 }
 
 // NewVerifier creates a Verifier that is bound to the clusterID and uses the default http client.
-func NewVerifier(clusterID string) Verifier {
-	return tokenVerifier{
+func NewVerifier(clusterID string) *tokenVerifier {
+	return &tokenVerifier{
 		client:    http.DefaultClient,
 		clusterID: clusterID,
 	}
 }
 
+func (v *tokenVerifier) ReloadConfig(c config.Config) {
+	v.lock.RLock()
+	defer v.lock.RUnlock()
+
+	v.clusterID = c.ClusterID
+}
+
 // Verify a token is valid for the specified clusterID. On success, returns an
 // Identity that contains information about the AWS principal that created the
 // token. On failure, returns nil and a non-nil error.
-func (v tokenVerifier) Verify(token string) (*Identity, error) {
+func (v *tokenVerifier) Verify(token string) (*Identity, error) {
+	v.lock.RLock()
+	defer v.lock.RUnlock()
+
 	if len(token) > maxTokenLenBytes {
 		return nil, FormatError{"token is too large"}
 	}

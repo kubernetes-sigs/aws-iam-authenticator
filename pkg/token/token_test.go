@@ -16,7 +16,7 @@ import (
 
 func validationErrorTest(t *testing.T, token string, expectedErr string) {
 	t.Helper()
-	_, err := tokenVerifier{}.Verify(token)
+	_, err := (&tokenVerifier{}).Verify(token)
 	errorContains(t, err, expectedErr)
 }
 
@@ -45,12 +45,13 @@ func toToken(url string) string {
 	return v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(url))
 }
 
-func newVerifier(statusCode int, body string, err error) Verifier {
+func newVerifier(statusCode int, body string, err error) *tokenVerifier {
 	var rc io.ReadCloser
 	if body != "" {
 		rc = ioutil.NopCloser(bytes.NewReader([]byte(body)))
 	}
-	return tokenVerifier{
+	return &tokenVerifier{
+		clusterID: "test",
 		client: &http.Client{
 			Transport: &roundTripper{
 				err: err,
