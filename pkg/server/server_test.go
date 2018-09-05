@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
@@ -65,6 +66,9 @@ func (p *testEC2Provider) getPrivateDNSName(id string) (string, error) {
 	return p.name, nil
 }
 
+func (p *testEC2Provider) reloadConfig(cng config.Config) {
+}
+
 func newTestEC2Provider(name string) *testEC2Provider {
 	return &testEC2Provider{
 		name: name,
@@ -73,8 +77,12 @@ func newTestEC2Provider(name string) *testEC2Provider {
 
 func setup(verifier token.Verifier) *handler {
 	return &handler{
-		verifier: verifier,
-		metrics:  createMetrics(),
+		verifier:         verifier,
+		metrics:          createMetrics(),
+		reloadConfigChan: make(chan config.Config, reloadBufferSize),
+		lowercaseRoleMap: sync.Map{},
+		lowercaseUserMap: sync.Map{},
+		accountMap:       sync.Map{},
 	}
 }
 
@@ -137,6 +145,45 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 	}
 }
 
+func TestHandler_Reload(t *testing.T) {
+	h := setup(&testVerifier{err: nil})
+	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14")
+
+	go h.WatchConfig()
+	defer cleanup(h.metrics)
+
+	newCnf := config.Config{
+		RoleMappings: []config.RoleMapping{
+			{
+				RoleARN:  "arn:aws:iam::0123456789012:role/test",
+				Username: "role1",
+				Groups:   []string{"sys:admin"},
+			},
+		},
+	}
+
+	h.reloadConfigChan <- newCnf
+
+	h.lowercaseRoleMap.Range(func(key interface{}, value interface{}) bool {
+		v := value.(config.RoleMapping)
+		if v.Username != newCnf.RoleMappings[0].Username {
+			t.Error("Unexpected result")
+			return false
+		}
+		if v.RoleARN != newCnf.RoleMappings[0].RoleARN {
+			t.Error("Unexpected result")
+			return false
+		}
+		for i, g := range v.Groups {
+			if g != newCnf.RoleMappings[0].Groups[i] {
+				t.Error("Unexpected result")
+				return false
+			}
+		}
+		return true
+	})
+}
+
 func TestAuthenticateNonPostError(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://k8s.io/authenticate", nil)
@@ -180,6 +227,9 @@ type testVerifier struct {
 	identity *token.Identity
 	err      error
 	param    string
+}
+
+func (v *testVerifier) ReloadConfig(cng config.Config) {
 }
 
 func (v *testVerifier) Verify(token string) (*token.Identity, error) {
@@ -279,12 +329,12 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 		SessionName:  "",
 	}})
 	defer cleanup(h.metrics)
-	h.lowercaseRoleMap = make(map[string]config.RoleMapping)
-	h.lowercaseRoleMap["arn:aws:iam::0123456789012:role/test"] = config.RoleMapping{
+	h.lowercaseRoleMap = sync.Map{}
+	h.lowercaseRoleMap.Store("arn:aws:iam::0123456789012:role/test", config.RoleMapping{
 		RoleARN:  "arn:aws:iam::0123456789012:role/Test",
 		Username: "TestUser",
 		Groups:   []string{"sys:admin", "listers"},
-	}
+	})
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -313,12 +363,12 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 		SessionName:  "",
 	}})
 	defer cleanup(h.metrics)
-	h.lowercaseUserMap = make(map[string]config.UserMapping)
-	h.lowercaseUserMap["arn:aws:iam::0123456789012:user/test"] = config.UserMapping{
+	h.lowercaseUserMap = sync.Map{}
+	h.lowercaseUserMap.Store("arn:aws:iam::0123456789012:user/test", config.UserMapping{
 		UserARN:  "arn:aws:iam::0123456789012:user/Test",
 		Username: "TestUser",
 		Groups:   []string{"sys:admin", "listers"},
-	}
+	})
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -347,8 +397,8 @@ func TestAuthenticateVerifierAccountMappingForUser(t *testing.T) {
 		SessionName:  "",
 	}})
 	defer cleanup(h.metrics)
-	h.accountMap = make(map[string]bool)
-	h.accountMap["0123456789012"] = true
+	h.accountMap = sync.Map{}
+	h.accountMap.Store("0123456789012", true)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -377,8 +427,8 @@ func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
 		SessionName:  "",
 	}})
 	defer cleanup(h.metrics)
-	h.accountMap = make(map[string]bool)
-	h.accountMap["0123456789012"] = true
+	h.accountMap = sync.Map{}
+	h.accountMap.Store("0123456789012", true)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -408,12 +458,12 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 	}})
 	defer cleanup(h.metrics)
 	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14")
-	h.lowercaseRoleMap = make(map[string]config.RoleMapping)
-	h.lowercaseRoleMap["arn:aws:iam::0123456789012:role/testnoderole"] = config.RoleMapping{
+	h.lowercaseRoleMap = sync.Map{}
+	h.lowercaseRoleMap.Store("arn:aws:iam::0123456789012:role/testnoderole", config.RoleMapping{
 		RoleARN:  "arn:aws:iam::0123456789012:role/TestNodeRole",
 		Username: "system:node:{{EC2PrivateDNSName}}",
 		Groups:   []string{"system:nodes", "system:bootstrappers"},
-	}
+	})
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)

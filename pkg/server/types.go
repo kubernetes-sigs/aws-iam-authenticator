@@ -24,4 +24,6 @@ import (
 type Server struct {
 	// Config is the whole configuration of aws-iam-authenticator used for valid keys and certs, kubeconfig, and so on
 	config.Config
+
+	reloadConfigChan chan config.Config
 }

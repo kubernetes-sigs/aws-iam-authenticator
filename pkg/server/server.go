@@ -67,12 +67,13 @@ var (
 // server state (internal)
 type handler struct {
 	http.ServeMux
-	lowercaseRoleMap map[string]config.RoleMapping
-	lowercaseUserMap map[string]config.UserMapping
-	accountMap       map[string]bool
+	lowercaseRoleMap sync.Map
+	lowercaseUserMap sync.Map
+	accountMap       sync.Map
 	verifier         token.Verifier
 	metrics          metrics
 	ec2Provider      EC2Provider
+	reloadConfigChan chan config.Config
 }
 
 // metrics are handles to the collectors for prometheous for the various metrics we are tracking.
@@ -88,12 +89,16 @@ const (
 	metricSTSError  = "sts_error"
 	metricUnknown   = "uknown_user"
 	metricSuccess   = "success"
+
+	// We have set a buffer in order to reduce times of context switches.
+	reloadBufferSize = 1024
 )
 
 // New creates a new server from a config
-func New(config config.Config) *Server {
+func New(cnf config.Config) *Server {
 	return &Server{
-		Config: config,
+		Config:           cnf,
+		reloadConfigChan: make(chan config.Config, reloadBufferSize),
 	}
 }
 
@@ -147,41 +152,30 @@ func (c *Server) Run() {
 
 	logrus.Infof("listening on %s", listenURL)
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
+	handler := c.getHandler(c.reloadConfigChan)
 	httpServer := http.Server{
 		ErrorLog: log.New(errLog, "", 0),
-		Handler:  c.getHandler(),
+		Handler:  handler,
 	}
+	go handler.WatchConfig()
 	logrus.WithError(httpServer.Serve(listener)).Fatal("HTTP server exited")
 }
 
-func (c *Server) getHandler() *handler {
+func (c *Server) OnConfigChange(cnf config.Config) {
+	c.reloadConfigChan <- cnf
+}
+
+func (c *Server) getHandler(reloadChan chan config.Config) *handler {
 	h := &handler{
-		lowercaseRoleMap: make(map[string]config.RoleMapping),
-		lowercaseUserMap: make(map[string]config.UserMapping),
-		accountMap:       make(map[string]bool),
+		lowercaseRoleMap: sync.Map{},
+		lowercaseUserMap: sync.Map{},
+		accountMap:       sync.Map{},
 		verifier:         token.NewVerifier(c.ClusterID),
 		metrics:          createMetrics(),
 		ec2Provider:      newEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
+		reloadConfigChan: reloadChan,
 	}
-	for _, m := range c.RoleMappings {
-		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
-		if err != nil {
-			logrus.Errorf("Error canonicalizing ARN: %v", err)
-			continue
-		}
-		h.lowercaseRoleMap[canonicalizedARN] = m
-	}
-	for _, m := range c.UserMappings {
-		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
-		if err != nil {
-			logrus.Errorf("Error canonicalizing ARN: %v", err)
-			continue
-		}
-		h.lowercaseUserMap[canonicalizedARN] = m
-	}
-	for _, m := range c.AutoMappedAWSAccounts {
-		h.accountMap[m] = true
-	}
+	h.reloadConfig(c.Config)
 
 	h.HandleFunc("/authenticate", h.authenticateEndpoint)
 	h.Handle("/metrics", promhttp.Handler())
@@ -202,6 +196,54 @@ func createMetrics() metrics {
 
 func duration(start time.Time) float64 {
 	return time.Since(start).Seconds()
+}
+
+func (h *handler) WatchConfig() {
+	for {
+		select {
+		case c := <-h.reloadConfigChan:
+			h.reloadConfig(c)
+			h.verifier.ReloadConfig(c)
+			h.ec2Provider.reloadConfig(c)
+		}
+	}
+}
+
+func (h *handler) reloadConfig(c config.Config) {
+	// erase map
+	erase := func(m sync.Map) {
+		m.Range(func(key interface{}, value interface{}) bool {
+			m.Delete(key)
+			return true
+		})
+	}
+	erase(h.lowercaseRoleMap)
+	erase(h.lowercaseUserMap)
+	erase(h.accountMap)
+
+	for _, m := range c.RoleMappings {
+		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
+		if err != nil {
+			logrus.Errorf("Error canonicalizing ARN: %v", err)
+			continue
+		}
+		h.lowercaseRoleMap.Store(canonicalizedARN, m)
+	}
+
+	h.lowercaseUserMap = sync.Map{}
+	for _, m := range c.UserMappings {
+		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
+		if err != nil {
+			logrus.Errorf("Error canonicalizing ARN: %v", err)
+			continue
+		}
+		h.lowercaseUserMap.Store(canonicalizedARN, m)
+	}
+
+	h.accountMap = sync.Map{}
+	for _, m := range c.AutoMappedAWSAccounts {
+		h.accountMap.Store(m, true)
+	}
 }
 
 func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request) {
@@ -297,13 +339,14 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 }
 
 func (h *handler) doMapping(identity *token.Identity, arn string) (string, []string, error) {
-	if roleMapping, exists := h.lowercaseRoleMap[arn]; exists {
-		username, err := h.renderTemplate(roleMapping.Username, identity)
+	if roleMapping, exists := h.lowercaseRoleMap.Load(arn); exists {
+		role := roleMapping.(config.RoleMapping)
+		username, err := h.renderTemplate(role.Username, identity)
 		if err != nil {
 			return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
 		}
 		groups := []string{}
-		for _, groupPattern := range roleMapping.Groups {
+		for _, groupPattern := range role.Groups {
 			group, err := h.renderTemplate(groupPattern, identity)
 			if err != nil {
 				return "", nil, fmt.Errorf("failed mapping group: %s", err.Error())
@@ -312,10 +355,11 @@ func (h *handler) doMapping(identity *token.Identity, arn string) (string, []str
 		}
 		return username, groups, nil
 	}
-	if userMapping, exists := h.lowercaseUserMap[arn]; exists {
-		return userMapping.Username, userMapping.Groups, nil
+	if userMapping, exists := h.lowercaseUserMap.Load(arn); exists {
+		user := userMapping.(config.UserMapping)
+		return user.Username, user.Groups, nil
 	}
-	if _, exists := h.accountMap[identity.AccountID]; exists {
+	if _, exists := h.accountMap.Load(identity.AccountID); exists {
 		return identity.CanonicalARN, []string{}, nil
 	}
 	return "", nil, fmt.Errorf("ARN is not mapped: %s", arn)
@@ -352,6 +396,7 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 type EC2Provider interface {
 	// Get a node name from instance ID
 	getPrivateDNSName(string) (string, error)
+	reloadConfig(c config.Config)
 }
 
 type ec2ProviderImpl struct {
@@ -365,6 +410,13 @@ func newEC2Provider(roleARN string) EC2Provider {
 		sess:            newSession(roleARN),
 		privateDNSCache: make(map[string]string),
 	}
+}
+
+func (p *ec2ProviderImpl) reloadConfig(c config.Config) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.sess = newSession(c.ServerEC2DescribeInstancesRoleARN)
 }
 
 func newSession(roleARN string) *session.Session {
@@ -416,6 +468,9 @@ func (p *ec2ProviderImpl) setPrivateDNSNameCache(id string, privateDNSName strin
 
 // GetPrivateDNS looks up the private DNS from the EC2 API
 func (p *ec2ProviderImpl) getPrivateDNSName(id string) (string, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
 	privateDNSName, err := p.getPrivateDNSNameCache(id)
 	if err == nil {
 		return privateDNSName, nil
