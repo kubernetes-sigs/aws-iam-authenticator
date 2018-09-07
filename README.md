@@ -119,6 +119,14 @@ The token is valid for 15 minutes (the shortest value AWS permits) and can be re
 You can also omit `-r ROLE_ARN` to sign the token with your existing credentials without assuming a dedicated role.
 This is useful if you want to authenticate as an IAM user directly or if you want to authenticate using an EC2 instance role or a federated role.
 
+## Reload Usage
+You can configure aws-iam-authenticator to dynamically reload configuration files when there are changes.
+To do this, you specify flags (server.reload.enabled and server.reload.period) to watch for configuration changes.
+Currently we do not support following fields:
++ defaultRole
++ server.generateKubeconfig
++ server.stateDir
+
 ## Kops Usage
 Clusters managed by [Kops](https://github.com/kubernetes/kops) can be configured to use Authenticator.
 Both single and HA master cluster configurations are supported.
