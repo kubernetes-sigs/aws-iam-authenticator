@@ -130,7 +130,7 @@ type Generator interface {
 	GetWithRole(clusterID, roleARN string) (string, error)
 	// GetWithRoleForSession creates a token by assuming the provided role, using the provided session.
 	GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (string, error)
-	// GetWithSTS assumes returns a token valid for clusterID using the given STS client.
+	// GetWithSTS returns a token valid for clusterID using the given STS client.
 	GetWithSTS(clusterID string, stsAPI *sts.STS) (string, error)
 	// FormatJSON returns the client auth formatted json for the ExecCredential auth
 	FormatJSON(string) string
@@ -187,7 +187,7 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 	if roleARN != "" {
 		sessionSetter := func(provider *stscreds.AssumeRoleProvider) {}
 		if g.forwardSessionName {
-			// If the current session is already a federated identity, carry through 
+			// If the current session is already a federated identity, carry through
 			// this session name onto the new session to provide better debugging
 			// capabilities
 			resp, err := stsAPI.GetCallerIdentity(&sts.GetCallerIdentityInput{})
@@ -213,7 +213,7 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 	return g.GetWithSTS(clusterID, stsAPI)
 }
 
-// GetWithSTS assumes returns a token valid for clusterID using the given STS client.
+// GetWithSTS returns a token valid for clusterID using the given STS client.
 func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (string, error) {
 	// generate an sts:GetCallerIdentity request and add our custom cluster ID header
 	request, _ := stsAPI.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
