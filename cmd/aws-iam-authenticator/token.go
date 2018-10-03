@@ -78,5 +78,4 @@ func init() {
 	viper.BindPFlag("tokenOnly", tokenCmd.Flags().Lookup("token-only"))
 	viper.BindPFlag("forwardSessionName", tokenCmd.Flags().Lookup("forward-session-name"))
 	viper.BindEnv("role", "DEFAULT_ROLE")
-
 }
