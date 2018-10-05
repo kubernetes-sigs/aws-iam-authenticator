@@ -23,6 +23,6 @@ RUN adduser \
     apt-get update && \
     apt-get install -y ca-certificates && \
     rm -rf /var/lib/apt/lists/*
-COPY aws-iam-authenticator /
+COPY cmd/aws-iam-authenticator /
 USER aws-iam-authenticator
 ENTRYPOINT ["/aws-iam-authenticator"]
