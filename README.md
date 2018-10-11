@@ -153,17 +153,17 @@ Perform the following steps to setup Authenticator on a Kops cluster:
          ExecStart=/bin/mkdir -p /srv/kubernetes/aws-iam-authenticator
          ExecStart=/usr/local/bin/aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/aws-iam-authenticator/
    ```
-  If using a non-default AMI that does not have the AWS CLI, replace the second ExecStart statement with
+   If using a non-default AMI that does not have the AWS CLI, replace the second `ExecStart` statement with:
 
-  ```
-  ExecStart=/usr/bin/docker run --net=host --rm -v /srv/kubernetes/aws-iam-authenticator:/srv/kubernetes/aws-iam-authenticator quay.io/coreos/awscli@sha256:7b893bfb22ac582587798b011024f40871cd7424b9026595fd99c2b69492791d aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/aws-iam-authenticator/
-  ```
+   ```
+   ExecStart=/usr/bin/docker run --net=host --rm -v /srv/kubernetes/aws-iam-authenticator:/srv/kubernetes/aws-iam-authenticator quay.io/coreos/awscli@sha256:7b893bfb22ac582587798b011024f40871cd7424b9026595fd99c2b69492791d aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/aws-iam-authenticator/
+   ```
 3. Apply the changes with `kops update cluster ${CLUSTER_NAME}`.
    If the cluster already exists, roll the cluster with `kops rolling-update cluster ${CLUSTER_NAME}` in order to recreate the master nodes.
 4. Update the Authenticator DaemonSet's state and output volumes to both use `/srv/kubernetes/aws-iam-authenticator/` for their `hostPath`s.
 5. Apply the DaemonSet and ConfigMap resource manifests to launch the Authenticator server on the cluster.
 
-*Note:* Certain Kops commands will overwrite the `ExecCredential` in kubeconfig so it may need to be restored manually. See [kubernetes/kops#5051](https://github.com/kubernetes/kops/issues/5051) for more information.
+*Note:* Certain Kops commands will overwrite the `exec` configuration in kubeconfig so it may need to be restored manually. See [kubernetes/kops#5051](https://github.com/kubernetes/kops/issues/5051) for more information.
 
 
 ## How does it work?
@@ -270,6 +270,8 @@ If that fails, there are a few possible problems to check for:
  - Make sure your source principal (user/role/group) has an IAM policy that allows `sts:AssumeRole` for the target role.
 
  - Make sure you don't have any explicit deny policies attached to your user, group, or in AWS Organizations that would prevent the `sts:AssumeRole`.
+
+ - Try simulating the `sts:AssumeRole` call in the [Policy Simulator](https://policysim.aws.amazon.com/home/index.jsp).
 
 ## Full Configuration Format
 The client and server have the same configuration format.
