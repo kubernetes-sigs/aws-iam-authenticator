@@ -65,9 +65,21 @@ type Identity struct {
 }
 
 const (
-	v1Prefix         = "k8s-aws-v1."
-	maxTokenLenBytes = 1024 * 4
-	clusterIDHeader  = "x-k8s-aws-id"
+	// The sts GetCallerIdentity request is valid for 15 minutes regardless of this parameters value after it has been
+	// signed, but we set this unused parameter to 60 for legacy reasons (we check for a value between 0 and 60 on the
+	// server side in 0.3.0 or earlier).  IT IS IGNORED.  If we can get STS to support x-amz-expires, then we should
+	// set this parameter to the actual expiration, and make it configurable.
+	tokenExpirationParam = 60
+	// The actual token expiration (presigned STS urls are valid for 15 minutes after timestamp in x-amz-date).
+	tokenExpiration = 15 * time.Minute
+	// Refresh token after 14 minutes for some cushion.
+	refreshTokenAfter = 14 * time.Minute
+	v1Prefix          = "k8s-aws-v1."
+	maxTokenLenBytes  = 1024 * 4
+	clusterIDHeader   = "x-k8s-aws-id"
+	// Format of the X-Amz-Date header used for expiration
+	// https://golang.org/pkg/time/#pkg-constants
+	dateHeaderFormat = "20060102T030405Z"
 )
 
 // FormatError is returned when there is a problem with token that is
@@ -219,8 +231,13 @@ func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (string, error)
 	request, _ := stsAPI.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
 	request.HTTPRequest.Header.Add(clusterIDHeader, clusterID)
 
-	// sign the request
-	presignedURLString, err := request.Presign(60 * time.Second)
+	// Sign the request.  The expires parameter (sets the x-amz-expires header) is
+	// currently ignored by STS, and the token expires 15 minutes after the x-amz-date
+	// timestamp regardless.  We set it to 60 seconds for backwards compatibility (the
+	// parameter is a required argument to Presign(), and authenticators 0.3.0 and older are expecting a value between
+	// 0 and 60 on the server side).
+	// https://github.com/aws/aws-sdk-go/issues/2167
+	presignedURLString, err := request.Presign(tokenExpirationParam)
 	if err != nil {
 		return "", err
 	}
@@ -231,13 +248,15 @@ func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (string, error)
 
 // FormatJSON formats the json to support ExecCredential authentication
 func (g generator) FormatJSON(token string) string {
+	expirationTimestamp := metav1.NewTime(time.Now().Local().Add(refreshTokenAfter))
 	execInput := &clientauthv1alpha1.ExecCredential{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "client.authentication.k8s.io/v1alpha1",
 			Kind:       "ExecCredential",
 		},
 		Status: &clientauthv1alpha1.ExecCredentialStatus{
-			Token: token,
+			ExpirationTimestamp: &expirationTimestamp,
+			Token:               token,
 		},
 	}
 	enc, _ := json.Marshal(execInput)
@@ -317,9 +336,27 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, FormatError{fmt.Sprintf("client did not sign the %s header in the pre-signed URL", clusterIDHeader)}
 	}
 
+	// We validate x-amz-expires is between 0 and 15 minutes (900 seconds) although currently pre-signed STS URLs, and
+	// therefore tokens, expire exactly 15 minutes after the x-amz-date header, regardless of x-amz-expires.
 	expires, err := strconv.Atoi(queryParamsLower.Get("x-amz-expires"))
-	if err != nil || expires < 0 || expires > 60 {
-		return nil, FormatError{"invalid X-Amz-Expires parameter in pre-signed URL"}
+	if err != nil || expires < 0 || expires > 900 {
+		return nil, FormatError{fmt.Sprintf("invalid X-Amz-Expires parameter in pre-signed URL: %d", expires)}
+	}
+
+	date := queryParamsLower.Get("x-amz-date")
+	if date == "" {
+		return nil, FormatError{"X-Amz-Date parameter must be present in pre-signed URL"}
+	}
+
+	dateParam, err := time.Parse(dateHeaderFormat, date)
+	if err != nil {
+		return nil, FormatError{fmt.Sprintf("X-Amz-Date parameter in incorrect format %s (should be %s)", dateParam, dateHeaderFormat)}
+	}
+
+	now := time.Now()
+	expiration := dateParam.Add(tokenExpiration)
+	if now.After(expiration) {
+		return nil, FormatError{fmt.Sprintf("X-Amz-Date parameter is expired (%.f minute expiration) %s", tokenExpiration.Minutes(), dateParam)}
 	}
 
 	req, err := http.NewRequest("GET", parsedURL.String(), nil)
