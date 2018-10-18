@@ -42,7 +42,8 @@ var tokenCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		var tok string
+		var tok token.Token
+		var out string
 		var err error
 		gen, err := token.NewGenerator(forwardSessionName)
 		if err != nil {
@@ -60,10 +61,12 @@ var tokenCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
 			os.Exit(1)
 		}
-		if !tokenOnly {
-			tok = gen.FormatJSON(tok)
+		if tokenOnly {
+			out = tok.Token
+		} else {
+			out = gen.FormatJSON(tok)
 		}
-		fmt.Println(tok)
+		fmt.Println(out)
 	},
 }
 
