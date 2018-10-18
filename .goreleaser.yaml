@@ -16,29 +16,29 @@ builds:
       - "-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}"
 
 dockers:
-  - image: gcr.io/heptio-images/authenticator
+  - image: 894847497797.dkr.ecr.us-west-2.amazonaws.com/aws-iam-authenticator
     binary: aws-iam-authenticator
     dockerfile: Dockerfile.scratch
     tag_templates:
      - "{{ .Tag }}-scratch"
      - "{{ .Tag }}"
-  - image: gcr.io/heptio-images/authenticator
+  - image: 894847497797.dkr.ecr.us-west-2.amazonaws.com/aws-iam-authenticator
     binary: aws-iam-authenticator
     dockerfile: Dockerfile.alpine-3.6
     tag_templates:
      - "{{ .Tag }}-alpine-3.6"
-  - image: gcr.io/heptio-images/authenticator
+  - image: 894847497797.dkr.ecr.us-west-2.amazonaws.com/aws-iam-authenticator
     binary: aws-iam-authenticator
     dockerfile: Dockerfile.alpine-3.7
     tag_templates:
      - "{{ .Tag }}-alpine-3.7"
      - "{{ .Tag }}-alpine"
-  - image: gcr.io/heptio-images/authenticator
+  - image: 894847497797.dkr.ecr.us-west-2.amazonaws.com/aws-iam-authenticator
     binary: aws-iam-authenticator
     dockerfile: Dockerfile.debian-jessie
     tag_templates:
      - "{{ .Tag }}-debian-jessie"
-  - image: gcr.io/heptio-images/authenticator
+  - image: 894847497797.dkr.ecr.us-west-2.amazonaws.com/aws-iam-authenticator
     binary: aws-iam-authenticator
     dockerfile: Dockerfile.debian-stretch
     tag_templates:
