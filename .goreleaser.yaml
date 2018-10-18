@@ -1,9 +1,6 @@
 # Configuration for https://goreleaser.com/
 project_name: authenticator
 
-git:
-  short_hash: true
-
 builds:
   - binary: aws-iam-authenticator
     main: ./cmd/aws-iam-authenticator/
@@ -49,7 +46,7 @@ dockers:
      - "{{ .Tag }}-debian"
 
 snapshot:
-  name_template: "git-{{.Commit}}"
+  name_template: "git-{{.ShortCommit}}"
 
 archive:
   format: binary
