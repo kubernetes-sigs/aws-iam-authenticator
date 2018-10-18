@@ -69,18 +69,22 @@ const (
 	// signed, but we set this unused parameter to 60 for legacy reasons (we check for a value between 0 and 60 on the
 	// server side in 0.3.0 or earlier).  IT IS IGNORED.  If we can get STS to support x-amz-expires, then we should
 	// set this parameter to the actual expiration, and make it configurable.
-	tokenExpirationParam = 60
+	requestPresignParam = 60
 	// The actual token expiration (presigned STS urls are valid for 15 minutes after timestamp in x-amz-date).
-	tokenExpiration = 15 * time.Minute
-	// Refresh token after 14 minutes for some cushion.
-	refreshTokenAfter = 14 * time.Minute
-	v1Prefix          = "k8s-aws-v1."
-	maxTokenLenBytes  = 1024 * 4
-	clusterIDHeader   = "x-k8s-aws-id"
+	presignedURLExpiration = 15 * time.Minute
+	v1Prefix               = "k8s-aws-v1."
+	maxTokenLenBytes       = 1024 * 4
+	clusterIDHeader        = "x-k8s-aws-id"
 	// Format of the X-Amz-Date header used for expiration
 	// https://golang.org/pkg/time/#pkg-constants
-	dateHeaderFormat = "20060102T030405Z"
+	dateHeaderFormat = "20060102T150405Z"
 )
+
+// Token is generated and used by Kubernetes client-go to authenticate with a Kubernetes cluster.
+type Token struct {
+	Token      string
+	Expiration time.Time
+}
 
 // FormatError is returned when there is a problem with token that is
 // an encoded sts request.  This can include the url, data, action or anything
@@ -137,15 +141,15 @@ type getCallerIdentityWrapper struct {
 // Generator provides new tokens for the heptio authenticator.
 type Generator interface {
 	// Get a token using credentials in the default credentials chain.
-	Get(string) (string, error)
+	Get(string) (Token, error)
 	// GetWithRole creates a token by assuming the provided role, using the credentials in the default chain.
-	GetWithRole(clusterID, roleARN string) (string, error)
+	GetWithRole(clusterID, roleARN string) (Token, error)
 	// GetWithRoleForSession creates a token by assuming the provided role, using the provided session.
-	GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (string, error)
+	GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (Token, error)
 	// GetWithSTS returns a token valid for clusterID using the given STS client.
-	GetWithSTS(clusterID string, stsAPI *sts.STS) (string, error)
+	GetWithSTS(clusterID string, stsAPI *sts.STS) (Token, error)
 	// FormatJSON returns the client auth formatted json for the ExecCredential auth
-	FormatJSON(string) string
+	FormatJSON(Token) string
 }
 
 type generator struct {
@@ -161,7 +165,7 @@ func NewGenerator(forwardSessionName bool) (Generator, error) {
 
 // Get uses the directly available AWS credentials to return a token valid for
 // clusterID. It follows the default AWS credential handling behavior.
-func (g generator) Get(clusterID string) (string, error) {
+func (g generator) Get(clusterID string) (Token, error) {
 	return g.GetWithRole(clusterID, "")
 }
 
@@ -174,7 +178,7 @@ func StdinStderrTokenProvider() (string, error) {
 
 // GetWithRole assumes the given AWS IAM role and returns a token valid for
 // clusterID. If roleARN is empty, behaves like Get (does not assume a role).
-func (g generator) GetWithRole(clusterID string, roleARN string) (string, error) {
+func (g generator) GetWithRole(clusterID string, roleARN string) (Token, error) {
 	// create a session with the "base" credentials available
 	// (from environment variable, profile files, EC2 metadata, etc)
 	sess, err := session.NewSessionWithOptions(session.Options{
@@ -182,7 +186,7 @@ func (g generator) GetWithRole(clusterID string, roleARN string) (string, error)
 		SharedConfigState:       session.SharedConfigEnable,
 	})
 	if err != nil {
-		return "", fmt.Errorf("could not create session: %v", err)
+		return Token{}, fmt.Errorf("could not create session: %v", err)
 	}
 
 	return g.GetWithRoleForSession(clusterID, roleARN, sess)
@@ -190,7 +194,7 @@ func (g generator) GetWithRole(clusterID string, roleARN string) (string, error)
 
 // GetWithRole assumes the given AWS IAM role for the given session and behaves
 // like GetWithRole.
-func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (string, error) {
+func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (Token, error) {
 	// use an STS client based on the direct credentials
 	stsAPI := sts.New(sess)
 
@@ -204,7 +208,7 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 			// capabilities
 			resp, err := stsAPI.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 			if err != nil {
-				return "", err
+				return Token{}, err
 			}
 
 			userIDParts := strings.Split(*resp.UserId, ":")
@@ -226,7 +230,7 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 }
 
 // GetWithSTS returns a token valid for clusterID using the given STS client.
-func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (string, error) {
+func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (Token, error) {
 	// generate an sts:GetCallerIdentity request and add our custom cluster ID header
 	request, _ := stsAPI.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
 	request.HTTPRequest.Header.Add(clusterIDHeader, clusterID)
@@ -237,18 +241,20 @@ func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (string, error)
 	// parameter is a required argument to Presign(), and authenticators 0.3.0 and older are expecting a value between
 	// 0 and 60 on the server side).
 	// https://github.com/aws/aws-sdk-go/issues/2167
-	presignedURLString, err := request.Presign(tokenExpirationParam)
+	presignedURLString, err := request.Presign(requestPresignParam)
 	if err != nil {
-		return "", err
+		return Token{}, err
 	}
 
+	// Set token expiration to 1 minute before the presigned URL expires for some cushion
+	tokenExpiration := time.Now().Local().Add(presignedURLExpiration - 1*time.Minute)
 	// TODO: this may need to be a constant-time base64 encoding
-	return v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), nil
+	return Token{v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), tokenExpiration}, nil
 }
 
 // FormatJSON formats the json to support ExecCredential authentication
-func (g generator) FormatJSON(token string) string {
-	expirationTimestamp := metav1.NewTime(time.Now().Local().Add(refreshTokenAfter))
+func (g generator) FormatJSON(token Token) string {
+	expirationTimestamp := metav1.NewTime(token.Expiration)
 	execInput := &clientauthv1alpha1.ExecCredential{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "client.authentication.k8s.io/v1alpha1",
@@ -256,7 +262,7 @@ func (g generator) FormatJSON(token string) string {
 		},
 		Status: &clientauthv1alpha1.ExecCredentialStatus{
 			ExpirationTimestamp: &expirationTimestamp,
-			Token:               token,
+			Token:               token.Token,
 		},
 	}
 	enc, _ := json.Marshal(execInput)
@@ -350,13 +356,13 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 
 	dateParam, err := time.Parse(dateHeaderFormat, date)
 	if err != nil {
-		return nil, FormatError{fmt.Sprintf("X-Amz-Date parameter in incorrect format %s (should be %s)", dateParam, dateHeaderFormat)}
+		return nil, FormatError{fmt.Sprintf("error parsing X-Amz-Date parameter %s into format %s: %s", date, dateHeaderFormat, err.Error())}
 	}
 
 	now := time.Now()
-	expiration := dateParam.Add(tokenExpiration)
+	expiration := dateParam.Add(presignedURLExpiration)
 	if now.After(expiration) {
-		return nil, FormatError{fmt.Sprintf("X-Amz-Date parameter is expired (%.f minute expiration) %s", tokenExpiration.Minutes(), dateParam)}
+		return nil, FormatError{fmt.Sprintf("X-Amz-Date parameter is expired (%.f minute expiration) %s", presignedURLExpiration.Minutes(), dateParam)}
 	}
 
 	req, err := http.NewRequest("GET", parsedURL.String(), nil)

@@ -5,11 +5,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 func validationErrorTest(t *testing.T, token string, expectedErr string) {
@@ -32,9 +34,12 @@ func assertSTSError(t *testing.T, err error) {
 	}
 }
 
-const validURL = "https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-expires=60"
-
-var validToken = toToken(validURL)
+var (
+	now        = time.Now()
+	timeStr    = now.Format("20060102T150405Z")
+	validToken = toToken(validURL)
+	validURL   = fmt.Sprintf("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-expires=60&x-amz-date=%s", timeStr)
+)
 
 func toToken(url string) string {
 	return v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(url))
@@ -101,7 +106,9 @@ func TestVerifyTokenPreSTSValidations(t *testing.T) {
 	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=get&action=post"), "query parameter with multiple values not supported")
 	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=NotGetCallerIdenity"), "unexpected action parameter in pre-signed URL")
 	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=abc%3bx-k8s-aws-i%3bdef"), "client did not sign the x-k8s-aws-id header in the pre-signed URL")
-	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-expires=70"), "invalid X-Amz-Expires parameter in pre-signed URL")
+	validationErrorTest(t, toToken(fmt.Sprintf("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=9999999", timeStr)), "invalid X-Amz-Expires parameter in pre-signed URL")
+	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=xxxxxxx&x-amz-expires=60"), "error parsing X-Amz-Date parameter")
+	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=19900422T010203Z&x-amz-expires=60"), "X-Amz-Date parameter is expired")
 }
 
 func TestVerifyHTTPError(t *testing.T) {
