@@ -53,8 +53,8 @@ archive:
 
 release:
   github:
-    owner: heptio
-    name: authenticator
+    owner: kubernetes-sigs
+    name: aws-iam-authenticator
   draft: true
   prerelease: true
   name_template: "v{{.Version}}"
