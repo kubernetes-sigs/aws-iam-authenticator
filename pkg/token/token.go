@@ -35,7 +35,6 @@ import (
 	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/arn"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
-	"github.com/sirupsen/logrus"
 )
 
 // Identity is returned on successful Verify() results. It contains a parsed
@@ -380,16 +379,14 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != 200 {
-		var responseBody []byte
-		response.Body.Read(responseBody)
-		logrus.Errorf("Could not get a valid response from aws, status code: %d,\n body: %s", response.StatusCode, response)
-		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d)", response.StatusCode))
-	}
 
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, NewSTSError(fmt.Sprintf("error reading HTTP result: %v", err))
+	}
+
+	if response.StatusCode != 200 {
+		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d). Body: %s", response.StatusCode, string(responseBody[:])))
 	}
 
 	var callerIdentity getCallerIdentityWrapper
