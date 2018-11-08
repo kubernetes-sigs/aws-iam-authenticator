@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -314,8 +315,8 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, FormatError{fmt.Sprintf("unexpected scheme %q in pre-signed URL", parsedURL.Scheme)}
 	}
 
-	if parsedURL.Host != "sts.amazonaws.com" {
-		return nil, FormatError{"unexpected hostname in pre-signed URL"}
+	if match, _ := regexp.MatchString(`^sts(\.[a-z1-9\-]+)?\.amazonaws\.com(\.cn)?$`, parsedURL.Host); !match {
+		return nil, FormatError{fmt.Sprintf("unexpected hostname %q in pre-signed URL", parsedURL.Host)}
 	}
 
 	if parsedURL.Path != "/" {
