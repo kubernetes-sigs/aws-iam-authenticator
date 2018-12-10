@@ -122,7 +122,7 @@ This is useful if you want to authenticate as an IAM user directly or if you wan
 ## Kops Usage
 Clusters managed by [Kops](https://github.com/kubernetes/kops) can be configured to use Authenticator.
 Both single and HA master cluster configurations are supported.
-Perform the following steps to setup Authenticator on a Kops cluster:
+Perform the following steps to setup Authenticator on a Kops cluster, if your cluster running Kubernetes `1.9` or older.
 1. Pre-generate the certificate, key, and kubeconfig and upload them to the kops state store.
    ```
    aws-iam-authenticator init -i $CLUSTER_NAME
@@ -165,7 +165,13 @@ Perform the following steps to setup Authenticator on a Kops cluster:
 
 *Note:* Certain Kops commands will overwrite the `exec` configuration in kubeconfig so it may need to be restored manually. See [kubernetes/kops#5051](https://github.com/kubernetes/kops/issues/5051) for more information.
 
-
+If your cluster running Kubernetes `1.10` or newer, just add
+```bash
+authentication:
+  aws: {}
+```
+Once the cluster is up, you will need to create the AWS IAM authenticator config as a config map. 
+*(This can also be done when boostrapping a cluster using addons)*
 ## How does it work?
 It works using the AWS [`sts:GetCallerIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html) API endpoint.
 This endpoint returns information about whatever AWS IAM credentials you use to connect to it.
