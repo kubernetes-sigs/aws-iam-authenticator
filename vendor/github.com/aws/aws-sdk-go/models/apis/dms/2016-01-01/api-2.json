@@ -6,6 +6,7 @@
     "jsonVersion":"1.1",
     "protocol":"json",
     "serviceFullName":"AWS Database Migration Service",
+    "serviceId":"Database Migration Service",
     "signatureVersion":"v4",
     "targetPrefix":"AmazonDMSv20160101",
     "uid":"dms-2016-01-01"
@@ -295,6 +296,19 @@
         {"shape":"ResourceNotFoundFault"}
       ]
     },
+    "DescribeReplicationInstanceTaskLogs":{
+      "name":"DescribeReplicationInstanceTaskLogs",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"DescribeReplicationInstanceTaskLogsMessage"},
+      "output":{"shape":"DescribeReplicationInstanceTaskLogsResponse"},
+      "errors":[
+        {"shape":"ResourceNotFoundFault"},
+        {"shape":"InvalidResourceStateFault"}
+      ]
+    },
     "DescribeReplicationInstances":{
       "name":"DescribeReplicationInstances",
       "http":{
@@ -315,6 +329,18 @@
       },
       "input":{"shape":"DescribeReplicationSubnetGroupsMessage"},
       "output":{"shape":"DescribeReplicationSubnetGroupsResponse"},
+      "errors":[
+        {"shape":"ResourceNotFoundFault"}
+      ]
+    },
+    "DescribeReplicationTaskAssessmentResults":{
+      "name":"DescribeReplicationTaskAssessmentResults",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"DescribeReplicationTaskAssessmentResultsMessage"},
+      "output":{"shape":"DescribeReplicationTaskAssessmentResultsResponse"},
       "errors":[
         {"shape":"ResourceNotFoundFault"}
       ]
@@ -367,7 +393,8 @@
       "output":{"shape":"ImportCertificateResponse"},
       "errors":[
         {"shape":"ResourceAlreadyExistsFault"},
-        {"shape":"InvalidCertificateFault"}
+        {"shape":"InvalidCertificateFault"},
+        {"shape":"ResourceQuotaExceededFault"}
       ]
     },
     "ListTagsForResource":{
@@ -462,6 +489,19 @@
         {"shape":"KMSKeyNotAccessibleFault"}
       ]
     },
+    "RebootReplicationInstance":{
+      "name":"RebootReplicationInstance",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"RebootReplicationInstanceMessage"},
+      "output":{"shape":"RebootReplicationInstanceResponse"},
+      "errors":[
+        {"shape":"ResourceNotFoundFault"},
+        {"shape":"InvalidResourceStateFault"}
+      ]
+    },
     "RefreshSchemas":{
       "name":"RefreshSchemas",
       "http":{
@@ -512,7 +552,21 @@
       "output":{"shape":"StartReplicationTaskResponse"},
       "errors":[
         {"shape":"ResourceNotFoundFault"},
-        {"shape":"InvalidResourceStateFault"}
+        {"shape":"InvalidResourceStateFault"},
+        {"shape":"AccessDeniedFault"}
+      ]
+    },
+    "StartReplicationTaskAssessment":{
+      "name":"StartReplicationTaskAssessment",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"StartReplicationTaskAssessmentMessage"},
+      "output":{"shape":"StartReplicationTaskAssessmentResponse"},
+      "errors":[
+        {"shape":"InvalidResourceStateFault"},
+        {"shape":"ResourceNotFoundFault"}
       ]
     },
     "StopReplicationTask":{
@@ -562,10 +616,7 @@
     },
     "AccountQuotaList":{
       "type":"list",
-      "member":{
-        "shape":"AccountQuota",
-        "locationName":"AccountQuota"
-      }
+      "member":{"shape":"AccountQuota"}
     },
     "AddTagsToResourceMessage":{
       "type":"structure",
@@ -623,10 +674,7 @@
     },
     "CertificateList":{
       "type":"list",
-      "member":{
-        "shape":"Certificate",
-        "locationName":"Certificate"
-      }
+      "member":{"shape":"Certificate"}
     },
     "CertificateWallet":{"type":"blob"},
     "CompressionTypeValue":{
@@ -649,10 +697,7 @@
     },
     "ConnectionList":{
       "type":"list",
-      "member":{
-        "shape":"Connection",
-        "locationName":"Connection"
-      }
+      "member":{"shape":"Connection"}
     },
     "CreateEndpointMessage":{
       "type":"structure",
@@ -675,9 +720,14 @@
         "Tags":{"shape":"TagList"},
         "CertificateArn":{"shape":"String"},
         "SslMode":{"shape":"DmsSslModeValue"},
+        "ServiceAccessRoleArn":{"shape":"String"},
+        "ExternalTableDefinition":{"shape":"String"},
         "DynamoDbSettings":{"shape":"DynamoDbSettings"},
         "S3Settings":{"shape":"S3Settings"},
-        "MongoDbSettings":{"shape":"MongoDbSettings"}
+        "DmsTransferSettings":{"shape":"DmsTransferSettings"},
+        "MongoDbSettings":{"shape":"MongoDbSettings"},
+        "KinesisSettings":{"shape":"KinesisSettings"},
+        "ElasticsearchSettings":{"shape":"ElasticsearchSettings"}
       }
     },
     "CreateEndpointResponse":{
@@ -727,7 +777,8 @@
         "AutoMinorVersionUpgrade":{"shape":"BooleanOptional"},
         "Tags":{"shape":"TagList"},
         "KmsKeyId":{"shape":"String"},
-        "PubliclyAccessible":{"shape":"BooleanOptional"}
+        "PubliclyAccessible":{"shape":"BooleanOptional"},
+        "DnsNameServers":{"shape":"String"}
       }
     },
     "CreateReplicationInstanceResponse":{
@@ -775,6 +826,8 @@
         "TableMappings":{"shape":"String"},
         "ReplicationTaskSettings":{"shape":"String"},
         "CdcStartTime":{"shape":"TStamp"},
+        "CdcStartPosition":{"shape":"String"},
+        "CdcStopPosition":{"shape":"String"},
         "Tags":{"shape":"TagList"}
       }
     },
@@ -1009,6 +1062,23 @@
         "RefreshSchemasStatus":{"shape":"RefreshSchemasStatus"}
       }
     },
+    "DescribeReplicationInstanceTaskLogsMessage":{
+      "type":"structure",
+      "required":["ReplicationInstanceArn"],
+      "members":{
+        "ReplicationInstanceArn":{"shape":"String"},
+        "MaxRecords":{"shape":"IntegerOptional"},
+        "Marker":{"shape":"String"}
+      }
+    },
+    "DescribeReplicationInstanceTaskLogsResponse":{
+      "type":"structure",
+      "members":{
+        "ReplicationInstanceArn":{"shape":"String"},
+        "ReplicationInstanceTaskLogs":{"shape":"ReplicationInstanceTaskLogsList"},
+        "Marker":{"shape":"String"}
+      }
+    },
     "DescribeReplicationInstancesMessage":{
       "type":"structure",
       "members":{
@@ -1037,6 +1107,22 @@
       "members":{
         "Marker":{"shape":"String"},
         "ReplicationSubnetGroups":{"shape":"ReplicationSubnetGroups"}
+      }
+    },
+    "DescribeReplicationTaskAssessmentResultsMessage":{
+      "type":"structure",
+      "members":{
+        "ReplicationTaskArn":{"shape":"String"},
+        "MaxRecords":{"shape":"IntegerOptional"},
+        "Marker":{"shape":"String"}
+      }
+    },
+    "DescribeReplicationTaskAssessmentResultsResponse":{
+      "type":"structure",
+      "members":{
+        "Marker":{"shape":"String"},
+        "BucketName":{"shape":"String"},
+        "ReplicationTaskAssessmentResults":{"shape":"ReplicationTaskAssessmentResultList"}
       }
     },
     "DescribeReplicationTasksMessage":{
@@ -1076,7 +1162,8 @@
       "members":{
         "ReplicationTaskArn":{"shape":"String"},
         "MaxRecords":{"shape":"IntegerOptional"},
-        "Marker":{"shape":"String"}
+        "Marker":{"shape":"String"},
+        "Filters":{"shape":"FilterList"}
       }
     },
     "DescribeTableStatisticsResponse":{
@@ -1096,11 +1183,31 @@
         "verify-full"
       ]
     },
+    "DmsTransferSettings":{
+      "type":"structure",
+      "members":{
+        "ServiceAccessRoleArn":{"shape":"String"},
+        "BucketName":{"shape":"String"}
+      }
+    },
     "DynamoDbSettings":{
       "type":"structure",
       "required":["ServiceAccessRoleArn"],
       "members":{
         "ServiceAccessRoleArn":{"shape":"String"}
+      }
+    },
+    "ElasticsearchSettings":{
+      "type":"structure",
+      "required":[
+        "ServiceAccessRoleArn",
+        "EndpointUri"
+      ],
+      "members":{
+        "ServiceAccessRoleArn":{"shape":"String"},
+        "EndpointUri":{"shape":"String"},
+        "FullLoadErrorPercentage":{"shape":"IntegerOptional"},
+        "ErrorRetryDuration":{"shape":"IntegerOptional"}
       }
     },
     "Endpoint":{
@@ -1109,6 +1216,7 @@
         "EndpointIdentifier":{"shape":"String"},
         "EndpointType":{"shape":"ReplicationEndpointTypeValue"},
         "EngineName":{"shape":"String"},
+        "EngineDisplayName":{"shape":"String"},
         "Username":{"shape":"String"},
         "ServerName":{"shape":"String"},
         "Port":{"shape":"IntegerOptional"},
@@ -1119,18 +1227,20 @@
         "EndpointArn":{"shape":"String"},
         "CertificateArn":{"shape":"String"},
         "SslMode":{"shape":"DmsSslModeValue"},
+        "ServiceAccessRoleArn":{"shape":"String"},
+        "ExternalTableDefinition":{"shape":"String"},
         "ExternalId":{"shape":"String"},
         "DynamoDbSettings":{"shape":"DynamoDbSettings"},
         "S3Settings":{"shape":"S3Settings"},
-        "MongoDbSettings":{"shape":"MongoDbSettings"}
+        "DmsTransferSettings":{"shape":"DmsTransferSettings"},
+        "MongoDbSettings":{"shape":"MongoDbSettings"},
+        "KinesisSettings":{"shape":"KinesisSettings"},
+        "ElasticsearchSettings":{"shape":"ElasticsearchSettings"}
       }
     },
     "EndpointList":{
       "type":"list",
-      "member":{
-        "shape":"Endpoint",
-        "locationName":"Endpoint"
-      }
+      "member":{"shape":"Endpoint"}
     },
     "Event":{
       "type":"structure",
@@ -1144,10 +1254,7 @@
     },
     "EventCategoriesList":{
       "type":"list",
-      "member":{
-        "shape":"String",
-        "locationName":"EventCategory"
-      }
+      "member":{"shape":"String"}
     },
     "EventCategoryGroup":{
       "type":"structure",
@@ -1158,17 +1265,11 @@
     },
     "EventCategoryGroupList":{
       "type":"list",
-      "member":{
-        "shape":"EventCategoryGroup",
-        "locationName":"EventCategoryGroup"
-      }
+      "member":{"shape":"EventCategoryGroup"}
     },
     "EventList":{
       "type":"list",
-      "member":{
-        "shape":"Event",
-        "locationName":"Event"
-      }
+      "member":{"shape":"Event"}
     },
     "EventSubscription":{
       "type":"structure",
@@ -1186,10 +1287,7 @@
     },
     "EventSubscriptionsList":{
       "type":"list",
-      "member":{
-        "shape":"EventSubscription",
-        "locationName":"EventSubscription"
-      }
+      "member":{"shape":"EventSubscription"}
     },
     "ExceptionMessage":{"type":"string"},
     "Filter":{
@@ -1205,17 +1303,11 @@
     },
     "FilterList":{
       "type":"list",
-      "member":{
-        "shape":"Filter",
-        "locationName":"Filter"
-      }
+      "member":{"shape":"Filter"}
     },
     "FilterValueList":{
       "type":"list",
-      "member":{
-        "shape":"String",
-        "locationName":"Value"
-      }
+      "member":{"shape":"String"}
     },
     "ImportCertificateMessage":{
       "type":"structure",
@@ -1274,6 +1366,14 @@
       "type":"list",
       "member":{"shape":"String"}
     },
+    "KinesisSettings":{
+      "type":"structure",
+      "members":{
+        "StreamArn":{"shape":"String"},
+        "MessageFormat":{"shape":"MessageFormatValue"},
+        "ServiceAccessRoleArn":{"shape":"String"}
+      }
+    },
     "ListTagsForResourceMessage":{
       "type":"structure",
       "required":["ResourceArn"],
@@ -1288,6 +1388,10 @@
       }
     },
     "Long":{"type":"long"},
+    "MessageFormatValue":{
+      "type":"string",
+      "enum":["json"]
+    },
     "MigrationTypeValue":{
       "type":"string",
       "enum":[
@@ -1312,9 +1416,14 @@
         "ExtraConnectionAttributes":{"shape":"String"},
         "CertificateArn":{"shape":"String"},
         "SslMode":{"shape":"DmsSslModeValue"},
+        "ServiceAccessRoleArn":{"shape":"String"},
+        "ExternalTableDefinition":{"shape":"String"},
         "DynamoDbSettings":{"shape":"DynamoDbSettings"},
         "S3Settings":{"shape":"S3Settings"},
-        "MongoDbSettings":{"shape":"MongoDbSettings"}
+        "DmsTransferSettings":{"shape":"DmsTransferSettings"},
+        "MongoDbSettings":{"shape":"MongoDbSettings"},
+        "KinesisSettings":{"shape":"KinesisSettings"},
+        "ElasticsearchSettings":{"shape":"ElasticsearchSettings"}
       }
     },
     "ModifyEndpointResponse":{
@@ -1390,7 +1499,9 @@
         "MigrationType":{"shape":"MigrationTypeValue"},
         "TableMappings":{"shape":"String"},
         "ReplicationTaskSettings":{"shape":"String"},
-        "CdcStartTime":{"shape":"TStamp"}
+        "CdcStartTime":{"shape":"TStamp"},
+        "CdcStartPosition":{"shape":"String"},
+        "CdcStopPosition":{"shape":"String"}
       }
     },
     "ModifyReplicationTaskResponse":{
@@ -1412,7 +1523,8 @@
         "NestingLevel":{"shape":"NestingLevelValue"},
         "ExtractDocId":{"shape":"String"},
         "DocsToInvestigate":{"shape":"String"},
-        "AuthSource":{"shape":"String"}
+        "AuthSource":{"shape":"String"},
+        "KmsKeyId":{"shape":"String"}
       }
     },
     "NestingLevelValue":{
@@ -1436,9 +1548,20 @@
     },
     "OrderableReplicationInstanceList":{
       "type":"list",
-      "member":{
-        "shape":"OrderableReplicationInstance",
-        "locationName":"OrderableReplicationInstance"
+      "member":{"shape":"OrderableReplicationInstance"}
+    },
+    "RebootReplicationInstanceMessage":{
+      "type":"structure",
+      "required":["ReplicationInstanceArn"],
+      "members":{
+        "ReplicationInstanceArn":{"shape":"String"},
+        "ForceFailover":{"shape":"BooleanOptional"}
+      }
+    },
+    "RebootReplicationInstanceResponse":{
+      "type":"structure",
+      "members":{
+        "ReplicationInstance":{"shape":"ReplicationInstance"}
       }
     },
     "RefreshSchemasMessage":{
@@ -1476,6 +1599,13 @@
         "refreshing"
       ]
     },
+    "ReloadOptionValue":{
+      "type":"string",
+      "enum":[
+        "data-reload",
+        "validate-only"
+      ]
+    },
     "ReloadTablesMessage":{
       "type":"structure",
       "required":[
@@ -1484,7 +1614,8 @@
       ],
       "members":{
         "ReplicationTaskArn":{"shape":"String"},
-        "TablesToReload":{"shape":"TableListToReload"}
+        "TablesToReload":{"shape":"TableListToReload"},
+        "ReloadOption":{"shape":"ReloadOptionValue"}
       }
     },
     "ReloadTablesResponse":{
@@ -1545,15 +1676,14 @@
         "ReplicationInstancePublicIpAddresses":{"shape":"ReplicationInstancePublicIpAddressList"},
         "ReplicationInstancePrivateIpAddresses":{"shape":"ReplicationInstancePrivateIpAddressList"},
         "PubliclyAccessible":{"shape":"Boolean"},
-        "SecondaryAvailabilityZone":{"shape":"String"}
+        "SecondaryAvailabilityZone":{"shape":"String"},
+        "FreeUntil":{"shape":"TStamp"},
+        "DnsNameServers":{"shape":"String"}
       }
     },
     "ReplicationInstanceList":{
       "type":"list",
-      "member":{
-        "shape":"ReplicationInstance",
-        "locationName":"ReplicationInstance"
-      }
+      "member":{"shape":"ReplicationInstance"}
     },
     "ReplicationInstancePrivateIpAddressList":{
       "type":"list",
@@ -1562,6 +1692,18 @@
     "ReplicationInstancePublicIpAddressList":{
       "type":"list",
       "member":{"shape":"String"}
+    },
+    "ReplicationInstanceTaskLog":{
+      "type":"structure",
+      "members":{
+        "ReplicationTaskName":{"shape":"String"},
+        "ReplicationTaskArn":{"shape":"String"},
+        "ReplicationInstanceTaskLogSize":{"shape":"Long"}
+      }
+    },
+    "ReplicationInstanceTaskLogsList":{
+      "type":"list",
+      "member":{"shape":"ReplicationInstanceTaskLog"}
     },
     "ReplicationPendingModifiedValues":{
       "type":"structure",
@@ -1591,10 +1733,7 @@
     },
     "ReplicationSubnetGroups":{
       "type":"list",
-      "member":{
-        "shape":"ReplicationSubnetGroup",
-        "locationName":"ReplicationSubnetGroup"
-      }
+      "member":{"shape":"ReplicationSubnetGroup"}
     },
     "ReplicationTask":{
       "type":"structure",
@@ -1611,16 +1750,32 @@
         "StopReason":{"shape":"String"},
         "ReplicationTaskCreationDate":{"shape":"TStamp"},
         "ReplicationTaskStartDate":{"shape":"TStamp"},
+        "CdcStartPosition":{"shape":"String"},
+        "CdcStopPosition":{"shape":"String"},
+        "RecoveryCheckpoint":{"shape":"String"},
         "ReplicationTaskArn":{"shape":"String"},
         "ReplicationTaskStats":{"shape":"ReplicationTaskStats"}
       }
     },
+    "ReplicationTaskAssessmentResult":{
+      "type":"structure",
+      "members":{
+        "ReplicationTaskIdentifier":{"shape":"String"},
+        "ReplicationTaskArn":{"shape":"String"},
+        "ReplicationTaskLastAssessmentDate":{"shape":"TStamp"},
+        "AssessmentStatus":{"shape":"String"},
+        "AssessmentResultsFile":{"shape":"String"},
+        "AssessmentResults":{"shape":"String"},
+        "S3ObjectUrl":{"shape":"String"}
+      }
+    },
+    "ReplicationTaskAssessmentResultList":{
+      "type":"list",
+      "member":{"shape":"ReplicationTaskAssessmentResult"}
+    },
     "ReplicationTaskList":{
       "type":"list",
-      "member":{
-        "shape":"ReplicationTask",
-        "locationName":"ReplicationTask"
-      }
+      "member":{"shape":"ReplicationTask"}
     },
     "ReplicationTaskStats":{
       "type":"structure",
@@ -1690,14 +1845,24 @@
     },
     "SourceIdsList":{
       "type":"list",
-      "member":{
-        "shape":"String",
-        "locationName":"SourceId"
-      }
+      "member":{"shape":"String"}
     },
     "SourceType":{
       "type":"string",
       "enum":["replication-instance"]
+    },
+    "StartReplicationTaskAssessmentMessage":{
+      "type":"structure",
+      "required":["ReplicationTaskArn"],
+      "members":{
+        "ReplicationTaskArn":{"shape":"String"}
+      }
+    },
+    "StartReplicationTaskAssessmentResponse":{
+      "type":"structure",
+      "members":{
+        "ReplicationTask":{"shape":"ReplicationTask"}
+      }
     },
     "StartReplicationTaskMessage":{
       "type":"structure",
@@ -1708,7 +1873,9 @@
       "members":{
         "ReplicationTaskArn":{"shape":"String"},
         "StartReplicationTaskType":{"shape":"StartReplicationTaskTypeValue"},
-        "CdcStartTime":{"shape":"TStamp"}
+        "CdcStartTime":{"shape":"TStamp"},
+        "CdcStartPosition":{"shape":"String"},
+        "CdcStopPosition":{"shape":"String"}
       }
     },
     "StartReplicationTaskResponse":{
@@ -1763,32 +1930,24 @@
     },
     "SubnetIdentifierList":{
       "type":"list",
-      "member":{
-        "shape":"String",
-        "locationName":"SubnetIdentifier"
-      }
+      "member":{"shape":"String"}
     },
     "SubnetList":{
       "type":"list",
-      "member":{
-        "shape":"Subnet",
-        "locationName":"Subnet"
-      }
+      "member":{"shape":"Subnet"}
     },
     "SupportedEndpointType":{
       "type":"structure",
       "members":{
         "EngineName":{"shape":"String"},
         "SupportsCDC":{"shape":"Boolean"},
-        "EndpointType":{"shape":"ReplicationEndpointTypeValue"}
+        "EndpointType":{"shape":"ReplicationEndpointTypeValue"},
+        "EngineDisplayName":{"shape":"String"}
       }
     },
     "SupportedEndpointTypeList":{
       "type":"list",
-      "member":{
-        "shape":"SupportedEndpointType",
-        "locationName":"SupportedEndpointType"
-      }
+      "member":{"shape":"SupportedEndpointType"}
     },
     "TStamp":{"type":"timestamp"},
     "TableListToReload":{
@@ -1808,7 +1967,12 @@
         "FullLoadCondtnlChkFailedRows":{"shape":"Long"},
         "FullLoadErrorRows":{"shape":"Long"},
         "LastUpdateTime":{"shape":"TStamp"},
-        "TableState":{"shape":"String"}
+        "TableState":{"shape":"String"},
+        "ValidationPendingRecords":{"shape":"Long"},
+        "ValidationFailedRecords":{"shape":"Long"},
+        "ValidationSuspendedRecords":{"shape":"Long"},
+        "ValidationState":{"shape":"String"},
+        "ValidationStateDetails":{"shape":"String"}
       }
     },
     "TableStatisticsList":{
@@ -1831,10 +1995,7 @@
     },
     "TagList":{
       "type":"list",
-      "member":{
-        "shape":"Tag",
-        "locationName":"Tag"
-      }
+      "member":{"shape":"Tag"}
     },
     "TestConnectionMessage":{
       "type":"structure",
@@ -1862,10 +2023,7 @@
     },
     "VpcSecurityGroupIdList":{
       "type":"list",
-      "member":{
-        "shape":"String",
-        "locationName":"VpcSecurityGroupId"
-      }
+      "member":{"shape":"String"}
     },
     "VpcSecurityGroupMembership":{
       "type":"structure",
@@ -1876,10 +2034,7 @@
     },
     "VpcSecurityGroupMembershipList":{
       "type":"list",
-      "member":{
-        "shape":"VpcSecurityGroupMembership",
-        "locationName":"VpcSecurityGroupMembership"
-      }
+      "member":{"shape":"VpcSecurityGroupMembership"}
     }
   }
 }

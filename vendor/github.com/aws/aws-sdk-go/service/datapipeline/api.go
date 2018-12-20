@@ -17,8 +17,8 @@ const opActivatePipeline = "ActivatePipeline"
 
 // ActivatePipelineRequest generates a "aws/request.Request" representing the
 // client's request for the ActivatePipeline operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -38,7 +38,7 @@ const opActivatePipeline = "ActivatePipeline"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ActivatePipeline
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ActivatePipeline
 func (c *DataPipeline) ActivatePipelineRequest(input *ActivatePipelineInput) (req *request.Request, output *ActivatePipelineOutput) {
 	op := &request.Operation{
 		Name:       opActivatePipeline,
@@ -52,6 +52,7 @@ func (c *DataPipeline) ActivatePipelineRequest(input *ActivatePipelineInput) (re
 
 	output = &ActivatePipelineOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -89,7 +90,7 @@ func (c *DataPipeline) ActivatePipelineRequest(input *ActivatePipelineInput) (re
 //   that the signature was generated with the correct credentials, and that you
 //   haven't exceeded any of the service limits for your account.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ActivatePipeline
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ActivatePipeline
 func (c *DataPipeline) ActivatePipeline(input *ActivatePipelineInput) (*ActivatePipelineOutput, error) {
 	req, out := c.ActivatePipelineRequest(input)
 	return out, req.Send()
@@ -115,8 +116,8 @@ const opAddTags = "AddTags"
 
 // AddTagsRequest generates a "aws/request.Request" representing the
 // client's request for the AddTags operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -136,7 +137,7 @@ const opAddTags = "AddTags"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/AddTags
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/AddTags
 func (c *DataPipeline) AddTagsRequest(input *AddTagsInput) (req *request.Request, output *AddTagsOutput) {
 	op := &request.Operation{
 		Name:       opAddTags,
@@ -150,6 +151,7 @@ func (c *DataPipeline) AddTagsRequest(input *AddTagsInput) (req *request.Request
 
 	output = &AddTagsOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -180,7 +182,7 @@ func (c *DataPipeline) AddTagsRequest(input *AddTagsInput) (req *request.Request
 //   * ErrCodePipelineDeletedException "PipelineDeletedException"
 //   The specified pipeline has been deleted.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/AddTags
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/AddTags
 func (c *DataPipeline) AddTags(input *AddTagsInput) (*AddTagsOutput, error) {
 	req, out := c.AddTagsRequest(input)
 	return out, req.Send()
@@ -206,8 +208,8 @@ const opCreatePipeline = "CreatePipeline"
 
 // CreatePipelineRequest generates a "aws/request.Request" representing the
 // client's request for the CreatePipeline operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -227,7 +229,7 @@ const opCreatePipeline = "CreatePipeline"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/CreatePipeline
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/CreatePipeline
 func (c *DataPipeline) CreatePipelineRequest(input *CreatePipelineInput) (req *request.Request, output *CreatePipelineOutput) {
 	op := &request.Operation{
 		Name:       opCreatePipeline,
@@ -265,7 +267,7 @@ func (c *DataPipeline) CreatePipelineRequest(input *CreatePipelineInput) (req *r
 //   that the signature was generated with the correct credentials, and that you
 //   haven't exceeded any of the service limits for your account.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/CreatePipeline
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/CreatePipeline
 func (c *DataPipeline) CreatePipeline(input *CreatePipelineInput) (*CreatePipelineOutput, error) {
 	req, out := c.CreatePipelineRequest(input)
 	return out, req.Send()
@@ -291,8 +293,8 @@ const opDeactivatePipeline = "DeactivatePipeline"
 
 // DeactivatePipelineRequest generates a "aws/request.Request" representing the
 // client's request for the DeactivatePipeline operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -312,7 +314,7 @@ const opDeactivatePipeline = "DeactivatePipeline"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeactivatePipeline
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeactivatePipeline
 func (c *DataPipeline) DeactivatePipelineRequest(input *DeactivatePipelineInput) (req *request.Request, output *DeactivatePipelineOutput) {
 	op := &request.Operation{
 		Name:       opDeactivatePipeline,
@@ -326,6 +328,7 @@ func (c *DataPipeline) DeactivatePipelineRequest(input *DeactivatePipelineInput)
 
 	output = &DeactivatePipelineOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -361,7 +364,7 @@ func (c *DataPipeline) DeactivatePipelineRequest(input *DeactivatePipelineInput)
 //   that the signature was generated with the correct credentials, and that you
 //   haven't exceeded any of the service limits for your account.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeactivatePipeline
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeactivatePipeline
 func (c *DataPipeline) DeactivatePipeline(input *DeactivatePipelineInput) (*DeactivatePipelineOutput, error) {
 	req, out := c.DeactivatePipelineRequest(input)
 	return out, req.Send()
@@ -387,8 +390,8 @@ const opDeletePipeline = "DeletePipeline"
 
 // DeletePipelineRequest generates a "aws/request.Request" representing the
 // client's request for the DeletePipeline operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -408,7 +411,7 @@ const opDeletePipeline = "DeletePipeline"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeletePipeline
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeletePipeline
 func (c *DataPipeline) DeletePipelineRequest(input *DeletePipelineInput) (req *request.Request, output *DeletePipelineOutput) {
 	op := &request.Operation{
 		Name:       opDeletePipeline,
@@ -422,8 +425,7 @@ func (c *DataPipeline) DeletePipelineRequest(input *DeletePipelineInput) (req *r
 
 	output = &DeletePipelineOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -458,7 +460,7 @@ func (c *DataPipeline) DeletePipelineRequest(input *DeletePipelineInput) (req *r
 //   that the signature was generated with the correct credentials, and that you
 //   haven't exceeded any of the service limits for your account.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeletePipeline
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeletePipeline
 func (c *DataPipeline) DeletePipeline(input *DeletePipelineInput) (*DeletePipelineOutput, error) {
 	req, out := c.DeletePipelineRequest(input)
 	return out, req.Send()
@@ -484,8 +486,8 @@ const opDescribeObjects = "DescribeObjects"
 
 // DescribeObjectsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeObjects operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -505,7 +507,7 @@ const opDescribeObjects = "DescribeObjects"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribeObjects
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribeObjects
 func (c *DataPipeline) DescribeObjectsRequest(input *DescribeObjectsInput) (req *request.Request, output *DescribeObjectsOutput) {
 	op := &request.Operation{
 		Name:       opDescribeObjects,
@@ -557,7 +559,7 @@ func (c *DataPipeline) DescribeObjectsRequest(input *DescribeObjectsInput) (req 
 //   * ErrCodePipelineDeletedException "PipelineDeletedException"
 //   The specified pipeline has been deleted.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribeObjects
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribeObjects
 func (c *DataPipeline) DescribeObjects(input *DescribeObjectsInput) (*DescribeObjectsOutput, error) {
 	req, out := c.DescribeObjectsRequest(input)
 	return out, req.Send()
@@ -633,8 +635,8 @@ const opDescribePipelines = "DescribePipelines"
 
 // DescribePipelinesRequest generates a "aws/request.Request" representing the
 // client's request for the DescribePipelines operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -654,7 +656,7 @@ const opDescribePipelines = "DescribePipelines"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribePipelines
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribePipelines
 func (c *DataPipeline) DescribePipelinesRequest(input *DescribePipelinesInput) (req *request.Request, output *DescribePipelinesOutput) {
 	op := &request.Operation{
 		Name:       opDescribePipelines,
@@ -706,7 +708,7 @@ func (c *DataPipeline) DescribePipelinesRequest(input *DescribePipelinesInput) (
 //   that the signature was generated with the correct credentials, and that you
 //   haven't exceeded any of the service limits for your account.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribePipelines
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribePipelines
 func (c *DataPipeline) DescribePipelines(input *DescribePipelinesInput) (*DescribePipelinesOutput, error) {
 	req, out := c.DescribePipelinesRequest(input)
 	return out, req.Send()
@@ -732,8 +734,8 @@ const opEvaluateExpression = "EvaluateExpression"
 
 // EvaluateExpressionRequest generates a "aws/request.Request" representing the
 // client's request for the EvaluateExpression operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -753,7 +755,7 @@ const opEvaluateExpression = "EvaluateExpression"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/EvaluateExpression
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/EvaluateExpression
 func (c *DataPipeline) EvaluateExpressionRequest(input *EvaluateExpressionInput) (req *request.Request, output *EvaluateExpressionOutput) {
 	op := &request.Operation{
 		Name:       opEvaluateExpression,
@@ -802,7 +804,7 @@ func (c *DataPipeline) EvaluateExpressionRequest(input *EvaluateExpressionInput)
 //   * ErrCodePipelineDeletedException "PipelineDeletedException"
 //   The specified pipeline has been deleted.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/EvaluateExpression
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/EvaluateExpression
 func (c *DataPipeline) EvaluateExpression(input *EvaluateExpressionInput) (*EvaluateExpressionOutput, error) {
 	req, out := c.EvaluateExpressionRequest(input)
 	return out, req.Send()
@@ -828,8 +830,8 @@ const opGetPipelineDefinition = "GetPipelineDefinition"
 
 // GetPipelineDefinitionRequest generates a "aws/request.Request" representing the
 // client's request for the GetPipelineDefinition operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -849,7 +851,7 @@ const opGetPipelineDefinition = "GetPipelineDefinition"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/GetPipelineDefinition
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/GetPipelineDefinition
 func (c *DataPipeline) GetPipelineDefinitionRequest(input *GetPipelineDefinitionInput) (req *request.Request, output *GetPipelineDefinitionOutput) {
 	op := &request.Operation{
 		Name:       opGetPipelineDefinition,
@@ -894,7 +896,7 @@ func (c *DataPipeline) GetPipelineDefinitionRequest(input *GetPipelineDefinition
 //   * ErrCodePipelineDeletedException "PipelineDeletedException"
 //   The specified pipeline has been deleted.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/GetPipelineDefinition
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/GetPipelineDefinition
 func (c *DataPipeline) GetPipelineDefinition(input *GetPipelineDefinitionInput) (*GetPipelineDefinitionOutput, error) {
 	req, out := c.GetPipelineDefinitionRequest(input)
 	return out, req.Send()
@@ -920,8 +922,8 @@ const opListPipelines = "ListPipelines"
 
 // ListPipelinesRequest generates a "aws/request.Request" representing the
 // client's request for the ListPipelines operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -941,7 +943,7 @@ const opListPipelines = "ListPipelines"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ListPipelines
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ListPipelines
 func (c *DataPipeline) ListPipelinesRequest(input *ListPipelinesInput) (req *request.Request, output *ListPipelinesOutput) {
 	op := &request.Operation{
 		Name:       opListPipelines,
@@ -985,7 +987,7 @@ func (c *DataPipeline) ListPipelinesRequest(input *ListPipelinesInput) (req *req
 //   that the signature was generated with the correct credentials, and that you
 //   haven't exceeded any of the service limits for your account.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ListPipelines
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ListPipelines
 func (c *DataPipeline) ListPipelines(input *ListPipelinesInput) (*ListPipelinesOutput, error) {
 	req, out := c.ListPipelinesRequest(input)
 	return out, req.Send()
@@ -1061,8 +1063,8 @@ const opPollForTask = "PollForTask"
 
 // PollForTaskRequest generates a "aws/request.Request" representing the
 // client's request for the PollForTask operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1082,7 +1084,7 @@ const opPollForTask = "PollForTask"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PollForTask
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PollForTask
 func (c *DataPipeline) PollForTaskRequest(input *PollForTaskInput) (req *request.Request, output *PollForTaskOutput) {
 	op := &request.Operation{
 		Name:       opPollForTask,
@@ -1135,7 +1137,7 @@ func (c *DataPipeline) PollForTaskRequest(input *PollForTaskInput) (req *request
 //   * ErrCodeTaskNotFoundException "TaskNotFoundException"
 //   The specified task was not found.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PollForTask
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PollForTask
 func (c *DataPipeline) PollForTask(input *PollForTaskInput) (*PollForTaskOutput, error) {
 	req, out := c.PollForTaskRequest(input)
 	return out, req.Send()
@@ -1161,8 +1163,8 @@ const opPutPipelineDefinition = "PutPipelineDefinition"
 
 // PutPipelineDefinitionRequest generates a "aws/request.Request" representing the
 // client's request for the PutPipelineDefinition operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1182,7 +1184,7 @@ const opPutPipelineDefinition = "PutPipelineDefinition"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PutPipelineDefinition
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PutPipelineDefinition
 func (c *DataPipeline) PutPipelineDefinitionRequest(input *PutPipelineDefinitionInput) (req *request.Request, output *PutPipelineDefinitionOutput) {
 	op := &request.Operation{
 		Name:       opPutPipelineDefinition,
@@ -1239,7 +1241,7 @@ func (c *DataPipeline) PutPipelineDefinitionRequest(input *PutPipelineDefinition
 //   * ErrCodePipelineDeletedException "PipelineDeletedException"
 //   The specified pipeline has been deleted.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PutPipelineDefinition
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PutPipelineDefinition
 func (c *DataPipeline) PutPipelineDefinition(input *PutPipelineDefinitionInput) (*PutPipelineDefinitionOutput, error) {
 	req, out := c.PutPipelineDefinitionRequest(input)
 	return out, req.Send()
@@ -1265,8 +1267,8 @@ const opQueryObjects = "QueryObjects"
 
 // QueryObjectsRequest generates a "aws/request.Request" representing the
 // client's request for the QueryObjects operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1286,7 +1288,7 @@ const opQueryObjects = "QueryObjects"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/QueryObjects
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/QueryObjects
 func (c *DataPipeline) QueryObjectsRequest(input *QueryObjectsInput) (req *request.Request, output *QueryObjectsOutput) {
 	op := &request.Operation{
 		Name:       opQueryObjects,
@@ -1337,7 +1339,7 @@ func (c *DataPipeline) QueryObjectsRequest(input *QueryObjectsInput) (req *reque
 //   that the signature was generated with the correct credentials, and that you
 //   haven't exceeded any of the service limits for your account.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/QueryObjects
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/QueryObjects
 func (c *DataPipeline) QueryObjects(input *QueryObjectsInput) (*QueryObjectsOutput, error) {
 	req, out := c.QueryObjectsRequest(input)
 	return out, req.Send()
@@ -1413,8 +1415,8 @@ const opRemoveTags = "RemoveTags"
 
 // RemoveTagsRequest generates a "aws/request.Request" representing the
 // client's request for the RemoveTags operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1434,7 +1436,7 @@ const opRemoveTags = "RemoveTags"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/RemoveTags
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/RemoveTags
 func (c *DataPipeline) RemoveTagsRequest(input *RemoveTagsInput) (req *request.Request, output *RemoveTagsOutput) {
 	op := &request.Operation{
 		Name:       opRemoveTags,
@@ -1448,6 +1450,7 @@ func (c *DataPipeline) RemoveTagsRequest(input *RemoveTagsInput) (req *request.R
 
 	output = &RemoveTagsOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -1478,7 +1481,7 @@ func (c *DataPipeline) RemoveTagsRequest(input *RemoveTagsInput) (req *request.R
 //   * ErrCodePipelineDeletedException "PipelineDeletedException"
 //   The specified pipeline has been deleted.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/RemoveTags
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/RemoveTags
 func (c *DataPipeline) RemoveTags(input *RemoveTagsInput) (*RemoveTagsOutput, error) {
 	req, out := c.RemoveTagsRequest(input)
 	return out, req.Send()
@@ -1504,8 +1507,8 @@ const opReportTaskProgress = "ReportTaskProgress"
 
 // ReportTaskProgressRequest generates a "aws/request.Request" representing the
 // client's request for the ReportTaskProgress operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1525,7 +1528,7 @@ const opReportTaskProgress = "ReportTaskProgress"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskProgress
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskProgress
 func (c *DataPipeline) ReportTaskProgressRequest(input *ReportTaskProgressInput) (req *request.Request, output *ReportTaskProgressOutput) {
 	op := &request.Operation{
 		Name:       opReportTaskProgress,
@@ -1583,7 +1586,7 @@ func (c *DataPipeline) ReportTaskProgressRequest(input *ReportTaskProgressInput)
 //   * ErrCodePipelineDeletedException "PipelineDeletedException"
 //   The specified pipeline has been deleted.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskProgress
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskProgress
 func (c *DataPipeline) ReportTaskProgress(input *ReportTaskProgressInput) (*ReportTaskProgressOutput, error) {
 	req, out := c.ReportTaskProgressRequest(input)
 	return out, req.Send()
@@ -1609,8 +1612,8 @@ const opReportTaskRunnerHeartbeat = "ReportTaskRunnerHeartbeat"
 
 // ReportTaskRunnerHeartbeatRequest generates a "aws/request.Request" representing the
 // client's request for the ReportTaskRunnerHeartbeat operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1630,7 +1633,7 @@ const opReportTaskRunnerHeartbeat = "ReportTaskRunnerHeartbeat"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskRunnerHeartbeat
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskRunnerHeartbeat
 func (c *DataPipeline) ReportTaskRunnerHeartbeatRequest(input *ReportTaskRunnerHeartbeatInput) (req *request.Request, output *ReportTaskRunnerHeartbeatOutput) {
 	op := &request.Operation{
 		Name:       opReportTaskRunnerHeartbeat,
@@ -1671,7 +1674,7 @@ func (c *DataPipeline) ReportTaskRunnerHeartbeatRequest(input *ReportTaskRunnerH
 //   that the signature was generated with the correct credentials, and that you
 //   haven't exceeded any of the service limits for your account.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskRunnerHeartbeat
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskRunnerHeartbeat
 func (c *DataPipeline) ReportTaskRunnerHeartbeat(input *ReportTaskRunnerHeartbeatInput) (*ReportTaskRunnerHeartbeatOutput, error) {
 	req, out := c.ReportTaskRunnerHeartbeatRequest(input)
 	return out, req.Send()
@@ -1697,8 +1700,8 @@ const opSetStatus = "SetStatus"
 
 // SetStatusRequest generates a "aws/request.Request" representing the
 // client's request for the SetStatus operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1718,7 +1721,7 @@ const opSetStatus = "SetStatus"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetStatus
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetStatus
 func (c *DataPipeline) SetStatusRequest(input *SetStatusInput) (req *request.Request, output *SetStatusOutput) {
 	op := &request.Operation{
 		Name:       opSetStatus,
@@ -1732,8 +1735,7 @@ func (c *DataPipeline) SetStatusRequest(input *SetStatusInput) (req *request.Req
 
 	output = &SetStatusOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(jsonrpc.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -1768,7 +1770,7 @@ func (c *DataPipeline) SetStatusRequest(input *SetStatusInput) (req *request.Req
 //   that the signature was generated with the correct credentials, and that you
 //   haven't exceeded any of the service limits for your account.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetStatus
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetStatus
 func (c *DataPipeline) SetStatus(input *SetStatusInput) (*SetStatusOutput, error) {
 	req, out := c.SetStatusRequest(input)
 	return out, req.Send()
@@ -1794,8 +1796,8 @@ const opSetTaskStatus = "SetTaskStatus"
 
 // SetTaskStatusRequest generates a "aws/request.Request" representing the
 // client's request for the SetTaskStatus operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1815,7 +1817,7 @@ const opSetTaskStatus = "SetTaskStatus"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetTaskStatus
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetTaskStatus
 func (c *DataPipeline) SetTaskStatusRequest(input *SetTaskStatusInput) (req *request.Request, output *SetTaskStatusOutput) {
 	op := &request.Operation{
 		Name:       opSetTaskStatus,
@@ -1829,6 +1831,7 @@ func (c *DataPipeline) SetTaskStatusRequest(input *SetTaskStatusInput) (req *req
 
 	output = &SetTaskStatusOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -1866,7 +1869,7 @@ func (c *DataPipeline) SetTaskStatusRequest(input *SetTaskStatusInput) (req *req
 //   * ErrCodePipelineDeletedException "PipelineDeletedException"
 //   The specified pipeline has been deleted.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetTaskStatus
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetTaskStatus
 func (c *DataPipeline) SetTaskStatus(input *SetTaskStatusInput) (*SetTaskStatusOutput, error) {
 	req, out := c.SetTaskStatusRequest(input)
 	return out, req.Send()
@@ -1892,8 +1895,8 @@ const opValidatePipelineDefinition = "ValidatePipelineDefinition"
 
 // ValidatePipelineDefinitionRequest generates a "aws/request.Request" representing the
 // client's request for the ValidatePipelineDefinition operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1913,7 +1916,7 @@ const opValidatePipelineDefinition = "ValidatePipelineDefinition"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ValidatePipelineDefinition
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ValidatePipelineDefinition
 func (c *DataPipeline) ValidatePipelineDefinitionRequest(input *ValidatePipelineDefinitionInput) (req *request.Request, output *ValidatePipelineDefinitionOutput) {
 	op := &request.Operation{
 		Name:       opValidatePipelineDefinition,
@@ -1958,7 +1961,7 @@ func (c *DataPipeline) ValidatePipelineDefinitionRequest(input *ValidatePipeline
 //   * ErrCodePipelineDeletedException "PipelineDeletedException"
 //   The specified pipeline has been deleted.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ValidatePipelineDefinition
+// See also, https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ValidatePipelineDefinition
 func (c *DataPipeline) ValidatePipelineDefinition(input *ValidatePipelineDefinitionInput) (*ValidatePipelineDefinitionOutput, error) {
 	req, out := c.ValidatePipelineDefinitionRequest(input)
 	return out, req.Send()
@@ -1981,7 +1984,6 @@ func (c *DataPipeline) ValidatePipelineDefinitionWithContext(ctx aws.Context, in
 }
 
 // Contains the parameters for ActivatePipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ActivatePipelineInput
 type ActivatePipelineInput struct {
 	_ struct{} `type:"structure"`
 
@@ -1995,7 +1997,7 @@ type ActivatePipelineInput struct {
 
 	// The date and time to resume the pipeline. By default, the pipeline resumes
 	// from the last completed execution.
-	StartTimestamp *time.Time `locationName:"startTimestamp" type:"timestamp" timestampFormat:"unix"`
+	StartTimestamp *time.Time `locationName:"startTimestamp" type:"timestamp"`
 }
 
 // String returns the string representation
@@ -2053,7 +2055,6 @@ func (s *ActivatePipelineInput) SetStartTimestamp(v time.Time) *ActivatePipeline
 }
 
 // Contains the output of ActivatePipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ActivatePipelineOutput
 type ActivatePipelineOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -2069,7 +2070,6 @@ func (s ActivatePipelineOutput) GoString() string {
 }
 
 // Contains the parameters for AddTags.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/AddTagsInput
 type AddTagsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -2136,7 +2136,6 @@ func (s *AddTagsInput) SetTags(v []*Tag) *AddTagsInput {
 }
 
 // Contains the output of AddTags.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/AddTagsOutput
 type AddTagsOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -2152,7 +2151,6 @@ func (s AddTagsOutput) GoString() string {
 }
 
 // Contains the parameters for CreatePipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/CreatePipelineInput
 type CreatePipelineInput struct {
 	_ struct{} `type:"structure"`
 
@@ -2255,7 +2253,6 @@ func (s *CreatePipelineInput) SetUniqueId(v string) *CreatePipelineInput {
 }
 
 // Contains the output of CreatePipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/CreatePipelineOutput
 type CreatePipelineOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -2283,7 +2280,6 @@ func (s *CreatePipelineOutput) SetPipelineId(v string) *CreatePipelineOutput {
 }
 
 // Contains the parameters for DeactivatePipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeactivatePipelineInput
 type DeactivatePipelineInput struct {
 	_ struct{} `type:"structure"`
 
@@ -2337,7 +2333,6 @@ func (s *DeactivatePipelineInput) SetPipelineId(v string) *DeactivatePipelineInp
 }
 
 // Contains the output of DeactivatePipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeactivatePipelineOutput
 type DeactivatePipelineOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -2353,7 +2348,6 @@ func (s DeactivatePipelineOutput) GoString() string {
 }
 
 // Contains the parameters for DeletePipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeletePipelineInput
 type DeletePipelineInput struct {
 	_ struct{} `type:"structure"`
 
@@ -2395,7 +2389,6 @@ func (s *DeletePipelineInput) SetPipelineId(v string) *DeletePipelineInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DeletePipelineOutput
 type DeletePipelineOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -2411,7 +2404,6 @@ func (s DeletePipelineOutput) GoString() string {
 }
 
 // Contains the parameters for DescribeObjects.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribeObjectsInput
 type DescribeObjectsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -2491,7 +2483,6 @@ func (s *DescribeObjectsInput) SetPipelineId(v string) *DescribeObjectsInput {
 }
 
 // Contains the output of DescribeObjects.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribeObjectsOutput
 type DescribeObjectsOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -2538,7 +2529,6 @@ func (s *DescribeObjectsOutput) SetPipelineObjects(v []*PipelineObject) *Describ
 }
 
 // Contains the parameters for DescribePipelines.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribePipelinesInput
 type DescribePipelinesInput struct {
 	_ struct{} `type:"structure"`
 
@@ -2579,7 +2569,6 @@ func (s *DescribePipelinesInput) SetPipelineIds(v []*string) *DescribePipelinesI
 }
 
 // Contains the output of DescribePipelines.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/DescribePipelinesOutput
 type DescribePipelinesOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -2606,7 +2595,6 @@ func (s *DescribePipelinesOutput) SetPipelineDescriptionList(v []*PipelineDescri
 }
 
 // Contains the parameters for EvaluateExpression.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/EvaluateExpressionInput
 type EvaluateExpressionInput struct {
 	_ struct{} `type:"structure"`
 
@@ -2680,7 +2668,6 @@ func (s *EvaluateExpressionInput) SetPipelineId(v string) *EvaluateExpressionInp
 }
 
 // Contains the output of EvaluateExpression.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/EvaluateExpressionOutput
 type EvaluateExpressionOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -2709,7 +2696,6 @@ func (s *EvaluateExpressionOutput) SetEvaluatedExpression(v string) *EvaluateExp
 // A key-value pair that describes a property of a pipeline object. The value
 // is specified as either a string value (StringValue) or a reference to another
 // object (RefValue) but not as both.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/Field
 type Field struct {
 	_ struct{} `type:"structure"`
 
@@ -2773,7 +2759,6 @@ func (s *Field) SetStringValue(v string) *Field {
 }
 
 // Contains the parameters for GetPipelineDefinition.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/GetPipelineDefinitionInput
 type GetPipelineDefinitionInput struct {
 	_ struct{} `type:"structure"`
 
@@ -2827,7 +2812,6 @@ func (s *GetPipelineDefinitionInput) SetVersion(v string) *GetPipelineDefinition
 }
 
 // Contains the output of GetPipelineDefinition.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/GetPipelineDefinitionOutput
 type GetPipelineDefinitionOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -2875,7 +2859,6 @@ func (s *GetPipelineDefinitionOutput) SetPipelineObjects(v []*PipelineObject) *G
 // in the Amazon Elastic Compute Cloud User Guide. Passing in this value proves
 // that your task runner is running on an EC2 instance, and ensures the proper
 // AWS Data Pipeline service charges are applied to your pipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/InstanceIdentity
 type InstanceIdentity struct {
 	_ struct{} `type:"structure"`
 
@@ -2912,7 +2895,6 @@ func (s *InstanceIdentity) SetSignature(v string) *InstanceIdentity {
 }
 
 // Contains the parameters for ListPipelines.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ListPipelinesInput
 type ListPipelinesInput struct {
 	_ struct{} `type:"structure"`
 
@@ -2940,7 +2922,6 @@ func (s *ListPipelinesInput) SetMarker(v string) *ListPipelinesInput {
 }
 
 // Contains the output of ListPipelines.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ListPipelinesOutput
 type ListPipelinesOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -2990,7 +2971,6 @@ func (s *ListPipelinesOutput) SetPipelineIdList(v []*PipelineIdName) *ListPipeli
 
 // Contains a logical operation for comparing the value of a field with a specified
 // value.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/Operator
 type Operator struct {
 	_ struct{} `type:"structure"`
 
@@ -3052,7 +3032,6 @@ func (s *Operator) SetValues(v []*string) *Operator {
 }
 
 // The attributes allowed or specified with a parameter object.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ParameterAttribute
 type ParameterAttribute struct {
 	_ struct{} `type:"structure"`
 
@@ -3109,7 +3088,6 @@ func (s *ParameterAttribute) SetStringValue(v string) *ParameterAttribute {
 }
 
 // Contains information about a parameter object.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ParameterObject
 type ParameterObject struct {
 	_ struct{} `type:"structure"`
 
@@ -3176,7 +3154,6 @@ func (s *ParameterObject) SetId(v string) *ParameterObject {
 }
 
 // A value or list of parameter values.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ParameterValue
 type ParameterValue struct {
 	_ struct{} `type:"structure"`
 
@@ -3233,7 +3210,6 @@ func (s *ParameterValue) SetStringValue(v string) *ParameterValue {
 }
 
 // Contains pipeline metadata.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PipelineDescription
 type PipelineDescription struct {
 	_ struct{} `type:"structure"`
 
@@ -3305,7 +3281,6 @@ func (s *PipelineDescription) SetTags(v []*Tag) *PipelineDescription {
 }
 
 // Contains the name and identifier of a pipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PipelineIdName
 type PipelineIdName struct {
 	_ struct{} `type:"structure"`
 
@@ -3342,7 +3317,6 @@ func (s *PipelineIdName) SetName(v string) *PipelineIdName {
 // Contains information about a pipeline object. This can be a logical, physical,
 // or physical attempt pipeline object. The complete set of components of a
 // pipeline defines the pipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PipelineObject
 type PipelineObject struct {
 	_ struct{} `type:"structure"`
 
@@ -3426,7 +3400,6 @@ func (s *PipelineObject) SetName(v string) *PipelineObject {
 }
 
 // Contains the parameters for PollForTask.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PollForTaskInput
 type PollForTaskInput struct {
 	_ struct{} `type:"structure"`
 
@@ -3496,7 +3469,6 @@ func (s *PollForTaskInput) SetWorkerGroup(v string) *PollForTaskInput {
 }
 
 // Contains the output of PollForTask.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PollForTaskOutput
 type PollForTaskOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -3524,7 +3496,6 @@ func (s *PollForTaskOutput) SetTaskObject(v *TaskObject) *PollForTaskOutput {
 }
 
 // Contains the parameters for PutPipelineDefinition.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PutPipelineDefinitionInput
 type PutPipelineDefinitionInput struct {
 	_ struct{} `type:"structure"`
 
@@ -3630,7 +3601,6 @@ func (s *PutPipelineDefinitionInput) SetPipelineObjects(v []*PipelineObject) *Pu
 }
 
 // Contains the output of PutPipelineDefinition.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/PutPipelineDefinitionOutput
 type PutPipelineDefinitionOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -3677,7 +3647,6 @@ func (s *PutPipelineDefinitionOutput) SetValidationWarnings(v []*ValidationWarni
 }
 
 // Defines the query to run against an object.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/Query
 type Query struct {
 	_ struct{} `type:"structure"`
 
@@ -3703,7 +3672,6 @@ func (s *Query) SetSelectors(v []*Selector) *Query {
 }
 
 // Contains the parameters for QueryObjects.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/QueryObjectsInput
 type QueryObjectsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -3795,7 +3763,6 @@ func (s *QueryObjectsInput) SetSphere(v string) *QueryObjectsInput {
 }
 
 // Contains the output of QueryObjects.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/QueryObjectsOutput
 type QueryObjectsOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -3841,7 +3808,6 @@ func (s *QueryObjectsOutput) SetMarker(v string) *QueryObjectsOutput {
 }
 
 // Contains the parameters for RemoveTags.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/RemoveTagsInput
 type RemoveTagsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -3898,7 +3864,6 @@ func (s *RemoveTagsInput) SetTagKeys(v []*string) *RemoveTagsInput {
 }
 
 // Contains the output of RemoveTags.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/RemoveTagsOutput
 type RemoveTagsOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -3914,7 +3879,6 @@ func (s RemoveTagsOutput) GoString() string {
 }
 
 // Contains the parameters for ReportTaskProgress.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskProgressInput
 type ReportTaskProgressInput struct {
 	_ struct{} `type:"structure"`
 
@@ -3978,7 +3942,6 @@ func (s *ReportTaskProgressInput) SetTaskId(v string) *ReportTaskProgressInput {
 }
 
 // Contains the output of ReportTaskProgress.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskProgressOutput
 type ReportTaskProgressOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -4006,7 +3969,6 @@ func (s *ReportTaskProgressOutput) SetCanceled(v bool) *ReportTaskProgressOutput
 }
 
 // Contains the parameters for ReportTaskRunnerHeartbeat.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskRunnerHeartbeatInput
 type ReportTaskRunnerHeartbeatInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4078,7 +4040,6 @@ func (s *ReportTaskRunnerHeartbeatInput) SetWorkerGroup(v string) *ReportTaskRun
 }
 
 // Contains the output of ReportTaskRunnerHeartbeat.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ReportTaskRunnerHeartbeatOutput
 type ReportTaskRunnerHeartbeatOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -4106,7 +4067,6 @@ func (s *ReportTaskRunnerHeartbeatOutput) SetTerminate(v bool) *ReportTaskRunner
 
 // A comparision that is used to determine whether a query should return this
 // object.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/Selector
 type Selector struct {
 	_ struct{} `type:"structure"`
 
@@ -4144,7 +4104,6 @@ func (s *Selector) SetOperator(v *Operator) *Selector {
 }
 
 // Contains the parameters for SetStatus.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetStatusInput
 type SetStatusInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4216,7 +4175,6 @@ func (s *SetStatusInput) SetStatus(v string) *SetStatusInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetStatusOutput
 type SetStatusOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -4232,7 +4190,6 @@ func (s SetStatusOutput) GoString() string {
 }
 
 // Contains the parameters for SetTaskStatus.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetTaskStatusInput
 type SetTaskStatusInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4327,7 +4284,6 @@ func (s *SetTaskStatusInput) SetTaskStatus(v string) *SetTaskStatusInput {
 }
 
 // Contains the output of SetTaskStatus.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/SetTaskStatusOutput
 type SetTaskStatusOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -4347,7 +4303,6 @@ func (s SetTaskStatusOutput) GoString() string {
 // pipeline. For more information, see Controlling User Access to Pipelines
 // (http://docs.aws.amazon.com/datapipeline/latest/DeveloperGuide/dp-control-access.html)
 // in the AWS Data Pipeline Developer Guide.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/Tag
 type Tag struct {
 	_ struct{} `type:"structure"`
 
@@ -4408,7 +4363,6 @@ func (s *Tag) SetValue(v string) *Tag {
 }
 
 // Contains information about a pipeline task that is assigned to a task runner.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/TaskObject
 type TaskObject struct {
 	_ struct{} `type:"structure"`
 
@@ -4463,7 +4417,6 @@ func (s *TaskObject) SetTaskId(v string) *TaskObject {
 }
 
 // Contains the parameters for ValidatePipelineDefinition.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ValidatePipelineDefinitionInput
 type ValidatePipelineDefinitionInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4568,7 +4521,6 @@ func (s *ValidatePipelineDefinitionInput) SetPipelineObjects(v []*PipelineObject
 }
 
 // Contains the output of ValidatePipelineDefinition.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ValidatePipelineDefinitionOutput
 type ValidatePipelineDefinitionOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -4615,7 +4567,6 @@ func (s *ValidatePipelineDefinitionOutput) SetValidationWarnings(v []*Validation
 // Defines a validation error. Validation errors prevent pipeline activation.
 // The set of validation errors that can be returned are defined by AWS Data
 // Pipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ValidationError
 type ValidationError struct {
 	_ struct{} `type:"structure"`
 
@@ -4651,7 +4602,6 @@ func (s *ValidationError) SetId(v string) *ValidationError {
 // Defines a validation warning. Validation warnings do not prevent pipeline
 // activation. The set of validation warnings that can be returned are defined
 // by AWS Data Pipeline.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/datapipeline-2012-10-29/ValidationWarning
 type ValidationWarning struct {
 	_ struct{} `type:"structure"`
 

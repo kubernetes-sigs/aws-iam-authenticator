@@ -10,15 +10,46 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/credentials/endpointcreds"
 	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/internal/shareddefaults"
 )
 
 func TestHTTPCredProvider(t *testing.T) {
+	origFn := lookupHostFn
+	defer func() { lookupHostFn = origFn }()
+
+	lookupHostFn = func(host string) ([]string, error) {
+		m := map[string]struct {
+			Addrs []string
+			Err   error
+		}{
+			"localhost":       {Addrs: []string{"::1", "127.0.0.1"}},
+			"actuallylocal":   {Addrs: []string{"127.0.0.2"}},
+			"notlocal":        {Addrs: []string{"::1", "127.0.0.1", "192.168.1.10"}},
+			"www.example.com": {Addrs: []string{"10.10.10.10"}},
+		}
+
+		h, ok := m[host]
+		if !ok {
+			t.Fatalf("unknown host in test, %v", host)
+			return nil, fmt.Errorf("unknown host")
+		}
+
+		return h.Addrs, h.Err
+	}
+
 	cases := []struct {
-		Host string
-		Fail bool
+		Host      string
+		AuthToken string
+		Fail      bool
 	}{
-		{"localhost", false}, {"127.0.0.1", false},
-		{"www.example.com", true}, {"169.254.170.2", true},
+		{Host: "localhost", Fail: false},
+		{Host: "actuallylocal", Fail: false},
+		{Host: "127.0.0.1", Fail: false},
+		{Host: "127.1.1.1", Fail: false},
+		{Host: "[::1]", Fail: false},
+		{Host: "www.example.com", Fail: true},
+		{Host: "169.254.170.2", Fail: true},
+		{Host: "localhost", Fail: false, AuthToken: "Basic abc123"},
 	}
 
 	defer os.Clearenv()
@@ -26,6 +57,7 @@ func TestHTTPCredProvider(t *testing.T) {
 	for i, c := range cases {
 		u := fmt.Sprintf("http://%s/abc/123", c.Host)
 		os.Setenv(httpProviderEnvVar, u)
+		os.Setenv(httpProviderAuthorizationEnvVar, c.AuthToken)
 
 		provider := RemoteCredProvider(aws.Config{}, request.Handlers{})
 		if provider == nil {
@@ -50,13 +82,16 @@ func TestHTTPCredProvider(t *testing.T) {
 			if e, a := u, httpProvider.Client.Endpoint; e != a {
 				t.Errorf("%d, expect %q endpoint, got %q", i, e, a)
 			}
+			if e, a := c.AuthToken, httpProvider.AuthorizationToken; e != a {
+				t.Errorf("%d, expect %q auth token, got %q", i, e, a)
+			}
 		}
 	}
 }
 
 func TestECSCredProvider(t *testing.T) {
 	defer os.Clearenv()
-	os.Setenv(ecsCredsProviderEnvVar, "/abc/123")
+	os.Setenv(shareddefaults.ECSCredsProviderEnvVar, "/abc/123")
 
 	provider := RemoteCredProvider(aws.Config{}, request.Handlers{})
 	if provider == nil {

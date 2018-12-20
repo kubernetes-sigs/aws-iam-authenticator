@@ -9,14 +9,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/private/protocol"
+	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
 const opAcceptQualificationRequest = "AcceptQualificationRequest"
 
 // AcceptQualificationRequestRequest generates a "aws/request.Request" representing the
 // client's request for the AcceptQualificationRequest operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -36,7 +38,7 @@ const opAcceptQualificationRequest = "AcceptQualificationRequest"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AcceptQualificationRequest
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AcceptQualificationRequest
 func (c *MTurk) AcceptQualificationRequestRequest(input *AcceptQualificationRequestInput) (req *request.Request, output *AcceptQualificationRequestOutput) {
 	op := &request.Operation{
 		Name:       opAcceptQualificationRequest,
@@ -50,6 +52,7 @@ func (c *MTurk) AcceptQualificationRequestRequest(input *AcceptQualificationRequ
 
 	output = &AcceptQualificationRequestOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -79,7 +82,7 @@ func (c *MTurk) AcceptQualificationRequestRequest(input *AcceptQualificationRequ
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AcceptQualificationRequest
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AcceptQualificationRequest
 func (c *MTurk) AcceptQualificationRequest(input *AcceptQualificationRequestInput) (*AcceptQualificationRequestOutput, error) {
 	req, out := c.AcceptQualificationRequestRequest(input)
 	return out, req.Send()
@@ -105,8 +108,8 @@ const opApproveAssignment = "ApproveAssignment"
 
 // ApproveAssignmentRequest generates a "aws/request.Request" representing the
 // client's request for the ApproveAssignment operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -126,7 +129,7 @@ const opApproveAssignment = "ApproveAssignment"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ApproveAssignment
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ApproveAssignment
 func (c *MTurk) ApproveAssignmentRequest(input *ApproveAssignmentInput) (req *request.Request, output *ApproveAssignmentOutput) {
 	op := &request.Operation{
 		Name:       opApproveAssignment,
@@ -140,6 +143,7 @@ func (c *MTurk) ApproveAssignmentRequest(input *ApproveAssignmentInput) (req *re
 
 	output = &ApproveAssignmentOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -180,7 +184,7 @@ func (c *MTurk) ApproveAssignmentRequest(input *ApproveAssignmentInput) (req *re
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ApproveAssignment
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ApproveAssignment
 func (c *MTurk) ApproveAssignment(input *ApproveAssignmentInput) (*ApproveAssignmentOutput, error) {
 	req, out := c.ApproveAssignmentRequest(input)
 	return out, req.Send()
@@ -206,8 +210,8 @@ const opAssociateQualificationWithWorker = "AssociateQualificationWithWorker"
 
 // AssociateQualificationWithWorkerRequest generates a "aws/request.Request" representing the
 // client's request for the AssociateQualificationWithWorker operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -227,7 +231,7 @@ const opAssociateQualificationWithWorker = "AssociateQualificationWithWorker"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AssociateQualificationWithWorker
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AssociateQualificationWithWorker
 func (c *MTurk) AssociateQualificationWithWorkerRequest(input *AssociateQualificationWithWorkerInput) (req *request.Request, output *AssociateQualificationWithWorkerOutput) {
 	op := &request.Operation{
 		Name:       opAssociateQualificationWithWorker,
@@ -241,6 +245,7 @@ func (c *MTurk) AssociateQualificationWithWorkerRequest(input *AssociateQualific
 
 	output = &AssociateQualificationWithWorkerOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -275,7 +280,7 @@ func (c *MTurk) AssociateQualificationWithWorkerRequest(input *AssociateQualific
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AssociateQualificationWithWorker
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AssociateQualificationWithWorker
 func (c *MTurk) AssociateQualificationWithWorker(input *AssociateQualificationWithWorkerInput) (*AssociateQualificationWithWorkerOutput, error) {
 	req, out := c.AssociateQualificationWithWorkerRequest(input)
 	return out, req.Send()
@@ -301,8 +306,8 @@ const opCreateAdditionalAssignmentsForHIT = "CreateAdditionalAssignmentsForHIT"
 
 // CreateAdditionalAssignmentsForHITRequest generates a "aws/request.Request" representing the
 // client's request for the CreateAdditionalAssignmentsForHIT operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -322,7 +327,7 @@ const opCreateAdditionalAssignmentsForHIT = "CreateAdditionalAssignmentsForHIT"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateAdditionalAssignmentsForHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateAdditionalAssignmentsForHIT
 func (c *MTurk) CreateAdditionalAssignmentsForHITRequest(input *CreateAdditionalAssignmentsForHITInput) (req *request.Request, output *CreateAdditionalAssignmentsForHITOutput) {
 	op := &request.Operation{
 		Name:       opCreateAdditionalAssignmentsForHIT,
@@ -336,6 +341,7 @@ func (c *MTurk) CreateAdditionalAssignmentsForHITRequest(input *CreateAdditional
 
 	output = &CreateAdditionalAssignmentsForHITOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -372,7 +378,7 @@ func (c *MTurk) CreateAdditionalAssignmentsForHITRequest(input *CreateAdditional
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateAdditionalAssignmentsForHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateAdditionalAssignmentsForHIT
 func (c *MTurk) CreateAdditionalAssignmentsForHIT(input *CreateAdditionalAssignmentsForHITInput) (*CreateAdditionalAssignmentsForHITOutput, error) {
 	req, out := c.CreateAdditionalAssignmentsForHITRequest(input)
 	return out, req.Send()
@@ -398,8 +404,8 @@ const opCreateHIT = "CreateHIT"
 
 // CreateHITRequest generates a "aws/request.Request" representing the
 // client's request for the CreateHIT operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -419,7 +425,7 @@ const opCreateHIT = "CreateHIT"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHIT
 func (c *MTurk) CreateHITRequest(input *CreateHITInput) (req *request.Request, output *CreateHITOutput) {
 	op := &request.Operation{
 		Name:       opCreateHIT,
@@ -476,7 +482,7 @@ func (c *MTurk) CreateHITRequest(input *CreateHITInput) (req *request.Request, o
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHIT
 func (c *MTurk) CreateHIT(input *CreateHITInput) (*CreateHITOutput, error) {
 	req, out := c.CreateHITRequest(input)
 	return out, req.Send()
@@ -502,8 +508,8 @@ const opCreateHITType = "CreateHITType"
 
 // CreateHITTypeRequest generates a "aws/request.Request" representing the
 // client's request for the CreateHITType operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -523,7 +529,7 @@ const opCreateHITType = "CreateHITType"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITType
 func (c *MTurk) CreateHITTypeRequest(input *CreateHITTypeInput) (req *request.Request, output *CreateHITTypeOutput) {
 	op := &request.Operation{
 		Name:       opCreateHITType,
@@ -562,7 +568,7 @@ func (c *MTurk) CreateHITTypeRequest(input *CreateHITTypeInput) (req *request.Re
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITType
 func (c *MTurk) CreateHITType(input *CreateHITTypeInput) (*CreateHITTypeOutput, error) {
 	req, out := c.CreateHITTypeRequest(input)
 	return out, req.Send()
@@ -588,8 +594,8 @@ const opCreateHITWithHITType = "CreateHITWithHITType"
 
 // CreateHITWithHITTypeRequest generates a "aws/request.Request" representing the
 // client's request for the CreateHITWithHITType operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -609,7 +615,7 @@ const opCreateHITWithHITType = "CreateHITWithHITType"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITWithHITType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITWithHITType
 func (c *MTurk) CreateHITWithHITTypeRequest(input *CreateHITWithHITTypeInput) (req *request.Request, output *CreateHITWithHITTypeOutput) {
 	op := &request.Operation{
 		Name:       opCreateHITWithHITType,
@@ -657,7 +663,7 @@ func (c *MTurk) CreateHITWithHITTypeRequest(input *CreateHITWithHITTypeInput) (r
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITWithHITType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITWithHITType
 func (c *MTurk) CreateHITWithHITType(input *CreateHITWithHITTypeInput) (*CreateHITWithHITTypeOutput, error) {
 	req, out := c.CreateHITWithHITTypeRequest(input)
 	return out, req.Send()
@@ -683,8 +689,8 @@ const opCreateQualificationType = "CreateQualificationType"
 
 // CreateQualificationTypeRequest generates a "aws/request.Request" representing the
 // client's request for the CreateQualificationType operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -704,7 +710,7 @@ const opCreateQualificationType = "CreateQualificationType"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateQualificationType
 func (c *MTurk) CreateQualificationTypeRequest(input *CreateQualificationTypeInput) (req *request.Request, output *CreateQualificationTypeOutput) {
 	op := &request.Operation{
 		Name:       opCreateQualificationType,
@@ -741,7 +747,7 @@ func (c *MTurk) CreateQualificationTypeRequest(input *CreateQualificationTypeInp
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateQualificationType
 func (c *MTurk) CreateQualificationType(input *CreateQualificationTypeInput) (*CreateQualificationTypeOutput, error) {
 	req, out := c.CreateQualificationTypeRequest(input)
 	return out, req.Send()
@@ -767,8 +773,8 @@ const opCreateWorkerBlock = "CreateWorkerBlock"
 
 // CreateWorkerBlockRequest generates a "aws/request.Request" representing the
 // client's request for the CreateWorkerBlock operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -788,7 +794,7 @@ const opCreateWorkerBlock = "CreateWorkerBlock"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateWorkerBlock
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateWorkerBlock
 func (c *MTurk) CreateWorkerBlockRequest(input *CreateWorkerBlockInput) (req *request.Request, output *CreateWorkerBlockOutput) {
 	op := &request.Operation{
 		Name:       opCreateWorkerBlock,
@@ -802,6 +808,7 @@ func (c *MTurk) CreateWorkerBlockRequest(input *CreateWorkerBlockInput) (req *re
 
 	output = &CreateWorkerBlockOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -826,7 +833,7 @@ func (c *MTurk) CreateWorkerBlockRequest(input *CreateWorkerBlockInput) (req *re
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateWorkerBlock
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateWorkerBlock
 func (c *MTurk) CreateWorkerBlock(input *CreateWorkerBlockInput) (*CreateWorkerBlockOutput, error) {
 	req, out := c.CreateWorkerBlockRequest(input)
 	return out, req.Send()
@@ -852,8 +859,8 @@ const opDeleteHIT = "DeleteHIT"
 
 // DeleteHITRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteHIT operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -873,7 +880,7 @@ const opDeleteHIT = "DeleteHIT"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteHIT
 func (c *MTurk) DeleteHITRequest(input *DeleteHITInput) (req *request.Request, output *DeleteHITOutput) {
 	op := &request.Operation{
 		Name:       opDeleteHIT,
@@ -887,6 +894,7 @@ func (c *MTurk) DeleteHITRequest(input *DeleteHITInput) (req *request.Request, o
 
 	output = &DeleteHITOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -927,7 +935,7 @@ func (c *MTurk) DeleteHITRequest(input *DeleteHITInput) (req *request.Request, o
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteHIT
 func (c *MTurk) DeleteHIT(input *DeleteHITInput) (*DeleteHITOutput, error) {
 	req, out := c.DeleteHITRequest(input)
 	return out, req.Send()
@@ -953,8 +961,8 @@ const opDeleteQualificationType = "DeleteQualificationType"
 
 // DeleteQualificationTypeRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteQualificationType operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -974,7 +982,7 @@ const opDeleteQualificationType = "DeleteQualificationType"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteQualificationType
 func (c *MTurk) DeleteQualificationTypeRequest(input *DeleteQualificationTypeInput) (req *request.Request, output *DeleteQualificationTypeOutput) {
 	op := &request.Operation{
 		Name:       opDeleteQualificationType,
@@ -988,6 +996,7 @@ func (c *MTurk) DeleteQualificationTypeRequest(input *DeleteQualificationTypeInp
 
 	output = &DeleteQualificationTypeOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -1022,7 +1031,7 @@ func (c *MTurk) DeleteQualificationTypeRequest(input *DeleteQualificationTypeInp
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteQualificationType
 func (c *MTurk) DeleteQualificationType(input *DeleteQualificationTypeInput) (*DeleteQualificationTypeOutput, error) {
 	req, out := c.DeleteQualificationTypeRequest(input)
 	return out, req.Send()
@@ -1048,8 +1057,8 @@ const opDeleteWorkerBlock = "DeleteWorkerBlock"
 
 // DeleteWorkerBlockRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteWorkerBlock operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1069,7 +1078,7 @@ const opDeleteWorkerBlock = "DeleteWorkerBlock"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteWorkerBlock
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteWorkerBlock
 func (c *MTurk) DeleteWorkerBlockRequest(input *DeleteWorkerBlockInput) (req *request.Request, output *DeleteWorkerBlockOutput) {
 	op := &request.Operation{
 		Name:       opDeleteWorkerBlock,
@@ -1083,6 +1092,7 @@ func (c *MTurk) DeleteWorkerBlockRequest(input *DeleteWorkerBlockInput) (req *re
 
 	output = &DeleteWorkerBlockOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -1110,7 +1120,7 @@ func (c *MTurk) DeleteWorkerBlockRequest(input *DeleteWorkerBlockInput) (req *re
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteWorkerBlock
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteWorkerBlock
 func (c *MTurk) DeleteWorkerBlock(input *DeleteWorkerBlockInput) (*DeleteWorkerBlockOutput, error) {
 	req, out := c.DeleteWorkerBlockRequest(input)
 	return out, req.Send()
@@ -1136,8 +1146,8 @@ const opDisassociateQualificationFromWorker = "DisassociateQualificationFromWork
 
 // DisassociateQualificationFromWorkerRequest generates a "aws/request.Request" representing the
 // client's request for the DisassociateQualificationFromWorker operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1157,7 +1167,7 @@ const opDisassociateQualificationFromWorker = "DisassociateQualificationFromWork
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DisassociateQualificationFromWorker
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DisassociateQualificationFromWorker
 func (c *MTurk) DisassociateQualificationFromWorkerRequest(input *DisassociateQualificationFromWorkerInput) (req *request.Request, output *DisassociateQualificationFromWorkerOutput) {
 	op := &request.Operation{
 		Name:       opDisassociateQualificationFromWorker,
@@ -1171,6 +1181,7 @@ func (c *MTurk) DisassociateQualificationFromWorkerRequest(input *DisassociateQu
 
 	output = &DisassociateQualificationFromWorkerOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -1197,7 +1208,7 @@ func (c *MTurk) DisassociateQualificationFromWorkerRequest(input *DisassociateQu
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DisassociateQualificationFromWorker
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DisassociateQualificationFromWorker
 func (c *MTurk) DisassociateQualificationFromWorker(input *DisassociateQualificationFromWorkerInput) (*DisassociateQualificationFromWorkerOutput, error) {
 	req, out := c.DisassociateQualificationFromWorkerRequest(input)
 	return out, req.Send()
@@ -1223,8 +1234,8 @@ const opGetAccountBalance = "GetAccountBalance"
 
 // GetAccountBalanceRequest generates a "aws/request.Request" representing the
 // client's request for the GetAccountBalance operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1244,7 +1255,7 @@ const opGetAccountBalance = "GetAccountBalance"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAccountBalance
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAccountBalance
 func (c *MTurk) GetAccountBalanceRequest(input *GetAccountBalanceInput) (req *request.Request, output *GetAccountBalanceOutput) {
 	op := &request.Operation{
 		Name:       opGetAccountBalance,
@@ -1281,7 +1292,7 @@ func (c *MTurk) GetAccountBalanceRequest(input *GetAccountBalanceInput) (req *re
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAccountBalance
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAccountBalance
 func (c *MTurk) GetAccountBalance(input *GetAccountBalanceInput) (*GetAccountBalanceOutput, error) {
 	req, out := c.GetAccountBalanceRequest(input)
 	return out, req.Send()
@@ -1307,8 +1318,8 @@ const opGetAssignment = "GetAssignment"
 
 // GetAssignmentRequest generates a "aws/request.Request" representing the
 // client's request for the GetAssignment operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1328,7 +1339,7 @@ const opGetAssignment = "GetAssignment"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAssignment
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAssignment
 func (c *MTurk) GetAssignmentRequest(input *GetAssignmentInput) (req *request.Request, output *GetAssignmentOutput) {
 	op := &request.Operation{
 		Name:       opGetAssignment,
@@ -1364,7 +1375,7 @@ func (c *MTurk) GetAssignmentRequest(input *GetAssignmentInput) (req *request.Re
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAssignment
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAssignment
 func (c *MTurk) GetAssignment(input *GetAssignmentInput) (*GetAssignmentOutput, error) {
 	req, out := c.GetAssignmentRequest(input)
 	return out, req.Send()
@@ -1390,8 +1401,8 @@ const opGetFileUploadURL = "GetFileUploadURL"
 
 // GetFileUploadURLRequest generates a "aws/request.Request" representing the
 // client's request for the GetFileUploadURL operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1411,7 +1422,7 @@ const opGetFileUploadURL = "GetFileUploadURL"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetFileUploadURL
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetFileUploadURL
 func (c *MTurk) GetFileUploadURLRequest(input *GetFileUploadURLInput) (req *request.Request, output *GetFileUploadURLOutput) {
 	op := &request.Operation{
 		Name:       opGetFileUploadURL,
@@ -1436,7 +1447,11 @@ func (c *MTurk) GetFileUploadURLRequest(input *GetFileUploadURLInput) (req *requ
 // the instant the GetFileUploadURL operation is called, and is valid for 60
 // seconds. You can get a temporary file upload URL any time until the HIT is
 // disposed. After the HIT is disposed, any uploaded files are deleted, and
-// cannot be retrieved.
+// cannot be retrieved. Pending Deprecation on December 12, 2017. The Answer
+// Specification structure will no longer support the FileUploadAnswer element
+// to be used for the QuestionForm data structure. Instead, we recommend that
+// Requesters who want to create HITs asking Workers to upload files to use
+// Amazon S3.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -1453,7 +1468,7 @@ func (c *MTurk) GetFileUploadURLRequest(input *GetFileUploadURLInput) (req *requ
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetFileUploadURL
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetFileUploadURL
 func (c *MTurk) GetFileUploadURL(input *GetFileUploadURLInput) (*GetFileUploadURLOutput, error) {
 	req, out := c.GetFileUploadURLRequest(input)
 	return out, req.Send()
@@ -1479,8 +1494,8 @@ const opGetHIT = "GetHIT"
 
 // GetHITRequest generates a "aws/request.Request" representing the
 // client's request for the GetHIT operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1500,7 +1515,7 @@ const opGetHIT = "GetHIT"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetHIT
 func (c *MTurk) GetHITRequest(input *GetHITInput) (req *request.Request, output *GetHITOutput) {
 	op := &request.Operation{
 		Name:       opGetHIT,
@@ -1536,7 +1551,7 @@ func (c *MTurk) GetHITRequest(input *GetHITInput) (req *request.Request, output 
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetHIT
 func (c *MTurk) GetHIT(input *GetHITInput) (*GetHITOutput, error) {
 	req, out := c.GetHITRequest(input)
 	return out, req.Send()
@@ -1562,8 +1577,8 @@ const opGetQualificationScore = "GetQualificationScore"
 
 // GetQualificationScoreRequest generates a "aws/request.Request" representing the
 // client's request for the GetQualificationScore operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1583,7 +1598,7 @@ const opGetQualificationScore = "GetQualificationScore"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationScore
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationScore
 func (c *MTurk) GetQualificationScoreRequest(input *GetQualificationScoreInput) (req *request.Request, output *GetQualificationScoreOutput) {
 	op := &request.Operation{
 		Name:       opGetQualificationScore,
@@ -1627,7 +1642,7 @@ func (c *MTurk) GetQualificationScoreRequest(input *GetQualificationScoreInput) 
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationScore
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationScore
 func (c *MTurk) GetQualificationScore(input *GetQualificationScoreInput) (*GetQualificationScoreOutput, error) {
 	req, out := c.GetQualificationScoreRequest(input)
 	return out, req.Send()
@@ -1653,8 +1668,8 @@ const opGetQualificationType = "GetQualificationType"
 
 // GetQualificationTypeRequest generates a "aws/request.Request" representing the
 // client's request for the GetQualificationType operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1674,7 +1689,7 @@ const opGetQualificationType = "GetQualificationType"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationType
 func (c *MTurk) GetQualificationTypeRequest(input *GetQualificationTypeInput) (req *request.Request, output *GetQualificationTypeOutput) {
 	op := &request.Operation{
 		Name:       opGetQualificationType,
@@ -1711,7 +1726,7 @@ func (c *MTurk) GetQualificationTypeRequest(input *GetQualificationTypeInput) (r
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationType
 func (c *MTurk) GetQualificationType(input *GetQualificationTypeInput) (*GetQualificationTypeOutput, error) {
 	req, out := c.GetQualificationTypeRequest(input)
 	return out, req.Send()
@@ -1737,8 +1752,8 @@ const opListAssignmentsForHIT = "ListAssignmentsForHIT"
 
 // ListAssignmentsForHITRequest generates a "aws/request.Request" representing the
 // client's request for the ListAssignmentsForHIT operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1758,7 +1773,7 @@ const opListAssignmentsForHIT = "ListAssignmentsForHIT"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListAssignmentsForHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListAssignmentsForHIT
 func (c *MTurk) ListAssignmentsForHITRequest(input *ListAssignmentsForHITInput) (req *request.Request, output *ListAssignmentsForHITOutput) {
 	op := &request.Operation{
 		Name:       opListAssignmentsForHIT,
@@ -1820,7 +1835,7 @@ func (c *MTurk) ListAssignmentsForHITRequest(input *ListAssignmentsForHITInput) 
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListAssignmentsForHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListAssignmentsForHIT
 func (c *MTurk) ListAssignmentsForHIT(input *ListAssignmentsForHITInput) (*ListAssignmentsForHITOutput, error) {
 	req, out := c.ListAssignmentsForHITRequest(input)
 	return out, req.Send()
@@ -1896,8 +1911,8 @@ const opListBonusPayments = "ListBonusPayments"
 
 // ListBonusPaymentsRequest generates a "aws/request.Request" representing the
 // client's request for the ListBonusPayments operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1917,7 +1932,7 @@ const opListBonusPayments = "ListBonusPayments"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListBonusPayments
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListBonusPayments
 func (c *MTurk) ListBonusPaymentsRequest(input *ListBonusPaymentsInput) (req *request.Request, output *ListBonusPaymentsOutput) {
 	op := &request.Operation{
 		Name:       opListBonusPayments,
@@ -1960,7 +1975,7 @@ func (c *MTurk) ListBonusPaymentsRequest(input *ListBonusPaymentsInput) (req *re
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListBonusPayments
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListBonusPayments
 func (c *MTurk) ListBonusPayments(input *ListBonusPaymentsInput) (*ListBonusPaymentsOutput, error) {
 	req, out := c.ListBonusPaymentsRequest(input)
 	return out, req.Send()
@@ -2036,8 +2051,8 @@ const opListHITs = "ListHITs"
 
 // ListHITsRequest generates a "aws/request.Request" representing the
 // client's request for the ListHITs operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2057,7 +2072,7 @@ const opListHITs = "ListHITs"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITs
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITs
 func (c *MTurk) ListHITsRequest(input *ListHITsInput) (req *request.Request, output *ListHITsOutput) {
 	op := &request.Operation{
 		Name:       opListHITs,
@@ -2101,7 +2116,7 @@ func (c *MTurk) ListHITsRequest(input *ListHITsInput) (req *request.Request, out
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITs
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITs
 func (c *MTurk) ListHITs(input *ListHITsInput) (*ListHITsOutput, error) {
 	req, out := c.ListHITsRequest(input)
 	return out, req.Send()
@@ -2177,8 +2192,8 @@ const opListHITsForQualificationType = "ListHITsForQualificationType"
 
 // ListHITsForQualificationTypeRequest generates a "aws/request.Request" representing the
 // client's request for the ListHITsForQualificationType operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2198,7 +2213,7 @@ const opListHITsForQualificationType = "ListHITsForQualificationType"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITsForQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITsForQualificationType
 func (c *MTurk) ListHITsForQualificationTypeRequest(input *ListHITsForQualificationTypeInput) (req *request.Request, output *ListHITsForQualificationTypeOutput) {
 	op := &request.Operation{
 		Name:       opListHITsForQualificationType,
@@ -2243,7 +2258,7 @@ func (c *MTurk) ListHITsForQualificationTypeRequest(input *ListHITsForQualificat
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITsForQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITsForQualificationType
 func (c *MTurk) ListHITsForQualificationType(input *ListHITsForQualificationTypeInput) (*ListHITsForQualificationTypeOutput, error) {
 	req, out := c.ListHITsForQualificationTypeRequest(input)
 	return out, req.Send()
@@ -2319,8 +2334,8 @@ const opListQualificationRequests = "ListQualificationRequests"
 
 // ListQualificationRequestsRequest generates a "aws/request.Request" representing the
 // client's request for the ListQualificationRequests operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2340,7 +2355,7 @@ const opListQualificationRequests = "ListQualificationRequests"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationRequests
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationRequests
 func (c *MTurk) ListQualificationRequestsRequest(input *ListQualificationRequestsInput) (req *request.Request, output *ListQualificationRequestsOutput) {
 	op := &request.Operation{
 		Name:       opListQualificationRequests,
@@ -2385,7 +2400,7 @@ func (c *MTurk) ListQualificationRequestsRequest(input *ListQualificationRequest
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationRequests
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationRequests
 func (c *MTurk) ListQualificationRequests(input *ListQualificationRequestsInput) (*ListQualificationRequestsOutput, error) {
 	req, out := c.ListQualificationRequestsRequest(input)
 	return out, req.Send()
@@ -2461,8 +2476,8 @@ const opListQualificationTypes = "ListQualificationTypes"
 
 // ListQualificationTypesRequest generates a "aws/request.Request" representing the
 // client's request for the ListQualificationTypes operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2482,7 +2497,7 @@ const opListQualificationTypes = "ListQualificationTypes"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationTypes
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationTypes
 func (c *MTurk) ListQualificationTypesRequest(input *ListQualificationTypesInput) (req *request.Request, output *ListQualificationTypesOutput) {
 	op := &request.Operation{
 		Name:       opListQualificationTypes,
@@ -2507,10 +2522,8 @@ func (c *MTurk) ListQualificationTypesRequest(input *ListQualificationTypesInput
 
 // ListQualificationTypes API operation for Amazon Mechanical Turk.
 //
-// The ListQualificationRequests operation retrieves requests for Qualifications
-// of a particular Qualification type. The owner of the Qualification type calls
-// this operation to poll for pending requests, and accepts them using the AcceptQualification
-// operation.
+// The ListQualificationTypes operation returns a list of Qualification types,
+// filtered by an optional search term.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -2527,7 +2540,7 @@ func (c *MTurk) ListQualificationTypesRequest(input *ListQualificationTypesInput
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationTypes
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationTypes
 func (c *MTurk) ListQualificationTypes(input *ListQualificationTypesInput) (*ListQualificationTypesOutput, error) {
 	req, out := c.ListQualificationTypesRequest(input)
 	return out, req.Send()
@@ -2603,8 +2616,8 @@ const opListReviewPolicyResultsForHIT = "ListReviewPolicyResultsForHIT"
 
 // ListReviewPolicyResultsForHITRequest generates a "aws/request.Request" representing the
 // client's request for the ListReviewPolicyResultsForHIT operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2624,7 +2637,7 @@ const opListReviewPolicyResultsForHIT = "ListReviewPolicyResultsForHIT"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewPolicyResultsForHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewPolicyResultsForHIT
 func (c *MTurk) ListReviewPolicyResultsForHITRequest(input *ListReviewPolicyResultsForHITInput) (req *request.Request, output *ListReviewPolicyResultsForHITOutput) {
 	op := &request.Operation{
 		Name:       opListReviewPolicyResultsForHIT,
@@ -2670,7 +2683,7 @@ func (c *MTurk) ListReviewPolicyResultsForHITRequest(input *ListReviewPolicyResu
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewPolicyResultsForHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewPolicyResultsForHIT
 func (c *MTurk) ListReviewPolicyResultsForHIT(input *ListReviewPolicyResultsForHITInput) (*ListReviewPolicyResultsForHITOutput, error) {
 	req, out := c.ListReviewPolicyResultsForHITRequest(input)
 	return out, req.Send()
@@ -2746,8 +2759,8 @@ const opListReviewableHITs = "ListReviewableHITs"
 
 // ListReviewableHITsRequest generates a "aws/request.Request" representing the
 // client's request for the ListReviewableHITs operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2767,7 +2780,7 @@ const opListReviewableHITs = "ListReviewableHITs"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewableHITs
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewableHITs
 func (c *MTurk) ListReviewableHITsRequest(input *ListReviewableHITsInput) (req *request.Request, output *ListReviewableHITsOutput) {
 	op := &request.Operation{
 		Name:       opListReviewableHITs,
@@ -2811,7 +2824,7 @@ func (c *MTurk) ListReviewableHITsRequest(input *ListReviewableHITsInput) (req *
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewableHITs
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewableHITs
 func (c *MTurk) ListReviewableHITs(input *ListReviewableHITsInput) (*ListReviewableHITsOutput, error) {
 	req, out := c.ListReviewableHITsRequest(input)
 	return out, req.Send()
@@ -2887,8 +2900,8 @@ const opListWorkerBlocks = "ListWorkerBlocks"
 
 // ListWorkerBlocksRequest generates a "aws/request.Request" representing the
 // client's request for the ListWorkerBlocks operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2908,7 +2921,7 @@ const opListWorkerBlocks = "ListWorkerBlocks"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkerBlocks
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkerBlocks
 func (c *MTurk) ListWorkerBlocksRequest(input *ListWorkerBlocksInput) (req *request.Request, output *ListWorkerBlocksOutput) {
 	op := &request.Operation{
 		Name:       opListWorkerBlocks,
@@ -2951,7 +2964,7 @@ func (c *MTurk) ListWorkerBlocksRequest(input *ListWorkerBlocksInput) (req *requ
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkerBlocks
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkerBlocks
 func (c *MTurk) ListWorkerBlocks(input *ListWorkerBlocksInput) (*ListWorkerBlocksOutput, error) {
 	req, out := c.ListWorkerBlocksRequest(input)
 	return out, req.Send()
@@ -3027,8 +3040,8 @@ const opListWorkersWithQualificationType = "ListWorkersWithQualificationType"
 
 // ListWorkersWithQualificationTypeRequest generates a "aws/request.Request" representing the
 // client's request for the ListWorkersWithQualificationType operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3048,7 +3061,7 @@ const opListWorkersWithQualificationType = "ListWorkersWithQualificationType"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkersWithQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkersWithQualificationType
 func (c *MTurk) ListWorkersWithQualificationTypeRequest(input *ListWorkersWithQualificationTypeInput) (req *request.Request, output *ListWorkersWithQualificationTypeOutput) {
 	op := &request.Operation{
 		Name:       opListWorkersWithQualificationType,
@@ -3091,7 +3104,7 @@ func (c *MTurk) ListWorkersWithQualificationTypeRequest(input *ListWorkersWithQu
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkersWithQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkersWithQualificationType
 func (c *MTurk) ListWorkersWithQualificationType(input *ListWorkersWithQualificationTypeInput) (*ListWorkersWithQualificationTypeOutput, error) {
 	req, out := c.ListWorkersWithQualificationTypeRequest(input)
 	return out, req.Send()
@@ -3167,8 +3180,8 @@ const opNotifyWorkers = "NotifyWorkers"
 
 // NotifyWorkersRequest generates a "aws/request.Request" representing the
 // client's request for the NotifyWorkers operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3188,7 +3201,7 @@ const opNotifyWorkers = "NotifyWorkers"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/NotifyWorkers
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/NotifyWorkers
 func (c *MTurk) NotifyWorkersRequest(input *NotifyWorkersInput) (req *request.Request, output *NotifyWorkersOutput) {
 	op := &request.Operation{
 		Name:       opNotifyWorkers,
@@ -3228,7 +3241,7 @@ func (c *MTurk) NotifyWorkersRequest(input *NotifyWorkersInput) (req *request.Re
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/NotifyWorkers
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/NotifyWorkers
 func (c *MTurk) NotifyWorkers(input *NotifyWorkersInput) (*NotifyWorkersOutput, error) {
 	req, out := c.NotifyWorkersRequest(input)
 	return out, req.Send()
@@ -3254,8 +3267,8 @@ const opRejectAssignment = "RejectAssignment"
 
 // RejectAssignmentRequest generates a "aws/request.Request" representing the
 // client's request for the RejectAssignment operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3275,7 +3288,7 @@ const opRejectAssignment = "RejectAssignment"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectAssignment
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectAssignment
 func (c *MTurk) RejectAssignmentRequest(input *RejectAssignmentInput) (req *request.Request, output *RejectAssignmentOutput) {
 	op := &request.Operation{
 		Name:       opRejectAssignment,
@@ -3289,6 +3302,7 @@ func (c *MTurk) RejectAssignmentRequest(input *RejectAssignmentInput) (req *requ
 
 	output = &RejectAssignmentOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3319,7 +3333,7 @@ func (c *MTurk) RejectAssignmentRequest(input *RejectAssignmentInput) (req *requ
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectAssignment
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectAssignment
 func (c *MTurk) RejectAssignment(input *RejectAssignmentInput) (*RejectAssignmentOutput, error) {
 	req, out := c.RejectAssignmentRequest(input)
 	return out, req.Send()
@@ -3345,8 +3359,8 @@ const opRejectQualificationRequest = "RejectQualificationRequest"
 
 // RejectQualificationRequestRequest generates a "aws/request.Request" representing the
 // client's request for the RejectQualificationRequest operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3366,7 +3380,7 @@ const opRejectQualificationRequest = "RejectQualificationRequest"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectQualificationRequest
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectQualificationRequest
 func (c *MTurk) RejectQualificationRequestRequest(input *RejectQualificationRequestInput) (req *request.Request, output *RejectQualificationRequestOutput) {
 	op := &request.Operation{
 		Name:       opRejectQualificationRequest,
@@ -3380,6 +3394,7 @@ func (c *MTurk) RejectQualificationRequestRequest(input *RejectQualificationRequ
 
 	output = &RejectQualificationRequestOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3405,7 +3420,7 @@ func (c *MTurk) RejectQualificationRequestRequest(input *RejectQualificationRequ
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectQualificationRequest
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectQualificationRequest
 func (c *MTurk) RejectQualificationRequest(input *RejectQualificationRequestInput) (*RejectQualificationRequestOutput, error) {
 	req, out := c.RejectQualificationRequestRequest(input)
 	return out, req.Send()
@@ -3431,8 +3446,8 @@ const opSendBonus = "SendBonus"
 
 // SendBonusRequest generates a "aws/request.Request" representing the
 // client's request for the SendBonus operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3452,7 +3467,7 @@ const opSendBonus = "SendBonus"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendBonus
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendBonus
 func (c *MTurk) SendBonusRequest(input *SendBonusInput) (req *request.Request, output *SendBonusOutput) {
 	op := &request.Operation{
 		Name:       opSendBonus,
@@ -3466,6 +3481,7 @@ func (c *MTurk) SendBonusRequest(input *SendBonusInput) (req *request.Request, o
 
 	output = &SendBonusOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3496,7 +3512,7 @@ func (c *MTurk) SendBonusRequest(input *SendBonusInput) (req *request.Request, o
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendBonus
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendBonus
 func (c *MTurk) SendBonus(input *SendBonusInput) (*SendBonusOutput, error) {
 	req, out := c.SendBonusRequest(input)
 	return out, req.Send()
@@ -3522,8 +3538,8 @@ const opSendTestEventNotification = "SendTestEventNotification"
 
 // SendTestEventNotificationRequest generates a "aws/request.Request" representing the
 // client's request for the SendTestEventNotification operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3543,7 +3559,7 @@ const opSendTestEventNotification = "SendTestEventNotification"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendTestEventNotification
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendTestEventNotification
 func (c *MTurk) SendTestEventNotificationRequest(input *SendTestEventNotificationInput) (req *request.Request, output *SendTestEventNotificationOutput) {
 	op := &request.Operation{
 		Name:       opSendTestEventNotification,
@@ -3557,6 +3573,7 @@ func (c *MTurk) SendTestEventNotificationRequest(input *SendTestEventNotificatio
 
 	output = &SendTestEventNotificationOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3584,7 +3601,7 @@ func (c *MTurk) SendTestEventNotificationRequest(input *SendTestEventNotificatio
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendTestEventNotification
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendTestEventNotification
 func (c *MTurk) SendTestEventNotification(input *SendTestEventNotificationInput) (*SendTestEventNotificationOutput, error) {
 	req, out := c.SendTestEventNotificationRequest(input)
 	return out, req.Send()
@@ -3610,8 +3627,8 @@ const opUpdateExpirationForHIT = "UpdateExpirationForHIT"
 
 // UpdateExpirationForHITRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateExpirationForHIT operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3631,7 +3648,7 @@ const opUpdateExpirationForHIT = "UpdateExpirationForHIT"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateExpirationForHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateExpirationForHIT
 func (c *MTurk) UpdateExpirationForHITRequest(input *UpdateExpirationForHITInput) (req *request.Request, output *UpdateExpirationForHITOutput) {
 	op := &request.Operation{
 		Name:       opUpdateExpirationForHIT,
@@ -3645,6 +3662,7 @@ func (c *MTurk) UpdateExpirationForHITRequest(input *UpdateExpirationForHITInput
 
 	output = &UpdateExpirationForHITOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3669,7 +3687,7 @@ func (c *MTurk) UpdateExpirationForHITRequest(input *UpdateExpirationForHITInput
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateExpirationForHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateExpirationForHIT
 func (c *MTurk) UpdateExpirationForHIT(input *UpdateExpirationForHITInput) (*UpdateExpirationForHITOutput, error) {
 	req, out := c.UpdateExpirationForHITRequest(input)
 	return out, req.Send()
@@ -3695,8 +3713,8 @@ const opUpdateHITReviewStatus = "UpdateHITReviewStatus"
 
 // UpdateHITReviewStatusRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateHITReviewStatus operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3716,7 +3734,7 @@ const opUpdateHITReviewStatus = "UpdateHITReviewStatus"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITReviewStatus
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITReviewStatus
 func (c *MTurk) UpdateHITReviewStatusRequest(input *UpdateHITReviewStatusInput) (req *request.Request, output *UpdateHITReviewStatusOutput) {
 	op := &request.Operation{
 		Name:       opUpdateHITReviewStatus,
@@ -3730,6 +3748,7 @@ func (c *MTurk) UpdateHITReviewStatusRequest(input *UpdateHITReviewStatusInput) 
 
 	output = &UpdateHITReviewStatusOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3754,7 +3773,7 @@ func (c *MTurk) UpdateHITReviewStatusRequest(input *UpdateHITReviewStatusInput) 
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITReviewStatus
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITReviewStatus
 func (c *MTurk) UpdateHITReviewStatus(input *UpdateHITReviewStatusInput) (*UpdateHITReviewStatusOutput, error) {
 	req, out := c.UpdateHITReviewStatusRequest(input)
 	return out, req.Send()
@@ -3780,8 +3799,8 @@ const opUpdateHITTypeOfHIT = "UpdateHITTypeOfHIT"
 
 // UpdateHITTypeOfHITRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateHITTypeOfHIT operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3801,7 +3820,7 @@ const opUpdateHITTypeOfHIT = "UpdateHITTypeOfHIT"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITTypeOfHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITTypeOfHIT
 func (c *MTurk) UpdateHITTypeOfHITRequest(input *UpdateHITTypeOfHITInput) (req *request.Request, output *UpdateHITTypeOfHITOutput) {
 	op := &request.Operation{
 		Name:       opUpdateHITTypeOfHIT,
@@ -3815,6 +3834,7 @@ func (c *MTurk) UpdateHITTypeOfHITRequest(input *UpdateHITTypeOfHITInput) (req *
 
 	output = &UpdateHITTypeOfHITOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3840,7 +3860,7 @@ func (c *MTurk) UpdateHITTypeOfHITRequest(input *UpdateHITTypeOfHITInput) (req *
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITTypeOfHIT
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITTypeOfHIT
 func (c *MTurk) UpdateHITTypeOfHIT(input *UpdateHITTypeOfHITInput) (*UpdateHITTypeOfHITOutput, error) {
 	req, out := c.UpdateHITTypeOfHITRequest(input)
 	return out, req.Send()
@@ -3866,8 +3886,8 @@ const opUpdateNotificationSettings = "UpdateNotificationSettings"
 
 // UpdateNotificationSettingsRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateNotificationSettings operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3887,7 +3907,7 @@ const opUpdateNotificationSettings = "UpdateNotificationSettings"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateNotificationSettings
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateNotificationSettings
 func (c *MTurk) UpdateNotificationSettingsRequest(input *UpdateNotificationSettingsInput) (req *request.Request, output *UpdateNotificationSettingsOutput) {
 	op := &request.Operation{
 		Name:       opUpdateNotificationSettings,
@@ -3901,6 +3921,7 @@ func (c *MTurk) UpdateNotificationSettingsRequest(input *UpdateNotificationSetti
 
 	output = &UpdateNotificationSettingsOutput{}
 	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -3932,7 +3953,7 @@ func (c *MTurk) UpdateNotificationSettingsRequest(input *UpdateNotificationSetti
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateNotificationSettings
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateNotificationSettings
 func (c *MTurk) UpdateNotificationSettings(input *UpdateNotificationSettingsInput) (*UpdateNotificationSettingsOutput, error) {
 	req, out := c.UpdateNotificationSettingsRequest(input)
 	return out, req.Send()
@@ -3958,8 +3979,8 @@ const opUpdateQualificationType = "UpdateQualificationType"
 
 // UpdateQualificationTypeRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateQualificationType operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3979,7 +4000,7 @@ const opUpdateQualificationType = "UpdateQualificationType"
 //        fmt.Println(resp)
 //    }
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateQualificationType
 func (c *MTurk) UpdateQualificationTypeRequest(input *UpdateQualificationTypeInput) (req *request.Request, output *UpdateQualificationTypeOutput) {
 	op := &request.Operation{
 		Name:       opUpdateQualificationType,
@@ -4045,7 +4066,7 @@ func (c *MTurk) UpdateQualificationTypeRequest(input *UpdateQualificationTypeInp
 //   * ErrCodeRequestError "RequestError"
 //   Your request is invalid.
 //
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateQualificationType
+// See also, https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateQualificationType
 func (c *MTurk) UpdateQualificationType(input *UpdateQualificationTypeInput) (*UpdateQualificationTypeOutput, error) {
 	req, out := c.UpdateQualificationTypeRequest(input)
 	return out, req.Send()
@@ -4067,7 +4088,6 @@ func (c *MTurk) UpdateQualificationTypeWithContext(ctx aws.Context, input *Updat
 	return out, req.Send()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AcceptQualificationRequestRequest
 type AcceptQualificationRequestInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4117,7 +4137,6 @@ func (s *AcceptQualificationRequestInput) SetQualificationRequestId(v string) *A
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AcceptQualificationRequestResponse
 type AcceptQualificationRequestOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -4132,7 +4151,6 @@ func (s AcceptQualificationRequestOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ApproveAssignmentRequest
 type ApproveAssignmentInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4195,7 +4213,6 @@ func (s *ApproveAssignmentInput) SetRequesterFeedback(v string) *ApproveAssignme
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ApproveAssignmentResponse
 type ApproveAssignmentOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -4213,12 +4230,11 @@ func (s ApproveAssignmentOutput) GoString() string {
 // The Assignment data structure represents a single assignment of a HIT to
 // a Worker. The assignment tracks the Worker's efforts to complete the HIT,
 // and contains the results for later retrieval.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/Assignment
 type Assignment struct {
 	_ struct{} `type:"structure"`
 
 	// The date and time the Worker accepted the assignment.
-	AcceptTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	AcceptTime *time.Time `type:"timestamp"`
 
 	// The Worker's answers submitted for the HIT contained in a QuestionFormAnswers
 	// document, if the Worker provides an answer. If the Worker does not provide
@@ -4230,7 +4246,7 @@ type Assignment struct {
 	// ApprovalTime is the date and time the Requester approved the results. This
 	// value is omitted from the assignment if the Requester has not yet approved
 	// the results.
-	ApprovalTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	ApprovalTime *time.Time `type:"timestamp"`
 
 	// A unique identifier for the assignment.
 	AssignmentId *string `min:"1" type:"string"`
@@ -4244,19 +4260,19 @@ type Assignment struct {
 	// This value is derived from the auto-approval delay specified by the Requester
 	// in the HIT. This value is omitted from the assignment if the Worker has not
 	// yet submitted results.
-	AutoApprovalTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	AutoApprovalTime *time.Time `type:"timestamp"`
 
 	// The date and time of the deadline for the assignment. This value is derived
 	// from the deadline specification for the HIT and the date and time the Worker
 	// accepted the HIT.
-	Deadline *time.Time `type:"timestamp" timestampFormat:"unix"`
+	Deadline *time.Time `type:"timestamp"`
 
 	// The ID of the HIT.
 	HITId *string `min:"1" type:"string"`
 
 	// If the Worker has submitted results and the Requester has rejected the results,
 	// RejectionTime is the date and time the Requester rejected the results.
-	RejectionTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	RejectionTime *time.Time `type:"timestamp"`
 
 	// The feedback string included with the call to the ApproveAssignment operation
 	// or the RejectAssignment operation, if the Requester approved or rejected
@@ -4266,7 +4282,7 @@ type Assignment struct {
 	// If the Worker has submitted results, SubmitTime is the date and time the
 	// assignment was submitted. This value is omitted from the assignment if the
 	// Worker has not yet submitted results.
-	SubmitTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	SubmitTime *time.Time `type:"timestamp"`
 
 	// The ID of the Worker who accepted the HIT.
 	WorkerId *string `min:"1" type:"string"`
@@ -4354,7 +4370,6 @@ func (s *Assignment) SetWorkerId(v string) *Assignment {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AssociateQualificationWithWorkerRequest
 type AssociateQualificationWithWorkerInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4434,7 +4449,6 @@ func (s *AssociateQualificationWithWorkerInput) SetWorkerId(v string) *Associate
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/AssociateQualificationWithWorkerResponse
 type AssociateQualificationWithWorkerOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -4450,7 +4464,6 @@ func (s AssociateQualificationWithWorkerOutput) GoString() string {
 }
 
 // An object representing a Bonus payment paid to a Worker.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/BonusPayment
 type BonusPayment struct {
 	_ struct{} `type:"structure"`
 
@@ -4461,7 +4474,7 @@ type BonusPayment struct {
 	BonusAmount *string `type:"string"`
 
 	// The date and time of when the bonus was granted.
-	GrantTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	GrantTime *time.Time `type:"timestamp"`
 
 	// The Reason text given when the bonus was granted, if any.
 	Reason *string `type:"string"`
@@ -4510,7 +4523,6 @@ func (s *BonusPayment) SetWorkerId(v string) *BonusPayment {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateAdditionalAssignmentsForHITRequest
 type CreateAdditionalAssignmentsForHITInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4583,7 +4595,6 @@ func (s *CreateAdditionalAssignmentsForHITInput) SetUniqueRequestToken(v string)
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateAdditionalAssignmentsForHITResponse
 type CreateAdditionalAssignmentsForHITOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -4598,7 +4609,6 @@ func (s CreateAdditionalAssignmentsForHITOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITRequest
 type CreateHITInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4662,8 +4672,11 @@ type CreateHITInput struct {
 	// becomes unavailable.
 	MaxAssignments *int64 `type:"integer"`
 
-	// A condition that a Worker's Qualifications must meet before the Worker is
-	// allowed to accept and complete the HIT.
+	// Conditions that a Worker's Qualifications must meet in order to accept the
+	// HIT. A HIT can have between zero and ten Qualification requirements. All
+	// requirements must be met in order for a Worker to accept the HIT. Additionally,
+	// other actions can be restricted using the ActionsGuarded field on each QualificationRequirement
+	// structure.
 	QualificationRequirements []*QualificationRequirement `type:"list"`
 
 	// The data the person completing the HIT uses to produce the results.
@@ -4880,7 +4893,6 @@ func (s *CreateHITInput) SetUniqueRequestToken(v string) *CreateHITInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITResponse
 type CreateHITOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -4905,7 +4917,6 @@ func (s *CreateHITOutput) SetHIT(v *HIT) *CreateHITOutput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITTypeRequest
 type CreateHITTypeInput struct {
 	_ struct{} `type:"structure"`
 
@@ -4936,8 +4947,11 @@ type CreateHITTypeInput struct {
 	// These words are used in searches to find HITs.
 	Keywords *string `type:"string"`
 
-	// A condition that a Worker's Qualifications must meet before the Worker is
-	// allowed to accept and complete the HIT.
+	// Conditions that a Worker's Qualifications must meet in order to accept the
+	// HIT. A HIT can have between zero and ten Qualification requirements. All
+	// requirements must be met in order for a Worker to accept the HIT. Additionally,
+	// other actions can be restricted using the ActionsGuarded field on each QualificationRequirement
+	// structure.
 	QualificationRequirements []*QualificationRequirement `type:"list"`
 
 	// The amount of money the Requester will pay a Worker for successfully completing
@@ -5038,7 +5052,6 @@ func (s *CreateHITTypeInput) SetTitle(v string) *CreateHITTypeInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITTypeResponse
 type CreateHITTypeOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -5062,7 +5075,6 @@ func (s *CreateHITTypeOutput) SetHITTypeId(v string) *CreateHITTypeOutput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITWithHITTypeRequest
 type CreateHITWithHITTypeInput struct {
 	_ struct{} `type:"structure"`
 
@@ -5253,7 +5265,6 @@ func (s *CreateHITWithHITTypeInput) SetUniqueRequestToken(v string) *CreateHITWi
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateHITWithHITTypeResponse
 type CreateHITWithHITTypeOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -5278,7 +5289,6 @@ func (s *CreateHITWithHITTypeOutput) SetHIT(v *HIT) *CreateHITWithHITTypeOutput 
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateQualificationTypeRequest
 type CreateQualificationTypeInput struct {
 	_ struct{} `type:"structure"`
 
@@ -5443,7 +5453,6 @@ func (s *CreateQualificationTypeInput) SetTestDurationInSeconds(v int64) *Create
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateQualificationTypeResponse
 type CreateQualificationTypeOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -5467,7 +5476,6 @@ func (s *CreateQualificationTypeOutput) SetQualificationType(v *QualificationTyp
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateWorkerBlockRequest
 type CreateWorkerBlockInput struct {
 	_ struct{} `type:"structure"`
 
@@ -5524,7 +5532,6 @@ func (s *CreateWorkerBlockInput) SetWorkerId(v string) *CreateWorkerBlockInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/CreateWorkerBlockResponse
 type CreateWorkerBlockOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -5539,7 +5546,6 @@ func (s CreateWorkerBlockOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteHITRequest
 type DeleteHITInput struct {
 	_ struct{} `type:"structure"`
 
@@ -5581,7 +5587,6 @@ func (s *DeleteHITInput) SetHITId(v string) *DeleteHITInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteHITResponse
 type DeleteHITOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -5596,7 +5601,6 @@ func (s DeleteHITOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteQualificationTypeRequest
 type DeleteQualificationTypeInput struct {
 	_ struct{} `type:"structure"`
 
@@ -5638,7 +5642,6 @@ func (s *DeleteQualificationTypeInput) SetQualificationTypeId(v string) *DeleteQ
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteQualificationTypeResponse
 type DeleteQualificationTypeOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -5653,7 +5656,6 @@ func (s DeleteQualificationTypeOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteWorkerBlockRequest
 type DeleteWorkerBlockInput struct {
 	_ struct{} `type:"structure"`
 
@@ -5705,7 +5707,6 @@ func (s *DeleteWorkerBlockInput) SetWorkerId(v string) *DeleteWorkerBlockInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DeleteWorkerBlockResponse
 type DeleteWorkerBlockOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -5720,7 +5721,6 @@ func (s DeleteWorkerBlockOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DisassociateQualificationFromWorkerRequest
 type DisassociateQualificationFromWorkerInput struct {
 	_ struct{} `type:"structure"`
 
@@ -5789,7 +5789,6 @@ func (s *DisassociateQualificationFromWorkerInput) SetWorkerId(v string) *Disass
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/DisassociateQualificationFromWorkerResponse
 type DisassociateQualificationFromWorkerOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -5804,7 +5803,6 @@ func (s DisassociateQualificationFromWorkerOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAccountBalanceRequest
 type GetAccountBalanceInput struct {
 	_ struct{} `type:"structure"`
 }
@@ -5819,7 +5817,6 @@ func (s GetAccountBalanceInput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAccountBalanceResponse
 type GetAccountBalanceOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -5852,7 +5849,6 @@ func (s *GetAccountBalanceOutput) SetOnHoldBalance(v string) *GetAccountBalanceO
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAssignmentRequest
 type GetAssignmentInput struct {
 	_ struct{} `type:"structure"`
 
@@ -5894,7 +5890,6 @@ func (s *GetAssignmentInput) SetAssignmentId(v string) *GetAssignmentInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetAssignmentResponse
 type GetAssignmentOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -5927,7 +5922,6 @@ func (s *GetAssignmentOutput) SetHIT(v *HIT) *GetAssignmentOutput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetFileUploadURLRequest
 type GetFileUploadURLInput struct {
 	_ struct{} `type:"structure"`
 
@@ -5984,7 +5978,6 @@ func (s *GetFileUploadURLInput) SetQuestionIdentifier(v string) *GetFileUploadUR
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetFileUploadURLResponse
 type GetFileUploadURLOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -6008,7 +6001,6 @@ func (s *GetFileUploadURLOutput) SetFileUploadURL(v string) *GetFileUploadURLOut
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetHITRequest
 type GetHITInput struct {
 	_ struct{} `type:"structure"`
 
@@ -6050,7 +6042,6 @@ func (s *GetHITInput) SetHITId(v string) *GetHITInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetHITResponse
 type GetHITOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -6074,7 +6065,6 @@ func (s *GetHITOutput) SetHIT(v *HIT) *GetHITOutput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationScoreRequest
 type GetQualificationScoreInput struct {
 	_ struct{} `type:"structure"`
 
@@ -6133,7 +6123,6 @@ func (s *GetQualificationScoreInput) SetWorkerId(v string) *GetQualificationScor
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationScoreResponse
 type GetQualificationScoreOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -6158,7 +6147,6 @@ func (s *GetQualificationScoreOutput) SetQualification(v *Qualification) *GetQua
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationTypeRequest
 type GetQualificationTypeInput struct {
 	_ struct{} `type:"structure"`
 
@@ -6200,7 +6188,6 @@ func (s *GetQualificationTypeInput) SetQualificationTypeId(v string) *GetQualifi
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/GetQualificationTypeResponse
 type GetQualificationTypeOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -6226,7 +6213,6 @@ func (s *GetQualificationTypeOutput) SetQualificationType(v *QualificationType) 
 
 // The HIT data structure represents a single HIT, including all the information
 // necessary for a Worker to accept and complete the HIT.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/HIT
 type HIT struct {
 	_ struct{} `type:"structure"`
 
@@ -6242,13 +6228,13 @@ type HIT struct {
 	AutoApprovalDelayInSeconds *int64 `type:"long"`
 
 	// The date and time the HIT was created.
-	CreationTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	CreationTime *time.Time `type:"timestamp"`
 
 	// A general description of the HIT.
 	Description *string `type:"string"`
 
 	// The date and time the HIT expires.
-	Expiration *time.Time `type:"timestamp" timestampFormat:"unix"`
+	Expiration *time.Time `type:"timestamp"`
 
 	// The ID of the HIT Group of this HIT.
 	HITGroupId *string `min:"1" type:"string"`
@@ -6290,10 +6276,11 @@ type HIT struct {
 	// accepted by Workers, but have not yet been submitted, returned, or abandoned.
 	NumberOfAssignmentsPending *int64 `type:"integer"`
 
-	// A condition that a Worker's Qualifications must meet in order to accept the
+	// Conditions that a Worker's Qualifications must meet in order to accept the
 	// HIT. A HIT can have between zero and ten Qualification requirements. All
-	// requirements must be met by a Worker's Qualifications for the Worker to accept
-	// the HIT.
+	// requirements must be met in order for a Worker to accept the HIT. Additionally,
+	// other actions can be restricted using the ActionsGuarded field on each QualificationRequirement
+	// structure.
 	QualificationRequirements []*QualificationRequirement `type:"list"`
 
 	// The data the Worker completing the HIT uses produce the results. This is
@@ -6450,7 +6437,6 @@ func (s *HIT) SetTitle(v string) *HIT {
 // The HITLayoutParameter data structure defines parameter values used with
 // a HITLayout. A HITLayout is a reusable Amazon Mechanical Turk project template
 // used to provide Human Intelligence Task (HIT) question data for CreateHIT.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/HITLayoutParameter
 type HITLayoutParameter struct {
 	_ struct{} `type:"structure"`
 
@@ -6503,7 +6489,6 @@ func (s *HITLayoutParameter) SetValue(v string) *HITLayoutParameter {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListAssignmentsForHITRequest
 type ListAssignmentsForHITInput struct {
 	_ struct{} `type:"structure"`
 
@@ -6577,7 +6562,6 @@ func (s *ListAssignmentsForHITInput) SetNextToken(v string) *ListAssignmentsForH
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListAssignmentsForHITResponse
 type ListAssignmentsForHITOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -6622,7 +6606,6 @@ func (s *ListAssignmentsForHITOutput) SetNumResults(v int64) *ListAssignmentsFor
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListBonusPaymentsRequest
 type ListBonusPaymentsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -6698,7 +6681,6 @@ func (s *ListBonusPaymentsInput) SetNextToken(v string) *ListBonusPaymentsInput 
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListBonusPaymentsResponse
 type ListBonusPaymentsOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -6744,7 +6726,6 @@ func (s *ListBonusPaymentsOutput) SetNumResults(v int64) *ListBonusPaymentsOutpu
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITsForQualificationTypeRequest
 type ListHITsForQualificationTypeInput struct {
 	_ struct{} `type:"structure"`
 
@@ -6810,7 +6791,6 @@ func (s *ListHITsForQualificationTypeInput) SetQualificationTypeId(v string) *Li
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITsForQualificationTypeResponse
 type ListHITsForQualificationTypeOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -6855,7 +6835,6 @@ func (s *ListHITsForQualificationTypeOutput) SetNumResults(v int64) *ListHITsFor
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITsRequest
 type ListHITsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -6903,7 +6882,6 @@ func (s *ListHITsInput) SetNextToken(v string) *ListHITsInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListHITsResponse
 type ListHITsOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -6948,7 +6926,6 @@ func (s *ListHITsOutput) SetNumResults(v int64) *ListHITsOutput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationRequestsRequest
 type ListQualificationRequestsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -7011,7 +6988,6 @@ func (s *ListQualificationRequestsInput) SetQualificationTypeId(v string) *ListQ
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationRequestsResponse
 type ListQualificationRequestsOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -7058,7 +7034,6 @@ func (s *ListQualificationRequestsOutput) SetQualificationRequests(v []*Qualific
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationTypesRequest
 type ListQualificationTypesInput struct {
 	_ struct{} `type:"structure"`
 
@@ -7147,7 +7122,6 @@ func (s *ListQualificationTypesInput) SetQuery(v string) *ListQualificationTypes
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListQualificationTypesResponse
 type ListQualificationTypesOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -7192,7 +7166,6 @@ func (s *ListQualificationTypesOutput) SetQualificationTypes(v []*QualificationT
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewPolicyResultsForHITRequest
 type ListReviewPolicyResultsForHITInput struct {
 	_ struct{} `type:"structure"`
 
@@ -7289,7 +7262,6 @@ func (s *ListReviewPolicyResultsForHITInput) SetRetrieveResults(v bool) *ListRev
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewPolicyResultsForHITResponse
 type ListReviewPolicyResultsForHITOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -7362,7 +7334,6 @@ func (s *ListReviewPolicyResultsForHITOutput) SetNextToken(v string) *ListReview
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewableHITsRequest
 type ListReviewableHITsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -7433,7 +7404,6 @@ func (s *ListReviewableHITsInput) SetStatus(v string) *ListReviewableHITsInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListReviewableHITsResponse
 type ListReviewableHITsOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -7478,7 +7448,6 @@ func (s *ListReviewableHITsOutput) SetNumResults(v int64) *ListReviewableHITsOut
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkerBlocksRequest
 type ListWorkerBlocksInput struct {
 	_ struct{} `type:"structure"`
 
@@ -7526,7 +7495,6 @@ func (s *ListWorkerBlocksInput) SetNextToken(v string) *ListWorkerBlocksInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkerBlocksResponse
 type ListWorkerBlocksOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -7572,7 +7540,6 @@ func (s *ListWorkerBlocksOutput) SetWorkerBlocks(v []*WorkerBlock) *ListWorkerBl
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkersWithQualificationTypeRequest
 type ListWorkersWithQualificationTypeInput struct {
 	_ struct{} `type:"structure"`
 
@@ -7647,7 +7614,6 @@ func (s *ListWorkersWithQualificationTypeInput) SetStatus(v string) *ListWorkers
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ListWorkersWithQualificationTypeResponse
 type ListWorkersWithQualificationTypeOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -7693,7 +7659,6 @@ func (s *ListWorkersWithQualificationTypeOutput) SetQualifications(v []*Qualific
 }
 
 // The Locale data structure represents a geographical region or location.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/Locale
 type Locale struct {
 	_ struct{} `type:"structure"`
 
@@ -7751,7 +7716,6 @@ func (s *Locale) SetSubdivision(v string) *Locale {
 
 // The NotificationSpecification data structure describes a HIT event notification
 // for a HIT type.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/NotificationSpecification
 type NotificationSpecification struct {
 	_ struct{} `type:"structure"`
 
@@ -7846,7 +7810,6 @@ func (s *NotificationSpecification) SetVersion(v string) *NotificationSpecificat
 
 // When MTurk encounters an issue with notifying the Workers you specified,
 // it returns back this object with failure details.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/NotifyWorkersFailureStatus
 type NotifyWorkersFailureStatus struct {
 	_ struct{} `type:"structure"`
 
@@ -7888,7 +7851,6 @@ func (s *NotifyWorkersFailureStatus) SetWorkerId(v string) *NotifyWorkersFailure
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/NotifyWorkersRequest
 type NotifyWorkersInput struct {
 	_ struct{} `type:"structure"`
 
@@ -7956,7 +7918,6 @@ func (s *NotifyWorkersInput) SetWorkerIds(v []*string) *NotifyWorkersInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/NotifyWorkersResponse
 type NotifyWorkersOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -7983,7 +7944,6 @@ func (s *NotifyWorkersOutput) SetNotifyWorkersFailureStatuses(v []*NotifyWorkers
 
 // This data structure is the data type for the AnswerKey parameter of the ScoreMyKnownAnswers/2011-09-01
 // Review Policy.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ParameterMapEntry
 type ParameterMapEntry struct {
 	_ struct{} `type:"structure"`
 
@@ -8020,7 +7980,6 @@ func (s *ParameterMapEntry) SetValues(v []*string) *ParameterMapEntry {
 }
 
 // Name of the parameter from the Review policy.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/PolicyParameter
 type PolicyParameter struct {
 	_ struct{} `type:"structure"`
 
@@ -8064,7 +8023,6 @@ func (s *PolicyParameter) SetValues(v []*string) *PolicyParameter {
 
 // The Qualification data structure represents a Qualification assigned to a
 // user, including the Qualification type and the value (score).
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/Qualification
 type Qualification struct {
 	_ struct{} `type:"structure"`
 
@@ -8072,7 +8030,7 @@ type Qualification struct {
 	// Qualification was revoked, and then re-granted based on a new Qualification
 	// request, GrantTime is the date and time of the last call to the AcceptQualificationRequest
 	// operation.
-	GrantTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	GrantTime *time.Time `type:"timestamp"`
 
 	// The value (score) of the Qualification, if the Qualification has an integer
 	// value.
@@ -8139,7 +8097,6 @@ func (s *Qualification) SetWorkerId(v string) *Qualification {
 
 // The QualificationRequest data structure represents a request a Worker has
 // made for a Qualification.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/QualificationRequest
 type QualificationRequest struct {
 	_ struct{} `type:"structure"`
 
@@ -8160,7 +8117,7 @@ type QualificationRequest struct {
 	// is either the time the Worker submitted answers for a Qualification test,
 	// or the time the Worker requested the Qualification if the Qualification type
 	// does not have a test.
-	SubmitTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	SubmitTime *time.Time `type:"timestamp"`
 
 	// The contents of the Qualification test that was presented to the Worker,
 	// if the type has a test and the Worker has submitted answers. This value is
@@ -8221,10 +8178,28 @@ func (s *QualificationRequest) SetWorkerId(v string) *QualificationRequest {
 // The QualificationRequirement data structure describes a Qualification that
 // a Worker must have before the Worker is allowed to accept a HIT. A requirement
 // may optionally state that a Worker must have the Qualification in order to
-// preview the HIT.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/QualificationRequirement
+// preview the HIT, or see the HIT in search results.
 type QualificationRequirement struct {
 	_ struct{} `type:"structure"`
+
+	// Setting this attribute prevents Workers whose Qualifications do not meet
+	// this QualificationRequirement from taking the specified action. Valid arguments
+	// include "Accept" (Worker cannot accept the HIT, but can preview the HIT and
+	// see it in their search results), "PreviewAndAccept" (Worker cannot accept
+	// or preview the HIT, but can see the HIT in their search results), and "DiscoverPreviewAndAccept"
+	// (Worker cannot accept, preview, or see the HIT in their search results).
+	// It's possible for you to create a HIT with multiple QualificationRequirements
+	// (which can have different values for the ActionGuarded attribute). In this
+	// case, the Worker is only permitted to perform an action when they have met
+	// all QualificationRequirements guarding the action. The actions in the order
+	// of least restrictive to most restrictive are Discover, Preview and Accept.
+	// For example, if a Worker meets all QualificationRequirements that are set
+	// to DiscoverPreviewAndAccept, but do not meet all requirements that are set
+	// with PreviewAndAccept, then the Worker will be able to Discover, i.e. see
+	// the HIT in their search result, but will not be able to Preview or Accept
+	// the HIT. ActionsGuarded should not be used in combination with the RequiredToPreview
+	// field.
+	ActionsGuarded *string `type:"string" enum:"HITAccessActions"`
 
 	// The kind of comparison to make against a Qualification's value. You can compare
 	// a Qualification's value to an IntegerValue to see if it is LessThan, LessThanOrEqualTo,
@@ -8261,15 +8236,19 @@ type QualificationRequirement struct {
 	// QualificationTypeId is a required field
 	QualificationTypeId *string `type:"string" required:"true"`
 
-	// If true, the question data for the HIT will not be shown when a Worker whose
+	// DEPRECATED: Use the ActionsGuarded field instead. If RequiredToPreview is
+	// true, the question data for the HIT will not be shown when a Worker whose
 	// Qualifications do not meet this requirement tries to preview the HIT. That
 	// is, a Worker's Qualifications must meet all of the requirements for which
 	// RequiredToPreview is true in order to preview the HIT. If a Worker meets
 	// all of the requirements where RequiredToPreview is true (or if there are
 	// no such requirements), but does not meet all of the requirements for the
 	// HIT, the Worker will be allowed to preview the HIT's question data, but will
-	// not be allowed to accept and complete the HIT. The default is false.
-	RequiredToPreview *bool `type:"boolean"`
+	// not be allowed to accept and complete the HIT. The default is false. This
+	// should not be used in combination with the ActionsGuarded field.
+	//
+	// Deprecated: RequiredToPreview has been deprecated
+	RequiredToPreview *bool `deprecated:"true" type:"boolean"`
 }
 
 // String returns the string representation
@@ -8308,6 +8287,12 @@ func (s *QualificationRequirement) Validate() error {
 	return nil
 }
 
+// SetActionsGuarded sets the ActionsGuarded field's value.
+func (s *QualificationRequirement) SetActionsGuarded(v string) *QualificationRequirement {
+	s.ActionsGuarded = &v
+	return s
+}
+
 // SetComparator sets the Comparator field's value.
 func (s *QualificationRequirement) SetComparator(v string) *QualificationRequirement {
 	s.Comparator = &v
@@ -8343,7 +8328,6 @@ func (s *QualificationRequirement) SetRequiredToPreview(v bool) *QualificationRe
 // Worker to be able to accept the HIT. The type also describes how a Worker
 // can obtain a Qualification of that type, such as through a Qualification
 // test.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/QualificationType
 type QualificationType struct {
 	_ struct{} `type:"structure"`
 
@@ -8360,7 +8344,7 @@ type QualificationType struct {
 	AutoGrantedValue *int64 `type:"integer"`
 
 	// The date and time the Qualification type was created.
-	CreationTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	CreationTime *time.Time `type:"timestamp"`
 
 	// A long description for the Qualification type.
 	Description *string `type:"string"`
@@ -8496,7 +8480,6 @@ func (s *QualificationType) SetTestDurationInSeconds(v int64) *QualificationType
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectAssignmentRequest
 type RejectAssignmentInput struct {
 	_ struct{} `type:"structure"`
 
@@ -8554,7 +8537,6 @@ func (s *RejectAssignmentInput) SetRequesterFeedback(v string) *RejectAssignment
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectAssignmentResponse
 type RejectAssignmentOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -8569,7 +8551,6 @@ func (s RejectAssignmentOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectQualificationRequestRequest
 type RejectQualificationRequestInput struct {
 	_ struct{} `type:"structure"`
 
@@ -8619,7 +8600,6 @@ func (s *RejectQualificationRequestInput) SetReason(v string) *RejectQualificati
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/RejectQualificationRequestResponse
 type RejectQualificationRequestOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -8637,7 +8617,6 @@ func (s RejectQualificationRequestOutput) GoString() string {
 // Both the AssignmentReviewReport and the HITReviewReport elements contains
 // the ReviewActionDetail data structure. This structure is returned multiple
 // times for each action specified in the Review Policy.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ReviewActionDetail
 type ReviewActionDetail struct {
 	_ struct{} `type:"structure"`
 
@@ -8650,7 +8629,7 @@ type ReviewActionDetail struct {
 	ActionName *string `type:"string"`
 
 	// The date when the action was completed.
-	CompleteTime *time.Time `type:"timestamp" timestampFormat:"unix"`
+	CompleteTime *time.Time `type:"timestamp"`
 
 	// Present only when the Results have a FAILED Status.
 	ErrorCode *string `type:"string"`
@@ -8728,7 +8707,6 @@ func (s *ReviewActionDetail) SetTargetType(v string) *ReviewActionDetail {
 
 // HIT Review Policy data structures represent HIT review policies, which you
 // specify when you create a HIT.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ReviewPolicy
 type ReviewPolicy struct {
 	_ struct{} `type:"structure"`
 
@@ -8777,7 +8755,6 @@ func (s *ReviewPolicy) SetPolicyName(v string) *ReviewPolicy {
 }
 
 // Contains both ReviewResult and ReviewAction elements for a particular HIT.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ReviewReport
 type ReviewReport struct {
 	_ struct{} `type:"structure"`
 
@@ -8812,7 +8789,6 @@ func (s *ReviewReport) SetReviewResults(v []*ReviewResultDetail) *ReviewReport {
 
 // This data structure is returned multiple times for each result specified
 // in the Review Policy.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/ReviewResultDetail
 type ReviewResultDetail struct {
 	_ struct{} `type:"structure"`
 
@@ -8889,7 +8865,6 @@ func (s *ReviewResultDetail) SetValue(v string) *ReviewResultDetail {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendBonusRequest
 type SendBonusInput struct {
 	_ struct{} `type:"structure"`
 
@@ -8996,7 +8971,6 @@ func (s *SendBonusInput) SetWorkerId(v string) *SendBonusInput {
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendBonusResponse
 type SendBonusOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -9011,7 +8985,6 @@ func (s SendBonusOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendTestEventNotificationRequest
 type SendTestEventNotificationInput struct {
 	_ struct{} `type:"structure"`
 
@@ -9074,7 +9047,6 @@ func (s *SendTestEventNotificationInput) SetTestEventType(v string) *SendTestEve
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/SendTestEventNotificationResponse
 type SendTestEventNotificationOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -9089,14 +9061,13 @@ func (s SendTestEventNotificationOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateExpirationForHITRequest
 type UpdateExpirationForHITInput struct {
 	_ struct{} `type:"structure"`
 
 	// The date and time at which you want the HIT to expire
 	//
 	// ExpireAt is a required field
-	ExpireAt *time.Time `type:"timestamp" timestampFormat:"unix" required:"true"`
+	ExpireAt *time.Time `type:"timestamp" required:"true"`
 
 	// The HIT to update.
 	//
@@ -9145,7 +9116,6 @@ func (s *UpdateExpirationForHITInput) SetHITId(v string) *UpdateExpirationForHIT
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateExpirationForHITResponse
 type UpdateExpirationForHITOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -9160,7 +9130,6 @@ func (s UpdateExpirationForHITOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITReviewStatusRequest
 type UpdateHITReviewStatusInput struct {
 	_ struct{} `type:"structure"`
 
@@ -9216,7 +9185,6 @@ func (s *UpdateHITReviewStatusInput) SetRevert(v bool) *UpdateHITReviewStatusInp
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITReviewStatusResponse
 type UpdateHITReviewStatusOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -9231,7 +9199,6 @@ func (s UpdateHITReviewStatusOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITTypeOfHITRequest
 type UpdateHITTypeOfHITInput struct {
 	_ struct{} `type:"structure"`
 
@@ -9290,7 +9257,6 @@ func (s *UpdateHITTypeOfHITInput) SetHITTypeId(v string) *UpdateHITTypeOfHITInpu
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateHITTypeOfHITResponse
 type UpdateHITTypeOfHITOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -9305,7 +9271,6 @@ func (s UpdateHITTypeOfHITOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateNotificationSettingsRequest
 type UpdateNotificationSettingsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -9373,7 +9338,6 @@ func (s *UpdateNotificationSettingsInput) SetNotification(v *NotificationSpecifi
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateNotificationSettingsResponse
 type UpdateNotificationSettingsOutput struct {
 	_ struct{} `type:"structure"`
 }
@@ -9388,7 +9352,6 @@ func (s UpdateNotificationSettingsOutput) GoString() string {
 	return s.String()
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateQualificationTypeRequest
 type UpdateQualificationTypeInput struct {
 	_ struct{} `type:"structure"`
 
@@ -9523,7 +9486,6 @@ func (s *UpdateQualificationTypeInput) SetTestDurationInSeconds(v int64) *Update
 	return s
 }
 
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/UpdateQualificationTypeResponse
 type UpdateQualificationTypeOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -9549,7 +9511,6 @@ func (s *UpdateQualificationTypeOutput) SetQualificationType(v *QualificationTyp
 
 // The WorkerBlock data structure represents a Worker who has been blocked.
 // It has two elements: the WorkerId and the Reason for the block.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/mturk-requester-2017-01-17/WorkerBlock
 type WorkerBlock struct {
 	_ struct{} `type:"structure"`
 
@@ -9661,6 +9622,17 @@ const (
 
 	// EventTypePing is a EventType enum value
 	EventTypePing = "Ping"
+)
+
+const (
+	// HITAccessActionsAccept is a HITAccessActions enum value
+	HITAccessActionsAccept = "Accept"
+
+	// HITAccessActionsPreviewAndAccept is a HITAccessActions enum value
+	HITAccessActionsPreviewAndAccept = "PreviewAndAccept"
+
+	// HITAccessActionsDiscoverPreviewAndAccept is a HITAccessActions enum value
+	HITAccessActionsDiscoverPreviewAndAccept = "DiscoverPreviewAndAccept"
 )
 
 const (
