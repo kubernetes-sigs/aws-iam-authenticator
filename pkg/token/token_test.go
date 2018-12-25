@@ -36,7 +36,7 @@ func assertSTSError(t *testing.T, err error) {
 
 var (
 	now        = time.Now()
-	timeStr    = now.Format("20060102T150405Z")
+	timeStr    = now.UTC().Format("20060102T150405Z")
 	validToken = toToken(validURL)
 	validURL   = fmt.Sprintf("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-expires=60&x-amz-date=%s", timeStr)
 )
