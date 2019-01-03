@@ -1,3 +1,55 @@
+Release v1.16.13 (2019-01-03)
+===
+
+### Service Client Updates
+* `aws/endpoints`: Updated Regions and Endpoints metadata.
+* `service/iotanalytics`: Updates service API and documentation
+
+### SDK Enhancements
+* `aws/credentials`: Add support for getting credential's ExpiresAt. ([#2375](https://github.com/aws/aws-sdk-go/pull/2375))
+  * Adds an Expirer interface that Providers can implement, and add a suitable implementation to Expiry class used by most Providers. Add a method on Credentials to get the expiration time of the underlying Provider, if Expirer is supported, without exposing Provider to callers.
+  * Fix [#1329](https://github.com/aws/aws-sdk-go/pull/1329)
+
+### SDK Bugs
+* `aws/ec2metadata`: bounds check region identifier before split ([#2380](https://github.com/aws/aws-sdk-go/pull/2380))
+  * Adds empty response checking to ec2metadata's Region request to prevent a out of bounds panic if empty response received.
+* Fix SDK's generated API reference doc page's constants section links ([#2373](https://github.com/aws/aws-sdk-go/pull/2373))
+  * Fixes the SDK's generated API reference documentation page's constants section links to to be clickable.
+Release v1.16.12 (2019-01-03)
+===
+
+### Service Client Updates
+* `service/opsworkscm`: Updates service documentation
+  * Documentation updates for opsworkscm
+
+Release v1.16.11 (2018-12-21)
+===
+
+### Service Client Updates
+* `service/acm-pca`: Updates service documentation, waiters, paginators, and examples
+* `service/dynamodb`: Updates service API and documentation
+  * Added provisionedThroughPut exception on the request level for transaction APIs.
+* `aws/endpoints`: Updated Regions and Endpoints metadata.
+* `service/sms-voice`: Updates service API and documentation
+* `service/states`: Updates service API and documentation
+  * This release adds support for cost allocation tagging. You can now create, delete, and list tags for AWS Step Functions activity and state machine resources. For more information about tagging, see AWS Tagging Strategies.
+
+Release v1.16.10 (2018-12-20)
+===
+
+### Service Client Updates
+* `service/cognito-idp`: Updates service API and documentation
+* `service/comprehend`: Updates service API and documentation
+* `service/firehose`: Updates service API and documentation
+  * Support for specifying customized s3 keys and supplying a separate prefix for failed-records
+* `service/medialive`: Updates service API and documentation
+  * This release provides support for ID3 tags and video quality setting for subgop_length.
+* `service/transcribe`: Updates service API and documentation
+
+### SDK Enhancements
+* `service/dynamodb/expression`: Clarify expression examples ([#2367](https://github.com/aws/aws-sdk-go/pull/2367))
+  * Clarifies the expression package's examples to distinguish the pkg expression from a expr value.
+
 Release v1.16.9 (2018-12-19)
 ===
 
