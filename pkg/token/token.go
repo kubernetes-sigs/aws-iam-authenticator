@@ -79,6 +79,7 @@ const (
 	// Format of the X-Amz-Date header used for expiration
 	// https://golang.org/pkg/time/#pkg-constants
 	dateHeaderFormat = "20060102T150405Z"
+	hostRegexp       = `^sts(\.[a-z1-9\-]+)?\.amazonaws\.com(\.cn)?$`
 )
 
 // Token is generated and used by Kubernetes client-go to authenticate with a Kubernetes cluster.
@@ -288,6 +289,15 @@ func NewVerifier(clusterID string) Verifier {
 	}
 }
 
+// verify a sts host, doc: http://docs.amazonaws.cn/en_us/general/latest/gr/rande.html#sts_region
+func (v tokenVerifier) verifyHost(host string) error {
+	if match, _ := regexp.MatchString(hostRegexp, host); !match {
+		return FormatError{fmt.Sprintf("unexpected hostname %q in pre-signed URL", host)}
+	}
+
+	return nil
+}
+
 // Verify a token is valid for the specified clusterID. On success, returns an
 // Identity that contains information about the AWS principal that created the
 // token. On failure, returns nil and a non-nil error.
@@ -315,8 +325,8 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, FormatError{fmt.Sprintf("unexpected scheme %q in pre-signed URL", parsedURL.Scheme)}
 	}
 
-	if match, _ := regexp.MatchString(`^sts(\.[a-z1-9\-]+)?\.amazonaws\.com(\.cn)?$`, parsedURL.Host); !match {
-		return nil, FormatError{fmt.Sprintf("unexpected hostname %q in pre-signed URL", parsedURL.Host)}
+	if err = v.verifyHost(parsedURL.Host); err != nil {
+		return nil, err
 	}
 
 	if parsedURL.Path != "/" {
