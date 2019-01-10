@@ -83,6 +83,14 @@ func ExampleECS_CreateService_shared00() {
 				fmt.Println(ecs.ErrCodeInvalidParameterException, aerr.Error())
 			case ecs.ErrCodeClusterNotFoundException:
 				fmt.Println(ecs.ErrCodeClusterNotFoundException, aerr.Error())
+			case ecs.ErrCodeUnsupportedFeatureException:
+				fmt.Println(ecs.ErrCodeUnsupportedFeatureException, aerr.Error())
+			case ecs.ErrCodePlatformUnknownException:
+				fmt.Println(ecs.ErrCodePlatformUnknownException, aerr.Error())
+			case ecs.ErrCodePlatformTaskDefinitionIncompatibilityException:
+				fmt.Println(ecs.ErrCodePlatformTaskDefinitionIncompatibilityException, aerr.Error())
+			case ecs.ErrCodeAccessDeniedException:
+				fmt.Println(ecs.ErrCodeAccessDeniedException, aerr.Error())
 			default:
 				fmt.Println(aerr.Error())
 			}
@@ -130,6 +138,14 @@ func ExampleECS_CreateService_shared01() {
 				fmt.Println(ecs.ErrCodeInvalidParameterException, aerr.Error())
 			case ecs.ErrCodeClusterNotFoundException:
 				fmt.Println(ecs.ErrCodeClusterNotFoundException, aerr.Error())
+			case ecs.ErrCodeUnsupportedFeatureException:
+				fmt.Println(ecs.ErrCodeUnsupportedFeatureException, aerr.Error())
+			case ecs.ErrCodePlatformUnknownException:
+				fmt.Println(ecs.ErrCodePlatformUnknownException, aerr.Error())
+			case ecs.ErrCodePlatformTaskDefinitionIncompatibilityException:
+				fmt.Println(ecs.ErrCodePlatformTaskDefinitionIncompatibilityException, aerr.Error())
+			case ecs.ErrCodeAccessDeniedException:
+				fmt.Println(ecs.ErrCodeAccessDeniedException, aerr.Error())
 			default:
 				fmt.Println(aerr.Error())
 			}
@@ -169,6 +185,8 @@ func ExampleECS_DeleteCluster_shared00() {
 				fmt.Println(ecs.ErrCodeClusterContainsContainerInstancesException, aerr.Error())
 			case ecs.ErrCodeClusterContainsServicesException:
 				fmt.Println(ecs.ErrCodeClusterContainsServicesException, aerr.Error())
+			case ecs.ErrCodeClusterContainsTasksException:
+				fmt.Println(ecs.ErrCodeClusterContainsTasksException, aerr.Error())
 			default:
 				fmt.Println(aerr.Error())
 			}
@@ -542,6 +560,41 @@ func ExampleECS_ListServices_shared00() {
 	fmt.Println(result)
 }
 
+// To list the tags for a cluster.
+//
+// This example lists the tags for the 'dev' cluster.
+func ExampleECS_ListTagsForResource_shared00() {
+	svc := ecs.New(session.New())
+	input := &ecs.ListTagsForResourceInput{
+		ResourceArn: aws.String("arn:aws:ecs:region:aws_account_id:cluster/dev"),
+	}
+
+	result, err := svc.ListTagsForResource(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ecs.ErrCodeServerException:
+				fmt.Println(ecs.ErrCodeServerException, aerr.Error())
+			case ecs.ErrCodeClientException:
+				fmt.Println(ecs.ErrCodeClientException, aerr.Error())
+			case ecs.ErrCodeClusterNotFoundException:
+				fmt.Println(ecs.ErrCodeClusterNotFoundException, aerr.Error())
+			case ecs.ErrCodeInvalidParameterException:
+				fmt.Println(ecs.ErrCodeInvalidParameterException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		return
+	}
+
+	fmt.Println(result)
+}
+
 // To list your registered task definition families
 //
 // This example lists all of your registered task definition families.
@@ -815,6 +868,99 @@ func ExampleECS_RunTask_shared00() {
 				fmt.Println(ecs.ErrCodeInvalidParameterException, aerr.Error())
 			case ecs.ErrCodeClusterNotFoundException:
 				fmt.Println(ecs.ErrCodeClusterNotFoundException, aerr.Error())
+			case ecs.ErrCodeUnsupportedFeatureException:
+				fmt.Println(ecs.ErrCodeUnsupportedFeatureException, aerr.Error())
+			case ecs.ErrCodePlatformUnknownException:
+				fmt.Println(ecs.ErrCodePlatformUnknownException, aerr.Error())
+			case ecs.ErrCodePlatformTaskDefinitionIncompatibilityException:
+				fmt.Println(ecs.ErrCodePlatformTaskDefinitionIncompatibilityException, aerr.Error())
+			case ecs.ErrCodeAccessDeniedException:
+				fmt.Println(ecs.ErrCodeAccessDeniedException, aerr.Error())
+			case ecs.ErrCodeBlockedException:
+				fmt.Println(ecs.ErrCodeBlockedException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		return
+	}
+
+	fmt.Println(result)
+}
+
+// To tag a cluster.
+//
+// This example tags the 'dev' cluster with key 'team' and value 'dev'.
+func ExampleECS_TagResource_shared00() {
+	svc := ecs.New(session.New())
+	input := &ecs.TagResourceInput{
+		ResourceArn: aws.String("arn:aws:ecs:region:aws_account_id:cluster/dev"),
+		Tags: []*ecs.Tag{
+			{
+				Key:   aws.String("team"),
+				Value: aws.String("dev"),
+			},
+		},
+	}
+
+	result, err := svc.TagResource(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ecs.ErrCodeServerException:
+				fmt.Println(ecs.ErrCodeServerException, aerr.Error())
+			case ecs.ErrCodeClientException:
+				fmt.Println(ecs.ErrCodeClientException, aerr.Error())
+			case ecs.ErrCodeClusterNotFoundException:
+				fmt.Println(ecs.ErrCodeClusterNotFoundException, aerr.Error())
+			case ecs.ErrCodeResourceNotFoundException:
+				fmt.Println(ecs.ErrCodeResourceNotFoundException, aerr.Error())
+			case ecs.ErrCodeInvalidParameterException:
+				fmt.Println(ecs.ErrCodeInvalidParameterException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		return
+	}
+
+	fmt.Println(result)
+}
+
+// To untag a cluster.
+//
+// This example deletes the 'team' tag from the 'dev' cluster.
+func ExampleECS_UntagResource_shared00() {
+	svc := ecs.New(session.New())
+	input := &ecs.UntagResourceInput{
+		ResourceArn: aws.String("arn:aws:ecs:region:aws_account_id:cluster/dev"),
+		TagKeys: []*string{
+			aws.String("team"),
+		},
+	}
+
+	result, err := svc.UntagResource(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ecs.ErrCodeServerException:
+				fmt.Println(ecs.ErrCodeServerException, aerr.Error())
+			case ecs.ErrCodeClientException:
+				fmt.Println(ecs.ErrCodeClientException, aerr.Error())
+			case ecs.ErrCodeClusterNotFoundException:
+				fmt.Println(ecs.ErrCodeClusterNotFoundException, aerr.Error())
+			case ecs.ErrCodeResourceNotFoundException:
+				fmt.Println(ecs.ErrCodeResourceNotFoundException, aerr.Error())
+			case ecs.ErrCodeInvalidParameterException:
+				fmt.Println(ecs.ErrCodeInvalidParameterException, aerr.Error())
 			default:
 				fmt.Println(aerr.Error())
 			}
@@ -856,6 +1002,12 @@ func ExampleECS_UpdateService_shared00() {
 				fmt.Println(ecs.ErrCodeServiceNotFoundException, aerr.Error())
 			case ecs.ErrCodeServiceNotActiveException:
 				fmt.Println(ecs.ErrCodeServiceNotActiveException, aerr.Error())
+			case ecs.ErrCodePlatformUnknownException:
+				fmt.Println(ecs.ErrCodePlatformUnknownException, aerr.Error())
+			case ecs.ErrCodePlatformTaskDefinitionIncompatibilityException:
+				fmt.Println(ecs.ErrCodePlatformTaskDefinitionIncompatibilityException, aerr.Error())
+			case ecs.ErrCodeAccessDeniedException:
+				fmt.Println(ecs.ErrCodeAccessDeniedException, aerr.Error())
 			default:
 				fmt.Println(aerr.Error())
 			}
@@ -896,6 +1048,12 @@ func ExampleECS_UpdateService_shared01() {
 				fmt.Println(ecs.ErrCodeServiceNotFoundException, aerr.Error())
 			case ecs.ErrCodeServiceNotActiveException:
 				fmt.Println(ecs.ErrCodeServiceNotActiveException, aerr.Error())
+			case ecs.ErrCodePlatformUnknownException:
+				fmt.Println(ecs.ErrCodePlatformUnknownException, aerr.Error())
+			case ecs.ErrCodePlatformTaskDefinitionIncompatibilityException:
+				fmt.Println(ecs.ErrCodePlatformTaskDefinitionIncompatibilityException, aerr.Error())
+			case ecs.ErrCodeAccessDeniedException:
+				fmt.Println(ecs.ErrCodeAccessDeniedException, aerr.Error())
 			default:
 				fmt.Println(aerr.Error())
 			}

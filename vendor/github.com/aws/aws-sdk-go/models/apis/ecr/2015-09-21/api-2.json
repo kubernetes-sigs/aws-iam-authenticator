@@ -1,15 +1,16 @@
 {
   "version":"2.0",
   "metadata":{
-    "uid":"ecr-2015-09-21",
     "apiVersion":"2015-09-21",
     "endpointPrefix":"ecr",
     "jsonVersion":"1.1",
     "protocol":"json",
     "serviceAbbreviation":"Amazon ECR",
     "serviceFullName":"Amazon EC2 Container Registry",
+    "serviceId":"ECR",
     "signatureVersion":"v4",
-    "targetPrefix":"AmazonEC2ContainerRegistry_V20150921"
+    "targetPrefix":"AmazonEC2ContainerRegistry_V20150921",
+    "uid":"ecr-2015-09-21"
   },
   "operations":{
     "BatchCheckLayerAvailability":{
@@ -84,8 +85,25 @@
       "errors":[
         {"shape":"ServerException"},
         {"shape":"InvalidParameterException"},
+        {"shape":"InvalidTagParameterException"},
+        {"shape":"TooManyTagsException"},
         {"shape":"RepositoryAlreadyExistsException"},
         {"shape":"LimitExceededException"}
+      ]
+    },
+    "DeleteLifecyclePolicy":{
+      "name":"DeleteLifecyclePolicy",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"DeleteLifecyclePolicyRequest"},
+      "output":{"shape":"DeleteLifecyclePolicyResponse"},
+      "errors":[
+        {"shape":"ServerException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"RepositoryNotFoundException"},
+        {"shape":"LifecyclePolicyNotFoundException"}
       ]
     },
     "DeleteRepository":{
@@ -176,6 +194,36 @@
         {"shape":"RepositoryNotFoundException"}
       ]
     },
+    "GetLifecyclePolicy":{
+      "name":"GetLifecyclePolicy",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"GetLifecyclePolicyRequest"},
+      "output":{"shape":"GetLifecyclePolicyResponse"},
+      "errors":[
+        {"shape":"ServerException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"RepositoryNotFoundException"},
+        {"shape":"LifecyclePolicyNotFoundException"}
+      ]
+    },
+    "GetLifecyclePolicyPreview":{
+      "name":"GetLifecyclePolicyPreview",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"GetLifecyclePolicyPreviewRequest"},
+      "output":{"shape":"GetLifecyclePolicyPreviewResponse"},
+      "errors":[
+        {"shape":"ServerException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"RepositoryNotFoundException"},
+        {"shape":"LifecyclePolicyPreviewNotFoundException"}
+      ]
+    },
     "GetRepositoryPolicy":{
       "name":"GetRepositoryPolicy",
       "http":{
@@ -219,6 +267,20 @@
         {"shape":"RepositoryNotFoundException"}
       ]
     },
+    "ListTagsForResource":{
+      "name":"ListTagsForResource",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"ListTagsForResourceRequest"},
+      "output":{"shape":"ListTagsForResourceResponse"},
+      "errors":[
+        {"shape":"InvalidParameterException"},
+        {"shape":"RepositoryNotFoundException"},
+        {"shape":"ServerException"}
+      ]
+    },
     "PutImage":{
       "name":"PutImage",
       "http":{
@@ -236,6 +298,20 @@
         {"shape":"LimitExceededException"}
       ]
     },
+    "PutLifecyclePolicy":{
+      "name":"PutLifecyclePolicy",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"PutLifecyclePolicyRequest"},
+      "output":{"shape":"PutLifecyclePolicyResponse"},
+      "errors":[
+        {"shape":"ServerException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"RepositoryNotFoundException"}
+      ]
+    },
     "SetRepositoryPolicy":{
       "name":"SetRepositoryPolicy",
       "http":{
@@ -248,6 +324,54 @@
         {"shape":"ServerException"},
         {"shape":"InvalidParameterException"},
         {"shape":"RepositoryNotFoundException"}
+      ]
+    },
+    "StartLifecyclePolicyPreview":{
+      "name":"StartLifecyclePolicyPreview",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"StartLifecyclePolicyPreviewRequest"},
+      "output":{"shape":"StartLifecyclePolicyPreviewResponse"},
+      "errors":[
+        {"shape":"ServerException"},
+        {"shape":"InvalidParameterException"},
+        {"shape":"RepositoryNotFoundException"},
+        {"shape":"LifecyclePolicyNotFoundException"},
+        {"shape":"LifecyclePolicyPreviewInProgressException"}
+      ]
+    },
+    "TagResource":{
+      "name":"TagResource",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"TagResourceRequest"},
+      "output":{"shape":"TagResourceResponse"},
+      "errors":[
+        {"shape":"InvalidParameterException"},
+        {"shape":"InvalidTagParameterException"},
+        {"shape":"TooManyTagsException"},
+        {"shape":"RepositoryNotFoundException"},
+        {"shape":"ServerException"}
+      ]
+    },
+    "UntagResource":{
+      "name":"UntagResource",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"UntagResourceRequest"},
+      "output":{"shape":"UntagResourceResponse"},
+      "errors":[
+        {"shape":"InvalidParameterException"},
+        {"shape":"InvalidTagParameterException"},
+        {"shape":"TooManyTagsException"},
+        {"shape":"RepositoryNotFoundException"},
+        {"shape":"ServerException"}
       ]
     },
     "UploadLayerPart":{
@@ -382,7 +506,8 @@
       "type":"structure",
       "required":["repositoryName"],
       "members":{
-        "repositoryName":{"shape":"RepositoryName"}
+        "repositoryName":{"shape":"RepositoryName"},
+        "tags":{"shape":"TagList"}
       }
     },
     "CreateRepositoryResponse":{
@@ -392,6 +517,23 @@
       }
     },
     "CreationTimestamp":{"type":"timestamp"},
+    "DeleteLifecyclePolicyRequest":{
+      "type":"structure",
+      "required":["repositoryName"],
+      "members":{
+        "registryId":{"shape":"RegistryId"},
+        "repositoryName":{"shape":"RepositoryName"}
+      }
+    },
+    "DeleteLifecyclePolicyResponse":{
+      "type":"structure",
+      "members":{
+        "registryId":{"shape":"RegistryId"},
+        "repositoryName":{"shape":"RepositoryName"},
+        "lifecyclePolicyText":{"shape":"LifecyclePolicyText"},
+        "lastEvaluatedAt":{"shape":"EvaluationTimestamp"}
+      }
+    },
     "DeleteRepositoryPolicyRequest":{
       "type":"structure",
       "required":["repositoryName"],
@@ -471,6 +613,7 @@
       },
       "exception":true
     },
+    "EvaluationTimestamp":{"type":"timestamp"},
     "ExceptionMessage":{"type":"string"},
     "ExpirationTimestamp":{"type":"timestamp"},
     "ForceFlag":{"type":"boolean"},
@@ -511,6 +654,47 @@
         "layerDigest":{"shape":"LayerDigest"}
       }
     },
+    "GetLifecyclePolicyPreviewRequest":{
+      "type":"structure",
+      "required":["repositoryName"],
+      "members":{
+        "registryId":{"shape":"RegistryId"},
+        "repositoryName":{"shape":"RepositoryName"},
+        "imageIds":{"shape":"ImageIdentifierList"},
+        "nextToken":{"shape":"NextToken"},
+        "maxResults":{"shape":"LifecyclePreviewMaxResults"},
+        "filter":{"shape":"LifecyclePolicyPreviewFilter"}
+      }
+    },
+    "GetLifecyclePolicyPreviewResponse":{
+      "type":"structure",
+      "members":{
+        "registryId":{"shape":"RegistryId"},
+        "repositoryName":{"shape":"RepositoryName"},
+        "lifecyclePolicyText":{"shape":"LifecyclePolicyText"},
+        "status":{"shape":"LifecyclePolicyPreviewStatus"},
+        "nextToken":{"shape":"NextToken"},
+        "previewResults":{"shape":"LifecyclePolicyPreviewResultList"},
+        "summary":{"shape":"LifecyclePolicyPreviewSummary"}
+      }
+    },
+    "GetLifecyclePolicyRequest":{
+      "type":"structure",
+      "required":["repositoryName"],
+      "members":{
+        "registryId":{"shape":"RegistryId"},
+        "repositoryName":{"shape":"RepositoryName"}
+      }
+    },
+    "GetLifecyclePolicyResponse":{
+      "type":"structure",
+      "members":{
+        "registryId":{"shape":"RegistryId"},
+        "repositoryName":{"shape":"RepositoryName"},
+        "lifecyclePolicyText":{"shape":"LifecyclePolicyText"},
+        "lastEvaluatedAt":{"shape":"EvaluationTimestamp"}
+      }
+    },
     "GetRepositoryPolicyRequest":{
       "type":"structure",
       "required":["repositoryName"],
@@ -536,12 +720,20 @@
         "imageManifest":{"shape":"ImageManifest"}
       }
     },
+    "ImageActionType":{
+      "type":"string",
+      "enum":["EXPIRE"]
+    },
     "ImageAlreadyExistsException":{
       "type":"structure",
       "members":{
         "message":{"shape":"ExceptionMessage"}
       },
       "exception":true
+    },
+    "ImageCount":{
+      "type":"integer",
+      "min":0
     },
     "ImageDetail":{
       "type":"structure",
@@ -653,6 +845,13 @@
       },
       "exception":true
     },
+    "InvalidTagParameterException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"ExceptionMessage"}
+      },
+      "exception":true
+    },
     "Layer":{
       "type":"structure",
       "members":{
@@ -733,6 +932,82 @@
       },
       "exception":true
     },
+    "LifecyclePolicyNotFoundException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"ExceptionMessage"}
+      },
+      "exception":true
+    },
+    "LifecyclePolicyPreviewFilter":{
+      "type":"structure",
+      "members":{
+        "tagStatus":{"shape":"TagStatus"}
+      }
+    },
+    "LifecyclePolicyPreviewInProgressException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"ExceptionMessage"}
+      },
+      "exception":true
+    },
+    "LifecyclePolicyPreviewNotFoundException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"ExceptionMessage"}
+      },
+      "exception":true
+    },
+    "LifecyclePolicyPreviewResult":{
+      "type":"structure",
+      "members":{
+        "imageTags":{"shape":"ImageTagList"},
+        "imageDigest":{"shape":"ImageDigest"},
+        "imagePushedAt":{"shape":"PushTimestamp"},
+        "action":{"shape":"LifecyclePolicyRuleAction"},
+        "appliedRulePriority":{"shape":"LifecyclePolicyRulePriority"}
+      }
+    },
+    "LifecyclePolicyPreviewResultList":{
+      "type":"list",
+      "member":{"shape":"LifecyclePolicyPreviewResult"}
+    },
+    "LifecyclePolicyPreviewStatus":{
+      "type":"string",
+      "enum":[
+        "IN_PROGRESS",
+        "COMPLETE",
+        "EXPIRED",
+        "FAILED"
+      ]
+    },
+    "LifecyclePolicyPreviewSummary":{
+      "type":"structure",
+      "members":{
+        "expiringImageTotalCount":{"shape":"ImageCount"}
+      }
+    },
+    "LifecyclePolicyRuleAction":{
+      "type":"structure",
+      "members":{
+        "type":{"shape":"ImageActionType"}
+      }
+    },
+    "LifecyclePolicyRulePriority":{
+      "type":"integer",
+      "min":1
+    },
+    "LifecyclePolicyText":{
+      "type":"string",
+      "max":30720,
+      "min":100
+    },
+    "LifecyclePreviewMaxResults":{
+      "type":"integer",
+      "max":100,
+      "min":1
+    },
     "LimitExceededException":{
       "type":"structure",
       "members":{
@@ -764,15 +1039,25 @@
         "nextToken":{"shape":"NextToken"}
       }
     },
+    "ListTagsForResourceRequest":{
+      "type":"structure",
+      "required":["resourceArn"],
+      "members":{
+        "resourceArn":{"shape":"Arn"}
+      }
+    },
+    "ListTagsForResourceResponse":{
+      "type":"structure",
+      "members":{
+        "tags":{"shape":"TagList"}
+      }
+    },
     "MaxResults":{
       "type":"integer",
-      "max":100,
+      "max":1000,
       "min":1
     },
-    "MediaType":{
-      "type":"string",
-      "pattern":"\\w{1,127}\\/[-+.\\w]{1,127}"
-    },
+    "MediaType":{"type":"string"},
     "MediaTypeList":{
       "type":"list",
       "member":{"shape":"MediaType"},
@@ -803,6 +1088,26 @@
       "type":"structure",
       "members":{
         "image":{"shape":"Image"}
+      }
+    },
+    "PutLifecyclePolicyRequest":{
+      "type":"structure",
+      "required":[
+        "repositoryName",
+        "lifecyclePolicyText"
+      ],
+      "members":{
+        "registryId":{"shape":"RegistryId"},
+        "repositoryName":{"shape":"RepositoryName"},
+        "lifecyclePolicyText":{"shape":"LifecyclePolicyText"}
+      }
+    },
+    "PutLifecyclePolicyResponse":{
+      "type":"structure",
+      "members":{
+        "registryId":{"shape":"RegistryId"},
+        "repositoryName":{"shape":"RepositoryName"},
+        "lifecyclePolicyText":{"shape":"LifecyclePolicyText"}
       }
     },
     "RegistryId":{
@@ -897,12 +1202,87 @@
         "policyText":{"shape":"RepositoryPolicyText"}
       }
     },
+    "StartLifecyclePolicyPreviewRequest":{
+      "type":"structure",
+      "required":["repositoryName"],
+      "members":{
+        "registryId":{"shape":"RegistryId"},
+        "repositoryName":{"shape":"RepositoryName"},
+        "lifecyclePolicyText":{"shape":"LifecyclePolicyText"}
+      }
+    },
+    "StartLifecyclePolicyPreviewResponse":{
+      "type":"structure",
+      "members":{
+        "registryId":{"shape":"RegistryId"},
+        "repositoryName":{"shape":"RepositoryName"},
+        "lifecyclePolicyText":{"shape":"LifecyclePolicyText"},
+        "status":{"shape":"LifecyclePolicyPreviewStatus"}
+      }
+    },
+    "Tag":{
+      "type":"structure",
+      "members":{
+        "Key":{"shape":"TagKey"},
+        "Value":{"shape":"TagValue"}
+      }
+    },
+    "TagKey":{"type":"string"},
+    "TagKeyList":{
+      "type":"list",
+      "member":{"shape":"TagKey"}
+    },
+    "TagList":{
+      "type":"list",
+      "member":{"shape":"Tag"}
+    },
+    "TagResourceRequest":{
+      "type":"structure",
+      "required":[
+        "resourceArn",
+        "tags"
+      ],
+      "members":{
+        "resourceArn":{"shape":"Arn"},
+        "tags":{"shape":"TagList"}
+      }
+    },
+    "TagResourceResponse":{
+      "type":"structure",
+      "members":{
+      }
+    },
     "TagStatus":{
       "type":"string",
       "enum":[
         "TAGGED",
-        "UNTAGGED"
+        "UNTAGGED",
+        "ANY"
       ]
+    },
+    "TagValue":{"type":"string"},
+    "TooManyTagsException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"ExceptionMessage"}
+      },
+      "exception":true
+    },
+    "UntagResourceRequest":{
+      "type":"structure",
+      "required":[
+        "resourceArn",
+        "tagKeys"
+      ],
+      "members":{
+        "resourceArn":{"shape":"Arn"},
+        "tagKeys":{"shape":"TagKeyList"}
+      }
+    },
+    "UntagResourceResponse":{
+      "type":"structure",
+      "members":{
+      }
     },
     "UploadId":{
       "type":"string",

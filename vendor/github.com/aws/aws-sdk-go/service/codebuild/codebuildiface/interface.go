@@ -84,9 +84,21 @@ type CodeBuildAPI interface {
 	DeleteProjectWithContext(aws.Context, *codebuild.DeleteProjectInput, ...request.Option) (*codebuild.DeleteProjectOutput, error)
 	DeleteProjectRequest(*codebuild.DeleteProjectInput) (*request.Request, *codebuild.DeleteProjectOutput)
 
+	DeleteSourceCredentials(*codebuild.DeleteSourceCredentialsInput) (*codebuild.DeleteSourceCredentialsOutput, error)
+	DeleteSourceCredentialsWithContext(aws.Context, *codebuild.DeleteSourceCredentialsInput, ...request.Option) (*codebuild.DeleteSourceCredentialsOutput, error)
+	DeleteSourceCredentialsRequest(*codebuild.DeleteSourceCredentialsInput) (*request.Request, *codebuild.DeleteSourceCredentialsOutput)
+
 	DeleteWebhook(*codebuild.DeleteWebhookInput) (*codebuild.DeleteWebhookOutput, error)
 	DeleteWebhookWithContext(aws.Context, *codebuild.DeleteWebhookInput, ...request.Option) (*codebuild.DeleteWebhookOutput, error)
 	DeleteWebhookRequest(*codebuild.DeleteWebhookInput) (*request.Request, *codebuild.DeleteWebhookOutput)
+
+	ImportSourceCredentials(*codebuild.ImportSourceCredentialsInput) (*codebuild.ImportSourceCredentialsOutput, error)
+	ImportSourceCredentialsWithContext(aws.Context, *codebuild.ImportSourceCredentialsInput, ...request.Option) (*codebuild.ImportSourceCredentialsOutput, error)
+	ImportSourceCredentialsRequest(*codebuild.ImportSourceCredentialsInput) (*request.Request, *codebuild.ImportSourceCredentialsOutput)
+
+	InvalidateProjectCache(*codebuild.InvalidateProjectCacheInput) (*codebuild.InvalidateProjectCacheOutput, error)
+	InvalidateProjectCacheWithContext(aws.Context, *codebuild.InvalidateProjectCacheInput, ...request.Option) (*codebuild.InvalidateProjectCacheOutput, error)
+	InvalidateProjectCacheRequest(*codebuild.InvalidateProjectCacheInput) (*request.Request, *codebuild.InvalidateProjectCacheOutput)
 
 	ListBuilds(*codebuild.ListBuildsInput) (*codebuild.ListBuildsOutput, error)
 	ListBuildsWithContext(aws.Context, *codebuild.ListBuildsInput, ...request.Option) (*codebuild.ListBuildsOutput, error)
@@ -104,6 +116,10 @@ type CodeBuildAPI interface {
 	ListProjectsWithContext(aws.Context, *codebuild.ListProjectsInput, ...request.Option) (*codebuild.ListProjectsOutput, error)
 	ListProjectsRequest(*codebuild.ListProjectsInput) (*request.Request, *codebuild.ListProjectsOutput)
 
+	ListSourceCredentials(*codebuild.ListSourceCredentialsInput) (*codebuild.ListSourceCredentialsOutput, error)
+	ListSourceCredentialsWithContext(aws.Context, *codebuild.ListSourceCredentialsInput, ...request.Option) (*codebuild.ListSourceCredentialsOutput, error)
+	ListSourceCredentialsRequest(*codebuild.ListSourceCredentialsInput) (*request.Request, *codebuild.ListSourceCredentialsOutput)
+
 	StartBuild(*codebuild.StartBuildInput) (*codebuild.StartBuildOutput, error)
 	StartBuildWithContext(aws.Context, *codebuild.StartBuildInput, ...request.Option) (*codebuild.StartBuildOutput, error)
 	StartBuildRequest(*codebuild.StartBuildInput) (*request.Request, *codebuild.StartBuildOutput)
@@ -115,6 +131,10 @@ type CodeBuildAPI interface {
 	UpdateProject(*codebuild.UpdateProjectInput) (*codebuild.UpdateProjectOutput, error)
 	UpdateProjectWithContext(aws.Context, *codebuild.UpdateProjectInput, ...request.Option) (*codebuild.UpdateProjectOutput, error)
 	UpdateProjectRequest(*codebuild.UpdateProjectInput) (*request.Request, *codebuild.UpdateProjectOutput)
+
+	UpdateWebhook(*codebuild.UpdateWebhookInput) (*codebuild.UpdateWebhookOutput, error)
+	UpdateWebhookWithContext(aws.Context, *codebuild.UpdateWebhookInput, ...request.Option) (*codebuild.UpdateWebhookOutput, error)
+	UpdateWebhookRequest(*codebuild.UpdateWebhookInput) (*request.Request, *codebuild.UpdateWebhookOutput)
 }
 
 var _ CodeBuildAPI = (*codebuild.CodeBuild)(nil)

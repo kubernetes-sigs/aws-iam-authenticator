@@ -1,13 +1,14 @@
 {
   "version":"2.0",
   "metadata":{
-    "uid":"sns-2010-03-31",
     "apiVersion":"2010-03-31",
     "endpointPrefix":"sns",
     "protocol":"query",
     "serviceAbbreviation":"Amazon SNS",
     "serviceFullName":"Amazon Simple Notification Service",
+    "serviceId":"SNS",
     "signatureVersion":"v4",
+    "uid":"sns-2010-03-31",
     "xmlNamespace":"http://sns.amazonaws.com/doc/2010-03-31/"
   },
   "operations":{
@@ -112,7 +113,8 @@
         {"shape":"InvalidParameterException"},
         {"shape":"TopicLimitExceededException"},
         {"shape":"InternalErrorException"},
-        {"shape":"AuthorizationErrorException"}
+        {"shape":"AuthorizationErrorException"},
+        {"shape":"InvalidSecurityException"}
       ]
     },
     "DeleteEndpoint":{
@@ -242,7 +244,8 @@
         {"shape":"InvalidParameterException"},
         {"shape":"InternalErrorException"},
         {"shape":"NotFoundException"},
-        {"shape":"AuthorizationErrorException"}
+        {"shape":"AuthorizationErrorException"},
+        {"shape":"InvalidSecurityException"}
       ]
     },
     "ListEndpointsByPlatformApplication":{
@@ -386,7 +389,14 @@
         {"shape":"NotFoundException"},
         {"shape":"EndpointDisabledException"},
         {"shape":"PlatformApplicationDisabledException"},
-        {"shape":"AuthorizationErrorException"}
+        {"shape":"AuthorizationErrorException"},
+        {"shape":"KMSDisabledException"},
+        {"shape":"KMSInvalidStateException"},
+        {"shape":"KMSNotFoundException"},
+        {"shape":"KMSOptInRequired"},
+        {"shape":"KMSThrottlingException"},
+        {"shape":"KMSAccessDeniedException"},
+        {"shape":"InvalidSecurityException"}
       ]
     },
     "RemovePermission":{
@@ -458,6 +468,7 @@
       "input":{"shape":"SetSubscriptionAttributesInput"},
       "errors":[
         {"shape":"InvalidParameterException"},
+        {"shape":"FilterPolicyLimitExceededException"},
         {"shape":"InternalErrorException"},
         {"shape":"NotFoundException"},
         {"shape":"AuthorizationErrorException"}
@@ -474,7 +485,8 @@
         {"shape":"InvalidParameterException"},
         {"shape":"InternalErrorException"},
         {"shape":"NotFoundException"},
-        {"shape":"AuthorizationErrorException"}
+        {"shape":"AuthorizationErrorException"},
+        {"shape":"InvalidSecurityException"}
       ]
     },
     "Subscribe":{
@@ -490,10 +502,12 @@
       },
       "errors":[
         {"shape":"SubscriptionLimitExceededException"},
+        {"shape":"FilterPolicyLimitExceededException"},
         {"shape":"InvalidParameterException"},
         {"shape":"InternalErrorException"},
         {"shape":"NotFoundException"},
-        {"shape":"AuthorizationErrorException"}
+        {"shape":"AuthorizationErrorException"},
+        {"shape":"InvalidSecurityException"}
       ]
     },
     "Unsubscribe":{
@@ -507,7 +521,8 @@
         {"shape":"InvalidParameterException"},
         {"shape":"InternalErrorException"},
         {"shape":"AuthorizationErrorException"},
-        {"shape":"NotFoundException"}
+        {"shape":"NotFoundException"},
+        {"shape":"InvalidSecurityException"}
       ]
     }
   },
@@ -617,7 +632,8 @@
       "type":"structure",
       "required":["Name"],
       "members":{
-        "Name":{"shape":"topicName"}
+        "Name":{"shape":"topicName"},
+        "Attributes":{"shape":"TopicAttributesMap"}
       }
     },
     "CreateTopicResponse":{
@@ -666,6 +682,18 @@
       "error":{
         "code":"EndpointDisabled",
         "httpStatusCode":400,
+        "senderFault":true
+      },
+      "exception":true
+    },
+    "FilterPolicyLimitExceededException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"string"}
+      },
+      "error":{
+        "code":"FilterPolicyLimitExceeded",
+        "httpStatusCode":403,
         "senderFault":true
       },
       "exception":true
@@ -765,6 +793,90 @@
       },
       "error":{
         "code":"ParameterValueInvalid",
+        "httpStatusCode":400,
+        "senderFault":true
+      },
+      "exception":true
+    },
+    "InvalidSecurityException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"string"}
+      },
+      "error":{
+        "code":"InvalidSecurity",
+        "httpStatusCode":403,
+        "senderFault":true
+      },
+      "exception":true
+    },
+    "KMSAccessDeniedException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"string"}
+      },
+      "error":{
+        "code":"KMSAccessDenied",
+        "httpStatusCode":400,
+        "senderFault":true
+      },
+      "exception":true
+    },
+    "KMSDisabledException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"string"}
+      },
+      "error":{
+        "code":"KMSDisabled",
+        "httpStatusCode":400,
+        "senderFault":true
+      },
+      "exception":true
+    },
+    "KMSInvalidStateException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"string"}
+      },
+      "error":{
+        "code":"KMSInvalidState",
+        "httpStatusCode":400,
+        "senderFault":true
+      },
+      "exception":true
+    },
+    "KMSNotFoundException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"string"}
+      },
+      "error":{
+        "code":"KMSNotFound",
+        "httpStatusCode":400,
+        "senderFault":true
+      },
+      "exception":true
+    },
+    "KMSOptInRequired":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"string"}
+      },
+      "error":{
+        "code":"KMSOptInRequired",
+        "httpStatusCode":403,
+        "senderFault":true
+      },
+      "exception":true
+    },
+    "KMSThrottlingException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"string"}
+      },
+      "error":{
+        "code":"KMSThrottling",
         "httpStatusCode":400,
         "senderFault":true
       },
@@ -1035,7 +1147,9 @@
       "members":{
         "TopicArn":{"shape":"topicARN"},
         "Protocol":{"shape":"protocol"},
-        "Endpoint":{"shape":"endpoint"}
+        "Endpoint":{"shape":"endpoint"},
+        "Attributes":{"shape":"SubscriptionAttributesMap"},
+        "ReturnSubscriptionArn":{"shape":"boolean"}
       }
     },
     "SubscribeResponse":{
