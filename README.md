@@ -120,51 +120,7 @@ You can also omit `-r ROLE_ARN` to sign the token with your existing credentials
 This is useful if you want to authenticate as an IAM user directly or if you want to authenticate using an EC2 instance role or a federated role.
 
 ## Kops Usage
-Clusters managed by [Kops](https://github.com/kubernetes/kops) can be configured to use Authenticator.
-Both single and HA master cluster configurations are supported.
-Perform the following steps to setup Authenticator on a Kops cluster:
-1. Pre-generate the certificate, key, and kubeconfig and upload them to the kops state store.
-   ```
-   aws-iam-authenticator init -i $CLUSTER_NAME
-   aws s3 cp cert.pem ${KOPS_STATE_STORE}/${CLUSTER_NAME}/addons/authenticator/cert.pem;
-   aws s3 cp key.pem ${KOPS_STATE_STORE}/${CLUSTER_NAME}/addons/authenticator/key.pem;
-   aws s3 cp aws-iam-authenticator.kubeconfig ${KOPS_STATE_STORE}/${CLUSTER_NAME}/addons/authenticator/kubeconfig.yaml;
-   ```
-2. Add the following sections to the cluster spec, either using `kops edit cluster ${CLUSTER_NAME}` or editing the manifest yaml file.
-   Be sure to replace `KOPS_STATE_STORE` and `CLUSTER_NAME` with their appropriate values since those environment variables are not available at runtime.
-   This downloads the files from the state store on masters to a directory that is volume mounted by kube-apiserver.
-   Kops does not support adding additional volumes to kube-apiserver so we must reuse the existing `/srv/kubernetes` hostPath volume.
-   ```
-   apiVersion: kops/v1alpha2
-   kind: Cluster
-   spec:
-     kubeAPIServer:
-       authenticationTokenWebhookConfigFile: /srv/kubernetes/aws-iam-authenticator/kubeconfig.yaml
-     hooks:
-     - name: kops-hook-authenticator-config.service
-       before:
-         - kubelet.service
-       roles: [Master]
-       manifest: |
-         [Unit]
-         Description=Download AWS Authenticator configs from S3
-         [Service]
-         Type=oneshot
-         ExecStart=/bin/mkdir -p /srv/kubernetes/aws-iam-authenticator
-         ExecStart=/usr/local/bin/aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/aws-iam-authenticator/
-   ```
-   If using a non-default AMI that does not have the AWS CLI, replace the second `ExecStart` statement with:
-
-   ```
-   ExecStart=/usr/bin/docker run --net=host --rm -v /srv/kubernetes/aws-iam-authenticator:/srv/kubernetes/aws-iam-authenticator quay.io/coreos/awscli@sha256:7b893bfb22ac582587798b011024f40871cd7424b9026595fd99c2b69492791d aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/aws-iam-authenticator/
-   ```
-3. Apply the changes with `kops update cluster ${CLUSTER_NAME}`.
-   If the cluster already exists, roll the cluster with `kops rolling-update cluster ${CLUSTER_NAME}` in order to recreate the master nodes.
-4. Update the Authenticator DaemonSet's state and output volumes to both use `/srv/kubernetes/aws-iam-authenticator/` for their `hostPath`s.
-5. Apply the DaemonSet and ConfigMap resource manifests to launch the Authenticator server on the cluster.
-
-*Note:* Certain Kops commands will overwrite the `exec` configuration in kubeconfig so it may need to be restored manually. See [kubernetes/kops#5051](https://github.com/kubernetes/kops/issues/5051) for more information.
-
+Clusters managed by [Kops](https://github.com/kubernetes/kops) can be configured to use Authenticator. For usage instructions see the [Kops documentation](https://github.com/kubernetes/kops/blob/master/docs/authentication.md#aws-iam-authenticator).
 
 ## How does it work?
 It works using the AWS [`sts:GetCallerIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html) API endpoint.
