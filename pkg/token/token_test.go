@@ -92,6 +92,36 @@ func jsonResponse(arn, account, userid string) string {
 	return string(data)
 }
 
+func TestSTSEndpoints(t *testing.T) {
+	verifier := tokenVerifier{}
+	chinaR := "sts.amazonaws.com.cn"
+	globalR := "sts.amazonaws.com"
+	usEast1R := "sts.us-east-1.amazonaws.com"
+	usEast2R := "sts.us-east-2.amazonaws.com"
+	usWest1R := "sts.us-west-1.amazonaws.com"
+	usWest2R := "sts.us-west-2.amazonaws.com"
+	apSouth1R := "sts.ap-south-1.amazonaws.com"
+	apNorthEast1R := "sts.ap-northeast-1.amazonaws.com"
+	apNorthEast2R := "sts.ap-northeast-2.amazonaws.com"
+	apSouthEast1R := "sts.ap-southeast-1.amazonaws.com"
+	apSouthEast2R := "sts.ap-southeast-2.amazonaws.com"
+	caCentral1R := "sts.ca-central-1.amazonaws.com"
+	euCenteral1R := "sts.eu-central-1.amazonaws.com"
+	euWest1R := "sts.eu-west-1.amazonaws.com"
+	euWest2R := "sts.eu-west-2.amazonaws.com"
+	euWest3R := "sts.eu-west-3.amazonaws.com"
+	euNorth1R := "sts.eu-north-1.amazonaws.com"
+	saEast1R := "sts.sa-east-1.amazonaws.com"
+
+	hosts := []string{chinaR, globalR, usEast1R, usEast2R, usWest1R, usWest2R, apSouth1R, apNorthEast1R, apNorthEast2R, apSouthEast1R, apSouthEast2R, caCentral1R, euCenteral1R, euWest1R, euWest2R, euWest3R, euNorth1R, saEast1R}
+
+	for _, host := range hosts {
+		if err := verifier.verifyHost(host); err != nil {
+			t.Errorf("%s is not valid endpoints host", host)
+		}
+	}
+}
+
 func TestVerifyTokenPreSTSValidations(t *testing.T) {
 	b := make([]byte, maxTokenLenBytes+1, maxTokenLenBytes+1)
 	s := string(b)
@@ -100,7 +130,8 @@ func TestVerifyTokenPreSTSValidations(t *testing.T) {
 	validationErrorTest(t, "k8s-aws-v1.decodingerror", "illegal base64 data")
 	validationErrorTest(t, toToken(":ab:cd.af:/asda"), "missing protocol scheme")
 	validationErrorTest(t, toToken("http://"), "unexpected scheme")
-	validationErrorTest(t, toToken("https://google.com"), "unexpected hostname in pre-signed URL")
+	validationErrorTest(t, toToken("https://google.com"), fmt.Sprintf("unexpected hostname %q in pre-signed URL", "google.com"))
+	validationErrorTest(t, toToken("https://sts.cn-north-1.amazonaws.com.cn/abc"), "unexpected path in pre-signed URL")
 	validationErrorTest(t, toToken("https://sts.amazonaws.com/abc"), "unexpected path in pre-signed URL")
 	validationErrorTest(t, toToken("https://sts.amazonaws.com/?NoInWhiteList=abc"), "non-whitelisted query parameter")
 	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=get&action=post"), "query parameter with multiple values not supported")
