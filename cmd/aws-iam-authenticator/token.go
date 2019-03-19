@@ -78,7 +78,7 @@ func init() {
 	tokenCmd.Flags().Bool("forward-session-name",
 		false,
 		"Enable mapping a federated sessions caller-specified-role-name attribute onto newly assumed sessions. NOTE: Only applicable when a new role is requested via --role")
-	tokenCmd.Flags().Bool("cache", false, "Cache the token on disk until it expires")
+	tokenCmd.Flags().Bool("cache", false, "Cache the credential on disk until it expires. Uses the aws profile specified by AWS_PROFILE or the default profile.")
 	viper.BindPFlag("role", tokenCmd.Flags().Lookup("role"))
 	viper.BindPFlag("tokenOnly", tokenCmd.Flags().Lookup("token-only"))
 	viper.BindPFlag("forwardSessionName", tokenCmd.Flags().Lookup("forward-session-name"))
