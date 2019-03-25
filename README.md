@@ -1,7 +1,7 @@
 # AWS IAM Authenticator for Kubernetes
 
 A tool to use AWS IAM credentials to authenticate to a Kubernetes cluster.
-The initial work on this tool was driven by Heptio. The project recieves contributions from multiple community engineers and is currently maintained by Heptio and Amazon EKS OSS Engineers.
+The initial work on this tool was driven by Heptio. The project receives contributions from multiple community engineers and is currently maintained by Heptio and Amazon EKS OSS Engineers.
 
 ## Why do I want this?
 If you are an administrator running a Kubernetes cluster on AWS, you already need to manage AWS IAM credentials to provision and update the cluster.
