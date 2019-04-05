@@ -254,10 +254,10 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	}
 
 	log.WithFields(logrus.Fields{
-		"arn": identity.ARN,
+		"arn":       identity.ARN,
 		"accountid": identity.AccountID,
-		"userid": identity.UserID,
-		"session": identity.SessionName,
+		"userid":    identity.UserID,
+		"session":   identity.SessionName,
 	}).Info("STS response")
 
 	// look up the ARN in each of our mappings to fill in the username and groups

@@ -28,7 +28,7 @@ type filesystem interface {
 }
 
 // default os based implementation
-type osFS struct {}
+type osFS struct{}
 
 func (osFS) Stat(filename string) (os.FileInfo, error) {
 	return os.Stat(filename)
@@ -55,7 +55,7 @@ type environment interface {
 }
 
 // default os based implementation
-type osEnv struct {}
+type osEnv struct{}
 
 func (osEnv) Getenv(key string) string {
 	return os.Getenv(key)
@@ -167,9 +167,9 @@ func writeCacheWhileLocked(filename string, cache cacheFile) error {
 // (contained in Credentials) and provides caching support for credentials for the
 // specified clusterID, profile, and roleARN (contained in cacheKey)
 type FileCacheProvider struct {
-	credentials                 *credentials.Credentials // the underlying implementation that has the *real* Provider
-	cacheKey                    cacheKey                 // cache key parameters used to create Provider
-	cachedCredential            cachedCredential         // the cached credential, if it exists
+	credentials      *credentials.Credentials // the underlying implementation that has the *real* Provider
+	cacheKey         cacheKey                 // cache key parameters used to create Provider
+	cachedCredential cachedCredential         // the cached credential, if it exists
 }
 
 // NewFileCacheProvider creates a new Provider implementation that wraps a provided Credentials,
@@ -186,7 +186,7 @@ func NewFileCacheProvider(clusterID, profile, roleARN string, creds *credentials
 	// ensure path to cache file exists
 	_ = f.MkdirAll(filepath.Dir(filename), 0700)
 	if info, err := f.Stat(filename); !os.IsNotExist(err) {
-		if info.Mode() & 0077 != 0 {
+		if info.Mode()&0077 != 0 {
 			// cache file has secret credentials and should only be accessible to the user, refuse to use it.
 			return FileCacheProvider{}, fmt.Errorf("cache file %s is not private", filename)
 		}
@@ -197,7 +197,7 @@ func NewFileCacheProvider(clusterID, profile, roleARN string, creds *credentials
 		// wait up to a second for the file to lock
 		ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 		defer cancel()
-		ok, err := lock.TryRLockContext(ctx, 250 * time.Millisecond) // try to lock every 1/4 second
+		ok, err := lock.TryRLockContext(ctx, 250*time.Millisecond) // try to lock every 1/4 second
 		if !ok {
 			// unable to lock the cache, something is wrong, refuse to use it.
 			return FileCacheProvider{}, fmt.Errorf("unable to read lock file %s: %v", filename, err)
@@ -245,7 +245,7 @@ func (f *FileCacheProvider) Retrieve() (credentials.Value, error) {
 			// wait up to a second for the file to lock
 			ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 			defer cancel()
-			ok, err := lock.TryLockContext(ctx, 250 * time.Millisecond) // try to lock every 1/4 second
+			ok, err := lock.TryLockContext(ctx, 250*time.Millisecond) // try to lock every 1/4 second
 			if !ok {
 				// can't get write lock to create/update cache, but still return the credential
 				_, _ = fmt.Fprintf(os.Stderr, "Unable to write lock file %s: %v\n", filename, err)
@@ -283,7 +283,7 @@ func (f *FileCacheProvider) IsExpired() bool {
 }
 
 // ExpiresAt implements the Expirer interface, and gives access to the expiration time of the credential
-func (f* FileCacheProvider) ExpiresAt() time.Time {
+func (f *FileCacheProvider) ExpiresAt() time.Time {
 	return f.cachedCredential.Expiration
 }
 

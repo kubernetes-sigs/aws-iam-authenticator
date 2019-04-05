@@ -195,7 +195,7 @@ func (g generator) GetWithRole(clusterID string, roleARN string) (Token, error) 
 	}
 	if g.cache {
 		// figure out what profile we're using
-		var profile string;
+		var profile string
 		if v := os.Getenv("AWS_PROFILE"); len(v) > 0 {
 			profile = v
 		} else {
