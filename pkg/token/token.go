@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -156,12 +157,14 @@ type Generator interface {
 
 type generator struct {
 	forwardSessionName bool
+	cache              bool
 }
 
 // NewGenerator creates a Generator and returns it.
-func NewGenerator(forwardSessionName bool) (Generator, error) {
+func NewGenerator(forwardSessionName bool, cache bool) (Generator, error) {
 	return generator{
 		forwardSessionName: forwardSessionName,
+		cache:              cache,
 	}, nil
 }
 
@@ -189,6 +192,21 @@ func (g generator) GetWithRole(clusterID string, roleARN string) (Token, error) 
 	})
 	if err != nil {
 		return Token{}, fmt.Errorf("could not create session: %v", err)
+	}
+	if g.cache {
+		// figure out what profile we're using
+		var profile string;
+		if v := os.Getenv("AWS_PROFILE"); len(v) > 0 {
+			profile = v
+		} else {
+			profile = session.DefaultSharedConfigProfile
+		}
+		// create a cacheing Provider wrapper around the Credentials
+		if cacheProvider, err := NewFileCacheProvider(clusterID, profile, roleARN, sess.Config.Credentials); err == nil {
+			sess.Config.Credentials = credentials.NewCredentials(&cacheProvider)
+		} else {
+			_, _ = fmt.Fprintf(os.Stderr, "unable to use cache: %v\n", err)
+		}
 	}
 
 	return g.GetWithRoleForSession(clusterID, roleARN, sess)
