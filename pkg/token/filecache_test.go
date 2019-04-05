@@ -80,7 +80,7 @@ func (t *testFS) MkdirAll(path string, perm os.FileMode) error {
 	return t.err
 }
 
-func (t* testFS) reset() {
+func (t *testFS) reset() {
 	t.filename = ""
 	t.fileinfo = testFileInfo{}
 	t.data = []byte{}
