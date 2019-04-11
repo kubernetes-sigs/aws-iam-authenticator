@@ -59,7 +59,7 @@ func (c *Comprehend) BatchDetectDominantLanguageRequest(input *BatchDetectDomina
 //
 // Determines the dominant language of the input text for a batch of documents.
 // For a list of languages that Amazon Comprehend can detect, see Amazon Comprehend
-// Supported Languages (http://docs.aws.amazon.com/comprehend/latest/dg/how-languages.html).
+// Supported Languages (https://docs.aws.amazon.com/comprehend/latest/dg/how-languages.html).
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -553,6 +553,11 @@ func (c *Comprehend) CreateDocumentClassifierRequest(input *CreateDocumentClassi
 //   The specified name is already in use. Use a different name and try your request
 //   again.
 //
+//   * ErrCodeTooManyTagsException "TooManyTagsException"
+//   The request contains more tags than can be associated with a resource (50
+//   tags per resource). The maximum number of tags includes both existing tags
+//   and those included in your current request.
+//
 //   * ErrCodeTooManyRequestsException "TooManyRequestsException"
 //   The number of requests exceeds the limit. Resubmit your request later.
 //
@@ -565,6 +570,10 @@ func (c *Comprehend) CreateDocumentClassifierRequest(input *CreateDocumentClassi
 //   entity recognition APIs (such as CreateEntityRecognizer), only English is
 //   accepted. For most other APIs, Amazon Comprehend accepts only English or
 //   Spanish text.
+//
+//   * ErrCodeKmsKeyValidationException "KmsKeyValidationException"
+//   The KMS customer managed key (CMK) entered cannot be validated. Verify the
+//   key and re-enter it.
 //
 //   * ErrCodeInternalServerException "InternalServerException"
 //   An internal server error occurred. Retry your request.
@@ -653,6 +662,11 @@ func (c *Comprehend) CreateEntityRecognizerRequest(input *CreateEntityRecognizer
 //   The specified name is already in use. Use a different name and try your request
 //   again.
 //
+//   * ErrCodeTooManyTagsException "TooManyTagsException"
+//   The request contains more tags than can be associated with a resource (50
+//   tags per resource). The maximum number of tags includes both existing tags
+//   and those included in your current request.
+//
 //   * ErrCodeTooManyRequestsException "TooManyRequestsException"
 //   The number of requests exceeds the limit. Resubmit your request later.
 //
@@ -665,6 +679,10 @@ func (c *Comprehend) CreateEntityRecognizerRequest(input *CreateEntityRecognizer
 //   entity recognition APIs (such as CreateEntityRecognizer), only English is
 //   accepted. For most other APIs, Amazon Comprehend accepts only English or
 //   Spanish text.
+//
+//   * ErrCodeKmsKeyValidationException "KmsKeyValidationException"
+//   The KMS customer managed key (CMK) entered cannot be validated. Verify the
+//   key and re-enter it.
 //
 //   * ErrCodeInternalServerException "InternalServerException"
 //   An internal server error occurred. Retry your request.
@@ -1662,7 +1680,7 @@ func (c *Comprehend) DetectDominantLanguageRequest(input *DetectDominantLanguage
 //
 // Determines the dominant language of the input text. For a list of languages
 // that Amazon Comprehend can detect, see Amazon Comprehend Supported Languages
-// (http://docs.aws.amazon.com/comprehend/latest/dg/how-languages.html).
+// (https://docs.aws.amazon.com/comprehend/latest/dg/how-languages.html).
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -2924,6 +2942,92 @@ func (c *Comprehend) ListSentimentDetectionJobsPagesWithContext(ctx aws.Context,
 	return p.Err()
 }
 
+const opListTagsForResource = "ListTagsForResource"
+
+// ListTagsForResourceRequest generates a "aws/request.Request" representing the
+// client's request for the ListTagsForResource operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ListTagsForResource for more information on using the ListTagsForResource
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the ListTagsForResourceRequest method.
+//    req, resp := client.ListTagsForResourceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/comprehend-2017-11-27/ListTagsForResource
+func (c *Comprehend) ListTagsForResourceRequest(input *ListTagsForResourceInput) (req *request.Request, output *ListTagsForResourceOutput) {
+	op := &request.Operation{
+		Name:       opListTagsForResource,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &ListTagsForResourceInput{}
+	}
+
+	output = &ListTagsForResourceOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ListTagsForResource API operation for Amazon Comprehend.
+//
+// Lists all tags associated with a given Amazon Comprehend resource.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon Comprehend's
+// API operation ListTagsForResource for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeInvalidRequestException "InvalidRequestException"
+//   The request is invalid.
+//
+//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
+//   The specified resource ARN was not found. Check the ARN and try your request
+//   again.
+//
+//   * ErrCodeInternalServerException "InternalServerException"
+//   An internal server error occurred. Retry your request.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/comprehend-2017-11-27/ListTagsForResource
+func (c *Comprehend) ListTagsForResource(input *ListTagsForResourceInput) (*ListTagsForResourceOutput, error) {
+	req, out := c.ListTagsForResourceRequest(input)
+	return out, req.Send()
+}
+
+// ListTagsForResourceWithContext is the same as ListTagsForResource with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ListTagsForResource for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *Comprehend) ListTagsForResourceWithContext(ctx aws.Context, input *ListTagsForResourceInput, opts ...request.Option) (*ListTagsForResourceOutput, error) {
+	req, out := c.ListTagsForResourceRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opListTopicsDetectionJobs = "ListTopicsDetectionJobs"
 
 // ListTopicsDetectionJobsRequest generates a "aws/request.Request" representing the
@@ -3138,6 +3242,10 @@ func (c *Comprehend) StartDocumentClassificationJobRequest(input *StartDocumentC
 //   The specified resource is not available. Check to see if the resource is
 //   in the TRAINED state and try your request again.
 //
+//   * ErrCodeKmsKeyValidationException "KmsKeyValidationException"
+//   The KMS customer managed key (CMK) entered cannot be validated. Verify the
+//   key and re-enter it.
+//
 //   * ErrCodeInternalServerException "InternalServerException"
 //   An internal server error occurred. Retry your request.
 //
@@ -3223,6 +3331,10 @@ func (c *Comprehend) StartDominantLanguageDetectionJobRequest(input *StartDomina
 //
 //   * ErrCodeTooManyRequestsException "TooManyRequestsException"
 //   The number of requests exceeds the limit. Resubmit your request later.
+//
+//   * ErrCodeKmsKeyValidationException "KmsKeyValidationException"
+//   The KMS customer managed key (CMK) entered cannot be validated. Verify the
+//   key and re-enter it.
 //
 //   * ErrCodeInternalServerException "InternalServerException"
 //   An internal server error occurred. Retry your request.
@@ -3323,6 +3435,10 @@ func (c *Comprehend) StartEntitiesDetectionJobRequest(input *StartEntitiesDetect
 //   The specified resource is not available. Check to see if the resource is
 //   in the TRAINED state and try your request again.
 //
+//   * ErrCodeKmsKeyValidationException "KmsKeyValidationException"
+//   The KMS customer managed key (CMK) entered cannot be validated. Verify the
+//   key and re-enter it.
+//
 //   * ErrCodeInternalServerException "InternalServerException"
 //   An internal server error occurred. Retry your request.
 //
@@ -3408,6 +3524,10 @@ func (c *Comprehend) StartKeyPhrasesDetectionJobRequest(input *StartKeyPhrasesDe
 //
 //   * ErrCodeTooManyRequestsException "TooManyRequestsException"
 //   The number of requests exceeds the limit. Resubmit your request later.
+//
+//   * ErrCodeKmsKeyValidationException "KmsKeyValidationException"
+//   The KMS customer managed key (CMK) entered cannot be validated. Verify the
+//   key and re-enter it.
 //
 //   * ErrCodeInternalServerException "InternalServerException"
 //   An internal server error occurred. Retry your request.
@@ -3495,6 +3615,10 @@ func (c *Comprehend) StartSentimentDetectionJobRequest(input *StartSentimentDete
 //   * ErrCodeTooManyRequestsException "TooManyRequestsException"
 //   The number of requests exceeds the limit. Resubmit your request later.
 //
+//   * ErrCodeKmsKeyValidationException "KmsKeyValidationException"
+//   The KMS customer managed key (CMK) entered cannot be validated. Verify the
+//   key and re-enter it.
+//
 //   * ErrCodeInternalServerException "InternalServerException"
 //   An internal server error occurred. Retry your request.
 //
@@ -3580,6 +3704,10 @@ func (c *Comprehend) StartTopicsDetectionJobRequest(input *StartTopicsDetectionJ
 //
 //   * ErrCodeTooManyRequestsException "TooManyRequestsException"
 //   The number of requests exceeds the limit. Resubmit your request later.
+//
+//   * ErrCodeKmsKeyValidationException "KmsKeyValidationException"
+//   The KMS customer managed key (CMK) entered cannot be validated. Verify the
+//   key and re-enter it.
 //
 //   * ErrCodeInternalServerException "InternalServerException"
 //   An internal server error occurred. Retry your request.
@@ -4177,6 +4305,200 @@ func (c *Comprehend) StopTrainingEntityRecognizer(input *StopTrainingEntityRecog
 // for more information on using Contexts.
 func (c *Comprehend) StopTrainingEntityRecognizerWithContext(ctx aws.Context, input *StopTrainingEntityRecognizerInput, opts ...request.Option) (*StopTrainingEntityRecognizerOutput, error) {
 	req, out := c.StopTrainingEntityRecognizerRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opTagResource = "TagResource"
+
+// TagResourceRequest generates a "aws/request.Request" representing the
+// client's request for the TagResource operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See TagResource for more information on using the TagResource
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the TagResourceRequest method.
+//    req, resp := client.TagResourceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/comprehend-2017-11-27/TagResource
+func (c *Comprehend) TagResourceRequest(input *TagResourceInput) (req *request.Request, output *TagResourceOutput) {
+	op := &request.Operation{
+		Name:       opTagResource,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &TagResourceInput{}
+	}
+
+	output = &TagResourceOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// TagResource API operation for Amazon Comprehend.
+//
+// Associates a specific tag with an Amazon Comprehend resource. A tag is a
+// key-value pair that adds as a metadata to a resource used by Amazon Comprehend.
+// For example, a tag with "Sales" as the key might be added to a resource to
+// indicate its use by the sales department.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon Comprehend's
+// API operation TagResource for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeInvalidRequestException "InvalidRequestException"
+//   The request is invalid.
+//
+//   * ErrCodeConcurrentModificationException "ConcurrentModificationException"
+//   Concurrent modification of the tags associated with an Amazon Comprehend
+//   resource is not supported.
+//
+//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
+//   The specified resource ARN was not found. Check the ARN and try your request
+//   again.
+//
+//   * ErrCodeTooManyTagsException "TooManyTagsException"
+//   The request contains more tags than can be associated with a resource (50
+//   tags per resource). The maximum number of tags includes both existing tags
+//   and those included in your current request.
+//
+//   * ErrCodeInternalServerException "InternalServerException"
+//   An internal server error occurred. Retry your request.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/comprehend-2017-11-27/TagResource
+func (c *Comprehend) TagResource(input *TagResourceInput) (*TagResourceOutput, error) {
+	req, out := c.TagResourceRequest(input)
+	return out, req.Send()
+}
+
+// TagResourceWithContext is the same as TagResource with the addition of
+// the ability to pass a context and additional request options.
+//
+// See TagResource for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *Comprehend) TagResourceWithContext(ctx aws.Context, input *TagResourceInput, opts ...request.Option) (*TagResourceOutput, error) {
+	req, out := c.TagResourceRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opUntagResource = "UntagResource"
+
+// UntagResourceRequest generates a "aws/request.Request" representing the
+// client's request for the UntagResource operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See UntagResource for more information on using the UntagResource
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the UntagResourceRequest method.
+//    req, resp := client.UntagResourceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/comprehend-2017-11-27/UntagResource
+func (c *Comprehend) UntagResourceRequest(input *UntagResourceInput) (req *request.Request, output *UntagResourceOutput) {
+	op := &request.Operation{
+		Name:       opUntagResource,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &UntagResourceInput{}
+	}
+
+	output = &UntagResourceOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// UntagResource API operation for Amazon Comprehend.
+//
+// Removes a specific tag associated with an Amazon Comprehend resource.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon Comprehend's
+// API operation UntagResource for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeTooManyTagKeysException "TooManyTagKeysException"
+//   The request contains more tag keys than can be associated with a resource
+//   (50 tag keys per resource).
+//
+//   * ErrCodeInvalidRequestException "InvalidRequestException"
+//   The request is invalid.
+//
+//   * ErrCodeConcurrentModificationException "ConcurrentModificationException"
+//   Concurrent modification of the tags associated with an Amazon Comprehend
+//   resource is not supported.
+//
+//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
+//   The specified resource ARN was not found. Check the ARN and try your request
+//   again.
+//
+//   * ErrCodeInternalServerException "InternalServerException"
+//   An internal server error occurred. Retry your request.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/comprehend-2017-11-27/UntagResource
+func (c *Comprehend) UntagResource(input *UntagResourceInput) (*UntagResourceOutput, error) {
+	req, out := c.UntagResourceRequest(input)
+	return out, req.Send()
+}
+
+// UntagResourceWithContext is the same as UntagResource with the addition of
+// the ability to pass a context and additional request options.
+//
+// See UntagResource for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *Comprehend) UntagResourceWithContext(ctx aws.Context, input *UntagResourceInput, opts ...request.Option) (*UntagResourceOutput, error) {
+	req, out := c.UntagResourceRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -5019,6 +5341,26 @@ type CreateDocumentClassifierInput struct {
 	//
 	// LanguageCode is a required field
 	LanguageCode *string `type:"string" required:"true" enum:"LanguageCode"`
+
+	// Enables the addition of output results configuration parameters for custom
+	// classifier jobs.
+	OutputDataConfig *DocumentClassifierOutputDataConfig `type:"structure"`
+
+	// Tags to be associated with the document classifier being created. A tag is
+	// a key-value pair that adds as a metadata to a resource used by Amazon Comprehend.
+	// For example, a tag with "Sales" as the key might be added to a resource to
+	// indicate its use by the sales department.
+	Tags []*Tag `type:"list"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -5057,6 +5399,16 @@ func (s *CreateDocumentClassifierInput) Validate() error {
 			invalidParams.AddNested("InputDataConfig", err.(request.ErrInvalidParams))
 		}
 	}
+	if s.Tags != nil {
+		for i, v := range s.Tags {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Tags", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
 
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -5091,6 +5443,24 @@ func (s *CreateDocumentClassifierInput) SetInputDataConfig(v *DocumentClassifier
 // SetLanguageCode sets the LanguageCode field's value.
 func (s *CreateDocumentClassifierInput) SetLanguageCode(v string) *CreateDocumentClassifierInput {
 	s.LanguageCode = &v
+	return s
+}
+
+// SetOutputDataConfig sets the OutputDataConfig field's value.
+func (s *CreateDocumentClassifierInput) SetOutputDataConfig(v *DocumentClassifierOutputDataConfig) *CreateDocumentClassifierInput {
+	s.OutputDataConfig = v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateDocumentClassifierInput) SetTags(v []*Tag) *CreateDocumentClassifierInput {
+	s.Tags = v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *CreateDocumentClassifierInput) SetVolumeKmsKeyId(v string) *CreateDocumentClassifierInput {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -5149,6 +5519,22 @@ type CreateEntityRecognizerInput struct {
 	//
 	// RecognizerName is a required field
 	RecognizerName *string `type:"string" required:"true"`
+
+	// Tags to be associated with the entity recognizer being created. A tag is
+	// a key-value pair that adds as a metadata to a resource used by Amazon Comprehend.
+	// For example, a tag with "Sales" as the key might be added to a resource to
+	// indicate its use by the sales department.
+	Tags []*Tag `type:"list"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -5187,6 +5573,16 @@ func (s *CreateEntityRecognizerInput) Validate() error {
 			invalidParams.AddNested("InputDataConfig", err.(request.ErrInvalidParams))
 		}
 	}
+	if s.Tags != nil {
+		for i, v := range s.Tags {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Tags", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
 
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -5221,6 +5617,18 @@ func (s *CreateEntityRecognizerInput) SetLanguageCode(v string) *CreateEntityRec
 // SetRecognizerName sets the RecognizerName field's value.
 func (s *CreateEntityRecognizerInput) SetRecognizerName(v string) *CreateEntityRecognizerInput {
 	s.RecognizerName = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateEntityRecognizerInput) SetTags(v []*Tag) *CreateEntityRecognizerInput {
+	s.Tags = v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *CreateEntityRecognizerInput) SetVolumeKmsKeyId(v string) *CreateEntityRecognizerInput {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -6384,6 +6792,16 @@ type DocumentClassificationJobProperties struct {
 
 	// The time that the document classification job was submitted for processing.
 	SubmitTime *time.Time `type:"timestamp"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -6453,6 +6871,12 @@ func (s *DocumentClassificationJobProperties) SetOutputDataConfig(v *OutputDataC
 // SetSubmitTime sets the SubmitTime field's value.
 func (s *DocumentClassificationJobProperties) SetSubmitTime(v time.Time) *DocumentClassificationJobProperties {
 	s.SubmitTime = &v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *DocumentClassificationJobProperties) SetVolumeKmsKeyId(v string) *DocumentClassificationJobProperties {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -6551,6 +6975,58 @@ func (s *DocumentClassifierInputDataConfig) SetS3Uri(v string) *DocumentClassifi
 	return s
 }
 
+// Provides output results configuration parameters for custom classifier jobs.
+type DocumentClassifierOutputDataConfig struct {
+	_ struct{} `type:"structure"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt the output results from an analysis job. The KmsKeyId can be one
+	// of the following formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * KMS Key Alias: "alias/ExampleAlias"
+	//
+	//    * ARN of a KMS Key Alias: "arn:aws:kms:us-west-2:111122223333:alias/ExampleAlias"
+	KmsKeyId *string `type:"string"`
+
+	// When you use the OutputDataConfig object while creating a custom classifier,
+	// you specify the Amazon S3 location where you want to write the confusion
+	// matrix. The URI must be in the same region as the API endpoint that you are
+	// calling. The location is used as the prefix for the actual location of this
+	// output file.
+	//
+	// When the custom classifier job is finished, the service creates the output
+	// file in a directory specific to the job. The S3Uri field contains the location
+	// of the output file, called output.tar.gz. It is a compressed archive that
+	// contains the confusion matrix.
+	S3Uri *string `type:"string"`
+}
+
+// String returns the string representation
+func (s DocumentClassifierOutputDataConfig) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DocumentClassifierOutputDataConfig) GoString() string {
+	return s.String()
+}
+
+// SetKmsKeyId sets the KmsKeyId field's value.
+func (s *DocumentClassifierOutputDataConfig) SetKmsKeyId(v string) *DocumentClassifierOutputDataConfig {
+	s.KmsKeyId = &v
+	return s
+}
+
+// SetS3Uri sets the S3Uri field's value.
+func (s *DocumentClassifierOutputDataConfig) SetS3Uri(v string) *DocumentClassifierOutputDataConfig {
+	s.S3Uri = &v
+	return s
+}
+
 // Provides information about a document classifier.
 type DocumentClassifierProperties struct {
 	_ struct{} `type:"structure"`
@@ -6581,6 +7057,9 @@ type DocumentClassifierProperties struct {
 	// Additional information about the status of the classifier.
 	Message *string `type:"string"`
 
+	// Provides output results configuration parameters for custom classifier jobs.
+	OutputDataConfig *DocumentClassifierOutputDataConfig `type:"structure"`
+
 	// The status of the document classifier. If the status is TRAINED the classifier
 	// is ready to use. If the status is FAILED you can see additional information
 	// about why the classifier wasn't trained in the Message field.
@@ -6597,6 +7076,16 @@ type DocumentClassifierProperties struct {
 	// Indicates the time when the training starts on documentation classifiers.
 	// You are billed for the time interval between this time and the value of TrainingEndTime.
 	TrainingStartTime *time.Time `type:"timestamp"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -6651,6 +7140,12 @@ func (s *DocumentClassifierProperties) SetMessage(v string) *DocumentClassifierP
 	return s
 }
 
+// SetOutputDataConfig sets the OutputDataConfig field's value.
+func (s *DocumentClassifierProperties) SetOutputDataConfig(v *DocumentClassifierOutputDataConfig) *DocumentClassifierProperties {
+	s.OutputDataConfig = v
+	return s
+}
+
 // SetStatus sets the Status field's value.
 func (s *DocumentClassifierProperties) SetStatus(v string) *DocumentClassifierProperties {
 	s.Status = &v
@@ -6672,6 +7167,12 @@ func (s *DocumentClassifierProperties) SetTrainingEndTime(v time.Time) *Document
 // SetTrainingStartTime sets the TrainingStartTime field's value.
 func (s *DocumentClassifierProperties) SetTrainingStartTime(v time.Time) *DocumentClassifierProperties {
 	s.TrainingStartTime = &v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *DocumentClassifierProperties) SetVolumeKmsKeyId(v string) *DocumentClassifierProperties {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -6816,6 +7317,16 @@ type DominantLanguageDetectionJobProperties struct {
 
 	// The time that the dominant language detection job was submitted for processing.
 	SubmitTime *time.Time `type:"timestamp"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -6879,6 +7390,12 @@ func (s *DominantLanguageDetectionJobProperties) SetOutputDataConfig(v *OutputDa
 // SetSubmitTime sets the SubmitTime field's value.
 func (s *DominantLanguageDetectionJobProperties) SetSubmitTime(v time.Time) *DominantLanguageDetectionJobProperties {
 	s.SubmitTime = &v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *DominantLanguageDetectionJobProperties) SetVolumeKmsKeyId(v string) *DominantLanguageDetectionJobProperties {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -6992,6 +7509,16 @@ type EntitiesDetectionJobProperties struct {
 
 	// The time that the entities detection job was submitted for processing.
 	SubmitTime *time.Time `type:"timestamp"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -7067,6 +7594,12 @@ func (s *EntitiesDetectionJobProperties) SetOutputDataConfig(v *OutputDataConfig
 // SetSubmitTime sets the SubmitTime field's value.
 func (s *EntitiesDetectionJobProperties) SetSubmitTime(v time.Time) *EntitiesDetectionJobProperties {
 	s.SubmitTime = &v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *EntitiesDetectionJobProperties) SetVolumeKmsKeyId(v string) *EntitiesDetectionJobProperties {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -7569,6 +8102,16 @@ type EntityRecognizerProperties struct {
 
 	// The time that training of the entity recognizer started.
 	TrainingStartTime *time.Time `type:"timestamp"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -7644,6 +8187,12 @@ func (s *EntityRecognizerProperties) SetTrainingEndTime(v time.Time) *EntityReco
 // SetTrainingStartTime sets the TrainingStartTime field's value.
 func (s *EntityRecognizerProperties) SetTrainingStartTime(v time.Time) *EntityRecognizerProperties {
 	s.TrainingStartTime = &v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *EntityRecognizerProperties) SetVolumeKmsKeyId(v string) *EntityRecognizerProperties {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -7914,6 +8463,16 @@ type KeyPhrasesDetectionJobProperties struct {
 
 	// The time that the key phrases detection job was submitted for processing.
 	SubmitTime *time.Time `type:"timestamp"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -7983,6 +8542,12 @@ func (s *KeyPhrasesDetectionJobProperties) SetOutputDataConfig(v *OutputDataConf
 // SetSubmitTime sets the SubmitTime field's value.
 func (s *KeyPhrasesDetectionJobProperties) SetSubmitTime(v time.Time) *KeyPhrasesDetectionJobProperties {
 	s.SubmitTime = &v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *KeyPhrasesDetectionJobProperties) SetVolumeKmsKeyId(v string) *KeyPhrasesDetectionJobProperties {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -8647,6 +9212,81 @@ func (s *ListSentimentDetectionJobsOutput) SetSentimentDetectionJobPropertiesLis
 	return s
 }
 
+type ListTagsForResourceInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the given Amazon Comprehend resource you
+	// are querying.
+	//
+	// ResourceArn is a required field
+	ResourceArn *string `type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s ListTagsForResourceInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTagsForResourceInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListTagsForResourceInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListTagsForResourceInput"}
+	if s.ResourceArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceArn"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetResourceArn sets the ResourceArn field's value.
+func (s *ListTagsForResourceInput) SetResourceArn(v string) *ListTagsForResourceInput {
+	s.ResourceArn = &v
+	return s
+}
+
+type ListTagsForResourceOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the given Amazon Comprehend resource you
+	// are querying.
+	ResourceArn *string `type:"string"`
+
+	// Tags associated with the Amazon Comprehend resource being queried. A tag
+	// is a key-value pair that adds as a metadata to a resource used by Amazon
+	// Comprehend. For example, a tag with "Sales" as the key might be added to
+	// a resource to indicate its use by the sales department.
+	Tags []*Tag `type:"list"`
+}
+
+// String returns the string representation
+func (s ListTagsForResourceOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTagsForResourceOutput) GoString() string {
+	return s.String()
+}
+
+// SetResourceArn sets the ResourceArn field's value.
+func (s *ListTagsForResourceOutput) SetResourceArn(v string) *ListTagsForResourceOutput {
+	s.ResourceArn = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *ListTagsForResourceOutput) SetTags(v []*Tag) *ListTagsForResourceOutput {
+	s.Tags = v
+	return s
+}
+
 type ListTopicsDetectionJobsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -8747,6 +9387,19 @@ func (s *ListTopicsDetectionJobsOutput) SetTopicsDetectionJobPropertiesList(v []
 type OutputDataConfig struct {
 	_ struct{} `type:"structure"`
 
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt the output results from an analysis job. The KmsKeyId can be one
+	// of the following formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * KMS Key Alias: "alias/ExampleAlias"
+	//
+	//    * ARN of a KMS Key Alias: "arn:aws:kms:us-west-2:111122223333:alias/ExampleAlias"
+	KmsKeyId *string `type:"string"`
+
 	// When you use the OutputDataConfig object with asynchronous operations, you
 	// specify the Amazon S3 location where you want to write the output data. The
 	// URI must be in the same region as the API endpoint that you are calling.
@@ -8783,6 +9436,12 @@ func (s *OutputDataConfig) Validate() error {
 		return invalidParams
 	}
 	return nil
+}
+
+// SetKmsKeyId sets the KmsKeyId field's value.
+func (s *OutputDataConfig) SetKmsKeyId(v string) *OutputDataConfig {
+	s.KmsKeyId = &v
+	return s
 }
 
 // SetS3Uri sets the S3Uri field's value.
@@ -8935,6 +9594,16 @@ type SentimentDetectionJobProperties struct {
 
 	// The time that the sentiment detection job was submitted for processing.
 	SubmitTime *time.Time `type:"timestamp"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -9004,6 +9673,12 @@ func (s *SentimentDetectionJobProperties) SetOutputDataConfig(v *OutputDataConfi
 // SetSubmitTime sets the SubmitTime field's value.
 func (s *SentimentDetectionJobProperties) SetSubmitTime(v time.Time) *SentimentDetectionJobProperties {
 	s.SubmitTime = &v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *SentimentDetectionJobProperties) SetVolumeKmsKeyId(v string) *SentimentDetectionJobProperties {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -9094,6 +9769,16 @@ type StartDocumentClassificationJobInput struct {
 	//
 	// OutputDataConfig is a required field
 	OutputDataConfig *OutputDataConfig `type:"structure" required:"true"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -9183,6 +9868,12 @@ func (s *StartDocumentClassificationJobInput) SetOutputDataConfig(v *OutputDataC
 	return s
 }
 
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *StartDocumentClassificationJobInput) SetVolumeKmsKeyId(v string) *StartDocumentClassificationJobInput {
+	s.VolumeKmsKeyId = &v
+	return s
+}
+
 type StartDocumentClassificationJobOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -9256,6 +9947,16 @@ type StartDominantLanguageDetectionJobInput struct {
 	//
 	// OutputDataConfig is a required field
 	OutputDataConfig *OutputDataConfig `type:"structure" required:"true"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -9333,6 +10034,12 @@ func (s *StartDominantLanguageDetectionJobInput) SetJobName(v string) *StartDomi
 // SetOutputDataConfig sets the OutputDataConfig field's value.
 func (s *StartDominantLanguageDetectionJobInput) SetOutputDataConfig(v *OutputDataConfig) *StartDominantLanguageDetectionJobInput {
 	s.OutputDataConfig = v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *StartDominantLanguageDetectionJobInput) SetVolumeKmsKeyId(v string) *StartDominantLanguageDetectionJobInput {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -9418,6 +10125,16 @@ type StartEntitiesDetectionJobInput struct {
 	//
 	// OutputDataConfig is a required field
 	OutputDataConfig *OutputDataConfig `type:"structure" required:"true"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -9513,6 +10230,12 @@ func (s *StartEntitiesDetectionJobInput) SetOutputDataConfig(v *OutputDataConfig
 	return s
 }
 
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *StartEntitiesDetectionJobInput) SetVolumeKmsKeyId(v string) *StartEntitiesDetectionJobInput {
+	s.VolumeKmsKeyId = &v
+	return s
+}
+
 type StartEntitiesDetectionJobOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -9592,6 +10315,16 @@ type StartKeyPhrasesDetectionJobInput struct {
 	//
 	// OutputDataConfig is a required field
 	OutputDataConfig *OutputDataConfig `type:"structure" required:"true"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -9681,6 +10414,12 @@ func (s *StartKeyPhrasesDetectionJobInput) SetOutputDataConfig(v *OutputDataConf
 	return s
 }
 
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *StartKeyPhrasesDetectionJobInput) SetVolumeKmsKeyId(v string) *StartKeyPhrasesDetectionJobInput {
+	s.VolumeKmsKeyId = &v
+	return s
+}
+
 type StartKeyPhrasesDetectionJobOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -9755,6 +10494,16 @@ type StartSentimentDetectionJobInput struct {
 	//
 	// OutputDataConfig is a required field
 	OutputDataConfig *OutputDataConfig `type:"structure" required:"true"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -9844,6 +10593,12 @@ func (s *StartSentimentDetectionJobInput) SetOutputDataConfig(v *OutputDataConfi
 	return s
 }
 
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *StartSentimentDetectionJobInput) SetVolumeKmsKeyId(v string) *StartSentimentDetectionJobInput {
+	s.VolumeKmsKeyId = &v
+	return s
+}
+
 type StartSentimentDetectionJobOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -9917,6 +10672,16 @@ type StartTopicsDetectionJobInput struct {
 	//
 	// OutputDataConfig is a required field
 	OutputDataConfig *OutputDataConfig `type:"structure" required:"true"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -10003,6 +10768,12 @@ func (s *StartTopicsDetectionJobInput) SetNumberOfTopics(v int64) *StartTopicsDe
 // SetOutputDataConfig sets the OutputDataConfig field's value.
 func (s *StartTopicsDetectionJobInput) SetOutputDataConfig(v *OutputDataConfig) *StartTopicsDetectionJobInput {
 	s.OutputDataConfig = v
+	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *StartTopicsDetectionJobInput) SetVolumeKmsKeyId(v string) *StartTopicsDetectionJobInput {
+	s.VolumeKmsKeyId = &v
 	return s
 }
 
@@ -10515,6 +11286,144 @@ func (s *SyntaxToken) SetTokenId(v int64) *SyntaxToken {
 	return s
 }
 
+// A key-value pair that adds as a metadata to a resource used by Amazon Comprehend.
+// For example, a tag with the key-value pair ‘Department’:’Sales’ might be
+// added to a resource to indicate its use by a particular department.
+type Tag struct {
+	_ struct{} `type:"structure"`
+
+	// The initial part of a key-value pair that forms a tag associated with a given
+	// resource. For instance, if you want to show which resources are used by which
+	// departments, you might use “Department” as the key portion of the pair, with
+	// multiple possible values such as “sales,” “legal,” and “administration.”
+	//
+	// Key is a required field
+	Key *string `min:"1" type:"string" required:"true"`
+
+	// The second part of a key-value pair that forms a tag associated with a given
+	// resource. For instance, if you want to show which resources are used by which
+	// departments, you might use “Department” as the initial (key) portion of the
+	// pair, with a value of “sales” to indicate the sales department.
+	Value *string `type:"string"`
+}
+
+// String returns the string representation
+func (s Tag) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Tag) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *Tag) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "Tag"}
+	if s.Key == nil {
+		invalidParams.Add(request.NewErrParamRequired("Key"))
+	}
+	if s.Key != nil && len(*s.Key) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Key", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetKey sets the Key field's value.
+func (s *Tag) SetKey(v string) *Tag {
+	s.Key = &v
+	return s
+}
+
+// SetValue sets the Value field's value.
+func (s *Tag) SetValue(v string) *Tag {
+	s.Value = &v
+	return s
+}
+
+type TagResourceInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the given Amazon Comprehend resource to
+	// which you want to associate the tags.
+	//
+	// ResourceArn is a required field
+	ResourceArn *string `type:"string" required:"true"`
+
+	// Tags being associated with a specific Amazon Comprehend resource. There can
+	// be a maximum of 50 tags (both existing and pending) associated with a specific
+	// resource.
+	//
+	// Tags is a required field
+	Tags []*Tag `type:"list" required:"true"`
+}
+
+// String returns the string representation
+func (s TagResourceInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TagResourceInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *TagResourceInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "TagResourceInput"}
+	if s.ResourceArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceArn"))
+	}
+	if s.Tags == nil {
+		invalidParams.Add(request.NewErrParamRequired("Tags"))
+	}
+	if s.Tags != nil {
+		for i, v := range s.Tags {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Tags", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetResourceArn sets the ResourceArn field's value.
+func (s *TagResourceInput) SetResourceArn(v string) *TagResourceInput {
+	s.ResourceArn = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *TagResourceInput) SetTags(v []*Tag) *TagResourceInput {
+	s.Tags = v
+	return s
+}
+
+type TagResourceOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s TagResourceOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TagResourceOutput) GoString() string {
+	return s.String()
+}
+
 // Provides information for filtering topic detection jobs. For more information,
 // see .
 type TopicsDetectionJobFilter struct {
@@ -10588,6 +11497,10 @@ func (s *TopicsDetectionJobFilter) SetSubmitTimeBefore(v time.Time) *TopicsDetec
 type TopicsDetectionJobProperties struct {
 	_ struct{} `type:"structure"`
 
+	// The Amazon Resource Name (ARN) of the AWS Identity and Management (IAM) role
+	// that grants Amazon Comprehend read access to your job data.
+	DataAccessRoleArn *string `min:"20" type:"string"`
+
 	// The time that the topic detection job was completed.
 	EndTime *time.Time `type:"timestamp"`
 
@@ -10618,6 +11531,16 @@ type TopicsDetectionJobProperties struct {
 
 	// The time that the topic detection job was submitted for processing.
 	SubmitTime *time.Time `type:"timestamp"`
+
+	// ID for the AWS Key Management Service (KMS) key that Amazon Comprehend uses
+	// to encrypt data on the storage volume attached to the ML compute instance(s)
+	// that process the analysis job. The VolumeKmsKeyId can be either of the following
+	// formats:
+	//
+	//    * KMS Key ID: "1234abcd-12ab-34cd-56ef-1234567890ab"
+	//
+	//    * Amazon Resource Name (ARN) of a KMS Key: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+	VolumeKmsKeyId *string `type:"string"`
 }
 
 // String returns the string representation
@@ -10628,6 +11551,12 @@ func (s TopicsDetectionJobProperties) String() string {
 // GoString returns the string representation
 func (s TopicsDetectionJobProperties) GoString() string {
 	return s.String()
+}
+
+// SetDataAccessRoleArn sets the DataAccessRoleArn field's value.
+func (s *TopicsDetectionJobProperties) SetDataAccessRoleArn(v string) *TopicsDetectionJobProperties {
+	s.DataAccessRoleArn = &v
+	return s
 }
 
 // SetEndTime sets the EndTime field's value.
@@ -10682,6 +11611,82 @@ func (s *TopicsDetectionJobProperties) SetOutputDataConfig(v *OutputDataConfig) 
 func (s *TopicsDetectionJobProperties) SetSubmitTime(v time.Time) *TopicsDetectionJobProperties {
 	s.SubmitTime = &v
 	return s
+}
+
+// SetVolumeKmsKeyId sets the VolumeKmsKeyId field's value.
+func (s *TopicsDetectionJobProperties) SetVolumeKmsKeyId(v string) *TopicsDetectionJobProperties {
+	s.VolumeKmsKeyId = &v
+	return s
+}
+
+type UntagResourceInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the given Amazon Comprehend resource from
+	// which you want to remove the tags.
+	//
+	// ResourceArn is a required field
+	ResourceArn *string `type:"string" required:"true"`
+
+	// The initial part of a key-value pair that forms a tag being removed from
+	// a given resource. For example, a tag with "Sales" as the key might be added
+	// to a resource to indicate its use by the sales department. Keys must be unique
+	// and cannot be duplicated for a particular resource.
+	//
+	// TagKeys is a required field
+	TagKeys []*string `type:"list" required:"true"`
+}
+
+// String returns the string representation
+func (s UntagResourceInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UntagResourceInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *UntagResourceInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "UntagResourceInput"}
+	if s.ResourceArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceArn"))
+	}
+	if s.TagKeys == nil {
+		invalidParams.Add(request.NewErrParamRequired("TagKeys"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetResourceArn sets the ResourceArn field's value.
+func (s *UntagResourceInput) SetResourceArn(v string) *UntagResourceInput {
+	s.ResourceArn = &v
+	return s
+}
+
+// SetTagKeys sets the TagKeys field's value.
+func (s *UntagResourceInput) SetTagKeys(v []*string) *UntagResourceInput {
+	s.TagKeys = v
+	return s
+}
+
+type UntagResourceOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s UntagResourceOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UntagResourceOutput) GoString() string {
+	return s.String()
 }
 
 const (

@@ -5892,6 +5892,85 @@ func (c *Greengrass) ListSubscriptionDefinitionsWithContext(ctx aws.Context, inp
 	return out, req.Send()
 }
 
+const opListTagsForResource = "ListTagsForResource"
+
+// ListTagsForResourceRequest generates a "aws/request.Request" representing the
+// client's request for the ListTagsForResource operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ListTagsForResource for more information on using the ListTagsForResource
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the ListTagsForResourceRequest method.
+//    req, resp := client.ListTagsForResourceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/greengrass-2017-06-07/ListTagsForResource
+func (c *Greengrass) ListTagsForResourceRequest(input *ListTagsForResourceInput) (req *request.Request, output *ListTagsForResourceOutput) {
+	op := &request.Operation{
+		Name:       opListTagsForResource,
+		HTTPMethod: "GET",
+		HTTPPath:   "/tags/{resource-arn}",
+	}
+
+	if input == nil {
+		input = &ListTagsForResourceInput{}
+	}
+
+	output = &ListTagsForResourceOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ListTagsForResource API operation for AWS Greengrass.
+//
+// Retrieves a list of resource tags for a resource arn.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS Greengrass's
+// API operation ListTagsForResource for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeBadRequestException "BadRequestException"
+//   General error information.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/greengrass-2017-06-07/ListTagsForResource
+func (c *Greengrass) ListTagsForResource(input *ListTagsForResourceInput) (*ListTagsForResourceOutput, error) {
+	req, out := c.ListTagsForResourceRequest(input)
+	return out, req.Send()
+}
+
+// ListTagsForResourceWithContext is the same as ListTagsForResource with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ListTagsForResource for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *Greengrass) ListTagsForResourceWithContext(ctx aws.Context, input *ListTagsForResourceInput, opts ...request.Option) (*ListTagsForResourceOutput, error) {
+	req, out := c.ListTagsForResourceRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opResetDeployments = "ResetDeployments"
 
 // ResetDeploymentsRequest generates a "aws/request.Request" representing the
@@ -6133,6 +6212,168 @@ func (c *Greengrass) StopBulkDeployment(input *StopBulkDeploymentInput) (*StopBu
 // for more information on using Contexts.
 func (c *Greengrass) StopBulkDeploymentWithContext(ctx aws.Context, input *StopBulkDeploymentInput, opts ...request.Option) (*StopBulkDeploymentOutput, error) {
 	req, out := c.StopBulkDeploymentRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opTagResource = "TagResource"
+
+// TagResourceRequest generates a "aws/request.Request" representing the
+// client's request for the TagResource operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See TagResource for more information on using the TagResource
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the TagResourceRequest method.
+//    req, resp := client.TagResourceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/greengrass-2017-06-07/TagResource
+func (c *Greengrass) TagResourceRequest(input *TagResourceInput) (req *request.Request, output *TagResourceOutput) {
+	op := &request.Operation{
+		Name:       opTagResource,
+		HTTPMethod: "POST",
+		HTTPPath:   "/tags/{resource-arn}",
+	}
+
+	if input == nil {
+		input = &TagResourceInput{}
+	}
+
+	output = &TagResourceOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(restjson.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// TagResource API operation for AWS Greengrass.
+//
+// Add resource tags to a Greengrass Resource. Valid resources are Group, Connector,
+// Core, Device, Function, Logger, Subscription, and Resource Defintions, and
+// also BulkDeploymentIds.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS Greengrass's
+// API operation TagResource for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeBadRequestException "BadRequestException"
+//   General error information.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/greengrass-2017-06-07/TagResource
+func (c *Greengrass) TagResource(input *TagResourceInput) (*TagResourceOutput, error) {
+	req, out := c.TagResourceRequest(input)
+	return out, req.Send()
+}
+
+// TagResourceWithContext is the same as TagResource with the addition of
+// the ability to pass a context and additional request options.
+//
+// See TagResource for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *Greengrass) TagResourceWithContext(ctx aws.Context, input *TagResourceInput, opts ...request.Option) (*TagResourceOutput, error) {
+	req, out := c.TagResourceRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opUntagResource = "UntagResource"
+
+// UntagResourceRequest generates a "aws/request.Request" representing the
+// client's request for the UntagResource operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See UntagResource for more information on using the UntagResource
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the UntagResourceRequest method.
+//    req, resp := client.UntagResourceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/greengrass-2017-06-07/UntagResource
+func (c *Greengrass) UntagResourceRequest(input *UntagResourceInput) (req *request.Request, output *UntagResourceOutput) {
+	op := &request.Operation{
+		Name:       opUntagResource,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/tags/{resource-arn}",
+	}
+
+	if input == nil {
+		input = &UntagResourceInput{}
+	}
+
+	output = &UntagResourceOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(restjson.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// UntagResource API operation for AWS Greengrass.
+//
+// Remove resource tags from a Greengrass Resource.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS Greengrass's
+// API operation UntagResource for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeBadRequestException "BadRequestException"
+//   General error information.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/greengrass-2017-06-07/UntagResource
+func (c *Greengrass) UntagResource(input *UntagResourceInput) (*UntagResourceOutput, error) {
+	req, out := c.UntagResourceRequest(input)
+	return out, req.Send()
+}
+
+// UntagResourceWithContext is the same as UntagResource with the addition of
+// the ability to pass a context and additional request options.
+//
+// See UntagResource for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *Greengrass) UntagResourceWithContext(ctx aws.Context, input *UntagResourceInput, opts ...request.Option) (*UntagResourceOutput, error) {
+	req, out := c.UntagResourceRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -7167,7 +7408,7 @@ type BulkDeploymentResult struct {
 	// The ID of the group deployment.
 	DeploymentId *string `type:"string"`
 
-	// The current status of the group deployment: ''Pending'', ''InProgress'',
+	// The current status of the group deployment: ''InProgress'', ''Building'',
 	// ''Success'', or ''Failure''.
 	DeploymentStatus *string `type:"string"`
 
@@ -7451,6 +7692,8 @@ type CreateConnectorDefinitionInput struct {
 	InitialVersion *ConnectorDefinitionVersion `type:"structure"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -7478,6 +7721,12 @@ func (s *CreateConnectorDefinitionInput) SetInitialVersion(v *ConnectorDefinitio
 // SetName sets the Name field's value.
 func (s *CreateConnectorDefinitionInput) SetName(v string) *CreateConnectorDefinitionInput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateConnectorDefinitionInput) SetTags(v map[string]*string) *CreateConnectorDefinitionInput {
+	s.Tags = v
 	return s
 }
 
@@ -7661,6 +7910,8 @@ type CreateCoreDefinitionInput struct {
 	InitialVersion *CoreDefinitionVersion `type:"structure"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -7688,6 +7939,12 @@ func (s *CreateCoreDefinitionInput) SetInitialVersion(v *CoreDefinitionVersion) 
 // SetName sets the Name field's value.
 func (s *CreateCoreDefinitionInput) SetName(v string) *CreateCoreDefinitionInput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateCoreDefinitionInput) SetTags(v map[string]*string) *CreateCoreDefinitionInput {
+	s.Tags = v
 	return s
 }
 
@@ -7871,7 +8128,7 @@ type CreateDeploymentInput struct {
 	// The ID of the deployment if you wish to redeploy a previous deployment.
 	DeploymentId *string `type:"string"`
 
-	// The type of deployment. When used in ''CreateDeployment'', only ''NewDeployment''
+	// The type of deployment. When used for ''CreateDeployment'', only ''NewDeployment''
 	// and ''Redeployment'' are valid.
 	DeploymentType *string `type:"string" enum:"DeploymentType"`
 
@@ -7979,6 +8236,8 @@ type CreateDeviceDefinitionInput struct {
 	InitialVersion *DeviceDefinitionVersion `type:"structure"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -8006,6 +8265,12 @@ func (s *CreateDeviceDefinitionInput) SetInitialVersion(v *DeviceDefinitionVersi
 // SetName sets the Name field's value.
 func (s *CreateDeviceDefinitionInput) SetName(v string) *CreateDeviceDefinitionInput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateDeviceDefinitionInput) SetTags(v map[string]*string) *CreateDeviceDefinitionInput {
+	s.Tags = v
 	return s
 }
 
@@ -8189,6 +8454,8 @@ type CreateFunctionDefinitionInput struct {
 	InitialVersion *FunctionDefinitionVersion `type:"structure"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -8216,6 +8483,12 @@ func (s *CreateFunctionDefinitionInput) SetInitialVersion(v *FunctionDefinitionV
 // SetName sets the Name field's value.
 func (s *CreateFunctionDefinitionInput) SetName(v string) *CreateFunctionDefinitionInput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateFunctionDefinitionInput) SetTags(v map[string]*string) *CreateFunctionDefinitionInput {
+	s.Tags = v
 	return s
 }
 
@@ -8294,7 +8567,8 @@ type CreateFunctionDefinitionVersionInput struct {
 
 	AmznClientToken *string `location:"header" locationName:"X-Amzn-Client-Token" type:"string"`
 
-	// Default configuration that will apply to all Lambda functions in the group.
+	// The default configuration that applies to all Lambda functions in the group.
+	// Individual Lambda functions can override these settings.
 	DefaultConfig *FunctionDefaultConfig `type:"structure"`
 
 	// FunctionDefinitionId is a required field
@@ -8478,6 +8752,8 @@ type CreateGroupInput struct {
 	InitialVersion *GroupVersion `type:"structure"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -8505,6 +8781,12 @@ func (s *CreateGroupInput) SetInitialVersion(v *GroupVersion) *CreateGroupInput 
 // SetName sets the Name field's value.
 func (s *CreateGroupInput) SetName(v string) *CreateGroupInput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateGroupInput) SetTags(v map[string]*string) *CreateGroupInput {
+	s.Tags = v
 	return s
 }
 
@@ -8736,6 +9018,8 @@ type CreateLoggerDefinitionInput struct {
 	InitialVersion *LoggerDefinitionVersion `type:"structure"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -8763,6 +9047,12 @@ func (s *CreateLoggerDefinitionInput) SetInitialVersion(v *LoggerDefinitionVersi
 // SetName sets the Name field's value.
 func (s *CreateLoggerDefinitionInput) SetName(v string) *CreateLoggerDefinitionInput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateLoggerDefinitionInput) SetTags(v map[string]*string) *CreateLoggerDefinitionInput {
+	s.Tags = v
 	return s
 }
 
@@ -8946,6 +9236,8 @@ type CreateResourceDefinitionInput struct {
 	InitialVersion *ResourceDefinitionVersion `type:"structure"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -8973,6 +9265,12 @@ func (s *CreateResourceDefinitionInput) SetInitialVersion(v *ResourceDefinitionV
 // SetName sets the Name field's value.
 func (s *CreateResourceDefinitionInput) SetName(v string) *CreateResourceDefinitionInput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateResourceDefinitionInput) SetTags(v map[string]*string) *CreateResourceDefinitionInput {
+	s.Tags = v
 	return s
 }
 
@@ -9268,6 +9566,8 @@ type CreateSubscriptionDefinitionInput struct {
 	InitialVersion *SubscriptionDefinitionVersion `type:"structure"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -9295,6 +9595,12 @@ func (s *CreateSubscriptionDefinitionInput) SetInitialVersion(v *SubscriptionDef
 // SetName sets the Name field's value.
 func (s *CreateSubscriptionDefinitionInput) SetName(v string) *CreateSubscriptionDefinitionInput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateSubscriptionDefinitionInput) SetTags(v map[string]*string) *CreateSubscriptionDefinitionInput {
+	s.Tags = v
 	return s
 }
 
@@ -9493,6 +9799,8 @@ type DefinitionInformation struct {
 
 	// The name of the definition.
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -9544,6 +9852,12 @@ func (s *DefinitionInformation) SetLatestVersionArn(v string) *DefinitionInforma
 // SetName sets the Name field's value.
 func (s *DefinitionInformation) SetName(v string) *DefinitionInformation {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *DefinitionInformation) SetTags(v map[string]*string) *DefinitionInformation {
+	s.Tags = v
 	return s
 }
 
@@ -10427,13 +10741,12 @@ func (s *FunctionConfigurationEnvironment) SetVariables(v map[string]*string) *F
 	return s
 }
 
-// Default configuration that will apply to all Lambda functions in the group.
+// The default configuration that applies to all Lambda functions in the group.
+// Individual Lambda functions can override these settings.
 type FunctionDefaultConfig struct {
 	_ struct{} `type:"structure"`
 
-	// Configuration that defines the default containerization used for when running
-	// Lambda functions in the group. Individual Lambda functions can be override
-	// this setting.
+	// Configuration information that specifies how a Lambda function runs.
 	Execution *FunctionDefaultExecutionConfig `type:"structure"`
 }
 
@@ -10453,9 +10766,7 @@ func (s *FunctionDefaultConfig) SetExecution(v *FunctionDefaultExecutionConfig) 
 	return s
 }
 
-// Configuration that defines the default containerization used for when running
-// Lambda functions in the group. Individual Lambda functions can be override
-// this setting.
+// Configuration information that specifies how a Lambda function runs.
 type FunctionDefaultExecutionConfig struct {
 	_ struct{} `type:"structure"`
 
@@ -10465,6 +10776,14 @@ type FunctionDefaultExecutionConfig struct {
 	// this value to run the Lambda function with the default containerization for
 	// the group.
 	IsolationMode *string `type:"string" enum:"FunctionIsolationMode"`
+
+	// Specifies the user and group whose permissions are used when running the
+	// Lambda function. You can specify one or both values to override the default
+	// values. We recommend that you avoid running as root unless absolutely necessary
+	// to minimize the risk of unintended changes or malicious attacks. To run as
+	// root, you must set ''IsolationMode'' to ''NoContainer'' and update config.json
+	// in ''greengrass-root/config'' to set ''allowFunctionsToRunAsRoot'' to ''yes''.
+	RunAs *FunctionRunAsConfig `type:"structure"`
 }
 
 // String returns the string representation
@@ -10483,12 +10802,18 @@ func (s *FunctionDefaultExecutionConfig) SetIsolationMode(v string) *FunctionDef
 	return s
 }
 
+// SetRunAs sets the RunAs field's value.
+func (s *FunctionDefaultExecutionConfig) SetRunAs(v *FunctionRunAsConfig) *FunctionDefaultExecutionConfig {
+	s.RunAs = v
+	return s
+}
+
 // Information about a function definition version.
 type FunctionDefinitionVersion struct {
 	_ struct{} `type:"structure"`
 
-	// Default configuration that will apply to all Lambda functions in this function
-	// definition version
+	// The default configuration that applies to all Lambda functions in this function
+	// definition version. Individual Lambda functions can override these settings.
 	DefaultConfig *FunctionDefaultConfig `type:"structure"`
 
 	// A list of Lambda functions in this function definition version.
@@ -10517,7 +10842,7 @@ func (s *FunctionDefinitionVersion) SetFunctions(v []*Function) *FunctionDefinit
 	return s
 }
 
-// Configuration information that specifies how the Lambda function runs.
+// Configuration information that specifies how a Lambda function runs.
 type FunctionExecutionConfig struct {
 	_ struct{} `type:"structure"`
 
@@ -10528,13 +10853,12 @@ type FunctionExecutionConfig struct {
 	// the group.
 	IsolationMode *string `type:"string" enum:"FunctionIsolationMode"`
 
-	// Specifies the user and/or group whose permissions are used when running the
+	// Specifies the user and group whose permissions are used when running the
 	// Lambda function. You can specify one or both values to override the default
-	// values (ggc_user/ggc_group). We recommend that you avoid running as root
-	// unless absolutely necessary to minimize the risk of unintended changes or
-	// malicious attacks. To run as root, you must set IsolationMode to NoContainer
-	// and you must update config.json in greengrass-root/config to set allowFunctionsToRunAsRoot
-	// to yes.
+	// values. We recommend that you avoid running as root unless absolutely necessary
+	// to minimize the risk of unintended changes or malicious attacks. To run as
+	// root, you must set ''IsolationMode'' to ''NoContainer'' and update config.json
+	// in ''greengrass-root/config'' to set ''allowFunctionsToRunAsRoot'' to ''yes''.
 	RunAs *FunctionRunAsConfig `type:"structure"`
 }
 
@@ -10560,20 +10884,19 @@ func (s *FunctionExecutionConfig) SetRunAs(v *FunctionRunAsConfig) *FunctionExec
 	return s
 }
 
-// Specifies the user and/or group whose permissions are used when running the
+// Specifies the user and group whose permissions are used when running the
 // Lambda function. You can specify one or both values to override the default
-// values (ggc_user/ggc_group). We recommend that you avoid running as root
-// unless absolutely necessary to minimize the risk of unintended changes or
-// malicious attacks. To run as root, you must set IsolationMode to NoContainer
-// and you must update config.json in greengrass-root/config to set allowFunctionsToRunAsRoot
-// to yes.
+// values. We recommend that you avoid running as root unless absolutely necessary
+// to minimize the risk of unintended changes or malicious attacks. To run as
+// root, you must set ''IsolationMode'' to ''NoContainer'' and update config.json
+// in ''greengrass-root/config'' to set ''allowFunctionsToRunAsRoot'' to ''yes''.
 type FunctionRunAsConfig struct {
 	_ struct{} `type:"structure"`
 
-	// The Group ID whose permissions are used to run a Lambda function.
+	// The group ID whose permissions are used to run a Lambda function.
 	Gid *int64 `type:"integer"`
 
-	// The User ID whose permissions are used to run a Lambda function.
+	// The user ID whose permissions are used to run a Lambda function.
 	Uid *int64 `type:"integer"`
 }
 
@@ -10727,6 +11050,8 @@ type GetBulkDeploymentStatusOutput struct {
 
 	// Error message
 	ErrorMessage *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -10766,6 +11091,12 @@ func (s *GetBulkDeploymentStatusOutput) SetErrorDetails(v []*ErrorDetail) *GetBu
 // SetErrorMessage sets the ErrorMessage field's value.
 func (s *GetBulkDeploymentStatusOutput) SetErrorMessage(v string) *GetBulkDeploymentStatusOutput {
 	s.ErrorMessage = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *GetBulkDeploymentStatusOutput) SetTags(v map[string]*string) *GetBulkDeploymentStatusOutput {
+	s.Tags = v
 	return s
 }
 
@@ -10896,6 +11227,8 @@ type GetConnectorDefinitionOutput struct {
 	LatestVersionArn *string `type:"string"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -10947,6 +11280,12 @@ func (s *GetConnectorDefinitionOutput) SetLatestVersionArn(v string) *GetConnect
 // SetName sets the Name field's value.
 func (s *GetConnectorDefinitionOutput) SetName(v string) *GetConnectorDefinitionOutput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *GetConnectorDefinitionOutput) SetTags(v map[string]*string) *GetConnectorDefinitionOutput {
+	s.Tags = v
 	return s
 }
 
@@ -11138,6 +11477,8 @@ type GetCoreDefinitionOutput struct {
 	LatestVersionArn *string `type:"string"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -11189,6 +11530,12 @@ func (s *GetCoreDefinitionOutput) SetLatestVersionArn(v string) *GetCoreDefiniti
 // SetName sets the Name field's value.
 func (s *GetCoreDefinitionOutput) SetName(v string) *GetCoreDefinitionOutput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *GetCoreDefinitionOutput) SetTags(v map[string]*string) *GetCoreDefinitionOutput {
+	s.Tags = v
 	return s
 }
 
@@ -11374,8 +11721,8 @@ func (s *GetDeploymentStatusInput) SetGroupId(v string) *GetDeploymentStatusInpu
 type GetDeploymentStatusOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The status of the deployment: ''Pending'', ''InProgress'', ''Success'', or
-	// ''Failure''.
+	// The status of the deployment: ''InProgress'', ''Building'', ''Success'',
+	// or ''Failure''.
 	DeploymentStatus *string `type:"string"`
 
 	// The type of the deployment.
@@ -11487,6 +11834,8 @@ type GetDeviceDefinitionOutput struct {
 	LatestVersionArn *string `type:"string"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -11538,6 +11887,12 @@ func (s *GetDeviceDefinitionOutput) SetLatestVersionArn(v string) *GetDeviceDefi
 // SetName sets the Name field's value.
 func (s *GetDeviceDefinitionOutput) SetName(v string) *GetDeviceDefinitionOutput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *GetDeviceDefinitionOutput) SetTags(v map[string]*string) *GetDeviceDefinitionOutput {
+	s.Tags = v
 	return s
 }
 
@@ -11728,6 +12083,8 @@ type GetFunctionDefinitionOutput struct {
 	LatestVersionArn *string `type:"string"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -11779,6 +12136,12 @@ func (s *GetFunctionDefinitionOutput) SetLatestVersionArn(v string) *GetFunction
 // SetName sets the Name field's value.
 func (s *GetFunctionDefinitionOutput) SetName(v string) *GetFunctionDefinitionOutput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *GetFunctionDefinitionOutput) SetTags(v map[string]*string) *GetFunctionDefinitionOutput {
+	s.Tags = v
 	return s
 }
 
@@ -12143,6 +12506,8 @@ type GetGroupOutput struct {
 	LatestVersionArn *string `type:"string"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -12194,6 +12559,12 @@ func (s *GetGroupOutput) SetLatestVersionArn(v string) *GetGroupOutput {
 // SetName sets the Name field's value.
 func (s *GetGroupOutput) SetName(v string) *GetGroupOutput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *GetGroupOutput) SetTags(v map[string]*string) *GetGroupOutput {
+	s.Tags = v
 	return s
 }
 
@@ -12366,6 +12737,8 @@ type GetLoggerDefinitionOutput struct {
 	LatestVersionArn *string `type:"string"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -12417,6 +12790,12 @@ func (s *GetLoggerDefinitionOutput) SetLatestVersionArn(v string) *GetLoggerDefi
 // SetName sets the Name field's value.
 func (s *GetLoggerDefinitionOutput) SetName(v string) *GetLoggerDefinitionOutput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *GetLoggerDefinitionOutput) SetTags(v map[string]*string) *GetLoggerDefinitionOutput {
+	s.Tags = v
 	return s
 }
 
@@ -12598,6 +12977,8 @@ type GetResourceDefinitionOutput struct {
 	LatestVersionArn *string `type:"string"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -12649,6 +13030,12 @@ func (s *GetResourceDefinitionOutput) SetLatestVersionArn(v string) *GetResource
 // SetName sets the Name field's value.
 func (s *GetResourceDefinitionOutput) SetName(v string) *GetResourceDefinitionOutput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *GetResourceDefinitionOutput) SetTags(v map[string]*string) *GetResourceDefinitionOutput {
+	s.Tags = v
 	return s
 }
 
@@ -12868,6 +13255,8 @@ type GetSubscriptionDefinitionOutput struct {
 	LatestVersionArn *string `type:"string"`
 
 	Name *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -12919,6 +13308,12 @@ func (s *GetSubscriptionDefinitionOutput) SetLatestVersionArn(v string) *GetSubs
 // SetName sets the Name field's value.
 func (s *GetSubscriptionDefinitionOutput) SetName(v string) *GetSubscriptionDefinitionOutput {
 	s.Name = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *GetSubscriptionDefinitionOutput) SetTags(v map[string]*string) *GetSubscriptionDefinitionOutput {
+	s.Tags = v
 	return s
 }
 
@@ -14744,6 +15139,67 @@ func (s *ListSubscriptionDefinitionsOutput) SetNextToken(v string) *ListSubscrip
 	return s
 }
 
+type ListTagsForResourceInput struct {
+	_ struct{} `type:"structure"`
+
+	// ResourceArn is a required field
+	ResourceArn *string `location:"uri" locationName:"resource-arn" type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s ListTagsForResourceInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTagsForResourceInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListTagsForResourceInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListTagsForResourceInput"}
+	if s.ResourceArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceArn"))
+	}
+	if s.ResourceArn != nil && len(*s.ResourceArn) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceArn", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetResourceArn sets the ResourceArn field's value.
+func (s *ListTagsForResourceInput) SetResourceArn(v string) *ListTagsForResourceInput {
+	s.ResourceArn = &v
+	return s
+}
+
+type ListTagsForResourceOutput struct {
+	_ struct{} `type:"structure"`
+
+	Tags map[string]*string `type:"map"`
+}
+
+// String returns the string representation
+func (s ListTagsForResourceOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTagsForResourceOutput) GoString() string {
+	return s.String()
+}
+
+// SetTags sets the Tags field's value.
+func (s *ListTagsForResourceOutput) SetTags(v map[string]*string) *ListTagsForResourceOutput {
+	s.Tags = v
+	return s
+}
+
 // Attributes that define a local device resource.
 type LocalDeviceResourceData struct {
 	_ struct{} `type:"structure"`
@@ -15293,6 +15749,8 @@ type StartBulkDeploymentInput struct {
 	// file must be less than 100 MB. Currently, AWS IoT Greengrass supports only
 	// ''NewDeployment'' deployment types.
 	InputFileUri *string `type:"string"`
+
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -15320,6 +15778,12 @@ func (s *StartBulkDeploymentInput) SetExecutionRoleArn(v string) *StartBulkDeplo
 // SetInputFileUri sets the InputFileUri field's value.
 func (s *StartBulkDeploymentInput) SetInputFileUri(v string) *StartBulkDeploymentInput {
 	s.InputFileUri = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *StartBulkDeploymentInput) SetTags(v map[string]*string) *StartBulkDeploymentInput {
+	s.Tags = v
 	return s
 }
 
@@ -15421,7 +15885,7 @@ type Subscription struct {
 	// a connector ARN, 'cloud' (which represents the AWS IoT cloud), or 'GGShadowService'.
 	Source *string `type:"string"`
 
-	// The subject of the message.
+	// The MQTT topic used to route the message.
 	Subject *string `type:"string"`
 
 	// Where the message is sent to. Can be a thing ARN, a Lambda function ARN,
@@ -15485,6 +15949,136 @@ func (s SubscriptionDefinitionVersion) GoString() string {
 func (s *SubscriptionDefinitionVersion) SetSubscriptions(v []*Subscription) *SubscriptionDefinitionVersion {
 	s.Subscriptions = v
 	return s
+}
+
+type TagResourceInput struct {
+	_ struct{} `type:"structure"`
+
+	// ResourceArn is a required field
+	ResourceArn *string `location:"uri" locationName:"resource-arn" type:"string" required:"true"`
+
+	// Tags is a required field
+	Tags map[string]*string `locationName:"tags" type:"map" required:"true"`
+}
+
+// String returns the string representation
+func (s TagResourceInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TagResourceInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *TagResourceInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "TagResourceInput"}
+	if s.ResourceArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceArn"))
+	}
+	if s.ResourceArn != nil && len(*s.ResourceArn) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceArn", 1))
+	}
+	if s.Tags == nil {
+		invalidParams.Add(request.NewErrParamRequired("Tags"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetResourceArn sets the ResourceArn field's value.
+func (s *TagResourceInput) SetResourceArn(v string) *TagResourceInput {
+	s.ResourceArn = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *TagResourceInput) SetTags(v map[string]*string) *TagResourceInput {
+	s.Tags = v
+	return s
+}
+
+type TagResourceOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s TagResourceOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TagResourceOutput) GoString() string {
+	return s.String()
+}
+
+type UntagResourceInput struct {
+	_ struct{} `type:"structure"`
+
+	// ResourceArn is a required field
+	ResourceArn *string `location:"uri" locationName:"resource-arn" type:"string" required:"true"`
+
+	// TagKeys is a required field
+	TagKeys []*string `location:"querystring" locationName:"tagKeys" type:"list" required:"true"`
+}
+
+// String returns the string representation
+func (s UntagResourceInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UntagResourceInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *UntagResourceInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "UntagResourceInput"}
+	if s.ResourceArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceArn"))
+	}
+	if s.ResourceArn != nil && len(*s.ResourceArn) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceArn", 1))
+	}
+	if s.TagKeys == nil {
+		invalidParams.Add(request.NewErrParamRequired("TagKeys"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetResourceArn sets the ResourceArn field's value.
+func (s *UntagResourceInput) SetResourceArn(v string) *UntagResourceInput {
+	s.ResourceArn = &v
+	return s
+}
+
+// SetTagKeys sets the TagKeys field's value.
+func (s *UntagResourceInput) SetTagKeys(v []*string) *UntagResourceInput {
+	s.TagKeys = v
+	return s
+}
+
+type UntagResourceOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s UntagResourceOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UntagResourceOutput) GoString() string {
+	return s.String()
 }
 
 // Information required to update a Greengrass core's connectivity.
@@ -16214,7 +16808,8 @@ const (
 	BulkDeploymentStatusFailed = "Failed"
 )
 
-// The type of deployment.
+// The type of deployment. When used for ''CreateDeployment'', only ''NewDeployment''
+// and ''Redeployment'' are valid.
 const (
 	// DeploymentTypeNewDeployment is a DeploymentType enum value
 	DeploymentTypeNewDeployment = "NewDeployment"
