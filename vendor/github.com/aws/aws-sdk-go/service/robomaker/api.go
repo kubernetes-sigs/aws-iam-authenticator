@@ -238,7 +238,14 @@ func (c *RoboMaker) CreateDeploymentJobRequest(input *CreateDeploymentJobInput) 
 
 // CreateDeploymentJob API operation for AWS RoboMaker.
 //
-// Creates a deployment job.
+// Deploys a specific version of a robot application to robots in a fleet.
+//
+// The robot application must have a numbered applicationVersion for consistency
+// reasons. To create a new version, use CreateRobotApplicationVersion or see
+// Creating a Robot Application Version (https://docs.aws.amazon.com/robomaker/latest/dg/create-robot-application-version.html).
+//
+// After 90 days, deployment jobs expire and will be deleted. They will no longer
+// be accessible.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -267,6 +274,7 @@ func (c *RoboMaker) CreateDeploymentJobRequest(input *CreateDeploymentJobInput) 
 //   of concurrent stream requests exceeds the maximum number allowed.
 //
 //   * ErrCodeConcurrentDeploymentException "ConcurrentDeploymentException"
+//   The failure percentage threshold percentage was met.
 //
 //   * ErrCodeIdempotentParameterMismatchException "IdempotentParameterMismatchException"
 //   The request uses the same client token as a previous, but non-identical request.
@@ -456,7 +464,7 @@ func (c *RoboMaker) CreateRobotRequest(input *CreateRobotInput) (req *request.Re
 //   of concurrent stream requests exceeds the maximum number allowed.
 //
 //   * ErrCodeResourceAlreadyExistsException "ResourceAlreadyExistsException"
-//   The specified resource already exists
+//   The specified resource already exists.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/robomaker-2018-06-29/CreateRobot
 func (c *RoboMaker) CreateRobot(input *CreateRobotInput) (*CreateRobotOutput, error) {
@@ -539,7 +547,7 @@ func (c *RoboMaker) CreateRobotApplicationRequest(input *CreateRobotApplicationI
 //   be used. The returned message provides an explanation of the error value.
 //
 //   * ErrCodeResourceAlreadyExistsException "ResourceAlreadyExistsException"
-//   The specified resource already exists
+//   The specified resource already exists.
 //
 //   * ErrCodeLimitExceededException "LimitExceededException"
 //   The requested resource exceeds the maximum number allowed, or the number
@@ -734,7 +742,7 @@ func (c *RoboMaker) CreateSimulationApplicationRequest(input *CreateSimulationAp
 //   be used. The returned message provides an explanation of the error value.
 //
 //   * ErrCodeResourceAlreadyExistsException "ResourceAlreadyExistsException"
-//   The specified resource already exists
+//   The specified resource already exists.
 //
 //   * ErrCodeLimitExceededException "LimitExceededException"
 //   The requested resource exceeds the maximum number allowed, or the number
@@ -915,6 +923,9 @@ func (c *RoboMaker) CreateSimulationJobRequest(input *CreateSimulationJobInput) 
 // CreateSimulationJob API operation for AWS RoboMaker.
 //
 // Creates a simulation job.
+//
+// After 90 days, simulation jobs expire and will be deleted. They will no longer
+// be accessible.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -1983,6 +1994,12 @@ func (c *RoboMaker) ListDeploymentJobsRequest(input *ListDeploymentJobsInput) (r
 		Name:       opListDeploymentJobs,
 		HTTPMethod: "POST",
 		HTTPPath:   "/listDeploymentJobs",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"nextToken"},
+			OutputTokens:    []string{"nextToken"},
+			LimitToken:      "maxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -2043,6 +2060,56 @@ func (c *RoboMaker) ListDeploymentJobsWithContext(ctx aws.Context, input *ListDe
 	return out, req.Send()
 }
 
+// ListDeploymentJobsPages iterates over the pages of a ListDeploymentJobs operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListDeploymentJobs method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListDeploymentJobs operation.
+//    pageNum := 0
+//    err := client.ListDeploymentJobsPages(params,
+//        func(page *ListDeploymentJobsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *RoboMaker) ListDeploymentJobsPages(input *ListDeploymentJobsInput, fn func(*ListDeploymentJobsOutput, bool) bool) error {
+	return c.ListDeploymentJobsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListDeploymentJobsPagesWithContext same as ListDeploymentJobsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *RoboMaker) ListDeploymentJobsPagesWithContext(ctx aws.Context, input *ListDeploymentJobsInput, fn func(*ListDeploymentJobsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListDeploymentJobsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListDeploymentJobsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	cont := true
+	for p.Next() && cont {
+		cont = fn(p.Page().(*ListDeploymentJobsOutput), !p.HasNextPage())
+	}
+	return p.Err()
+}
+
 const opListFleets = "ListFleets"
 
 // ListFleetsRequest generates a "aws/request.Request" representing the
@@ -2074,6 +2141,12 @@ func (c *RoboMaker) ListFleetsRequest(input *ListFleetsInput) (req *request.Requ
 		Name:       opListFleets,
 		HTTPMethod: "POST",
 		HTTPPath:   "/listFleets",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"nextToken"},
+			OutputTokens:    []string{"nextToken"},
+			LimitToken:      "maxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -2134,6 +2207,56 @@ func (c *RoboMaker) ListFleetsWithContext(ctx aws.Context, input *ListFleetsInpu
 	return out, req.Send()
 }
 
+// ListFleetsPages iterates over the pages of a ListFleets operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListFleets method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListFleets operation.
+//    pageNum := 0
+//    err := client.ListFleetsPages(params,
+//        func(page *ListFleetsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *RoboMaker) ListFleetsPages(input *ListFleetsInput, fn func(*ListFleetsOutput, bool) bool) error {
+	return c.ListFleetsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListFleetsPagesWithContext same as ListFleetsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *RoboMaker) ListFleetsPagesWithContext(ctx aws.Context, input *ListFleetsInput, fn func(*ListFleetsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListFleetsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListFleetsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	cont := true
+	for p.Next() && cont {
+		cont = fn(p.Page().(*ListFleetsOutput), !p.HasNextPage())
+	}
+	return p.Err()
+}
+
 const opListRobotApplications = "ListRobotApplications"
 
 // ListRobotApplicationsRequest generates a "aws/request.Request" representing the
@@ -2165,6 +2288,12 @@ func (c *RoboMaker) ListRobotApplicationsRequest(input *ListRobotApplicationsInp
 		Name:       opListRobotApplications,
 		HTTPMethod: "POST",
 		HTTPPath:   "/listRobotApplications",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"nextToken"},
+			OutputTokens:    []string{"nextToken"},
+			LimitToken:      "maxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -2222,6 +2351,56 @@ func (c *RoboMaker) ListRobotApplicationsWithContext(ctx aws.Context, input *Lis
 	return out, req.Send()
 }
 
+// ListRobotApplicationsPages iterates over the pages of a ListRobotApplications operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListRobotApplications method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListRobotApplications operation.
+//    pageNum := 0
+//    err := client.ListRobotApplicationsPages(params,
+//        func(page *ListRobotApplicationsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *RoboMaker) ListRobotApplicationsPages(input *ListRobotApplicationsInput, fn func(*ListRobotApplicationsOutput, bool) bool) error {
+	return c.ListRobotApplicationsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListRobotApplicationsPagesWithContext same as ListRobotApplicationsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *RoboMaker) ListRobotApplicationsPagesWithContext(ctx aws.Context, input *ListRobotApplicationsInput, fn func(*ListRobotApplicationsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListRobotApplicationsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListRobotApplicationsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	cont := true
+	for p.Next() && cont {
+		cont = fn(p.Page().(*ListRobotApplicationsOutput), !p.HasNextPage())
+	}
+	return p.Err()
+}
+
 const opListRobots = "ListRobots"
 
 // ListRobotsRequest generates a "aws/request.Request" representing the
@@ -2253,6 +2432,12 @@ func (c *RoboMaker) ListRobotsRequest(input *ListRobotsInput) (req *request.Requ
 		Name:       opListRobots,
 		HTTPMethod: "POST",
 		HTTPPath:   "/listRobots",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"nextToken"},
+			OutputTokens:    []string{"nextToken"},
+			LimitToken:      "maxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -2313,6 +2498,56 @@ func (c *RoboMaker) ListRobotsWithContext(ctx aws.Context, input *ListRobotsInpu
 	return out, req.Send()
 }
 
+// ListRobotsPages iterates over the pages of a ListRobots operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListRobots method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListRobots operation.
+//    pageNum := 0
+//    err := client.ListRobotsPages(params,
+//        func(page *ListRobotsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *RoboMaker) ListRobotsPages(input *ListRobotsInput, fn func(*ListRobotsOutput, bool) bool) error {
+	return c.ListRobotsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListRobotsPagesWithContext same as ListRobotsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *RoboMaker) ListRobotsPagesWithContext(ctx aws.Context, input *ListRobotsInput, fn func(*ListRobotsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListRobotsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListRobotsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	cont := true
+	for p.Next() && cont {
+		cont = fn(p.Page().(*ListRobotsOutput), !p.HasNextPage())
+	}
+	return p.Err()
+}
+
 const opListSimulationApplications = "ListSimulationApplications"
 
 // ListSimulationApplicationsRequest generates a "aws/request.Request" representing the
@@ -2344,6 +2579,12 @@ func (c *RoboMaker) ListSimulationApplicationsRequest(input *ListSimulationAppli
 		Name:       opListSimulationApplications,
 		HTTPMethod: "POST",
 		HTTPPath:   "/listSimulationApplications",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"nextToken"},
+			OutputTokens:    []string{"nextToken"},
+			LimitToken:      "maxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -2401,6 +2642,56 @@ func (c *RoboMaker) ListSimulationApplicationsWithContext(ctx aws.Context, input
 	return out, req.Send()
 }
 
+// ListSimulationApplicationsPages iterates over the pages of a ListSimulationApplications operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListSimulationApplications method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListSimulationApplications operation.
+//    pageNum := 0
+//    err := client.ListSimulationApplicationsPages(params,
+//        func(page *ListSimulationApplicationsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *RoboMaker) ListSimulationApplicationsPages(input *ListSimulationApplicationsInput, fn func(*ListSimulationApplicationsOutput, bool) bool) error {
+	return c.ListSimulationApplicationsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListSimulationApplicationsPagesWithContext same as ListSimulationApplicationsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *RoboMaker) ListSimulationApplicationsPagesWithContext(ctx aws.Context, input *ListSimulationApplicationsInput, fn func(*ListSimulationApplicationsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListSimulationApplicationsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListSimulationApplicationsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	cont := true
+	for p.Next() && cont {
+		cont = fn(p.Page().(*ListSimulationApplicationsOutput), !p.HasNextPage())
+	}
+	return p.Err()
+}
+
 const opListSimulationJobs = "ListSimulationJobs"
 
 // ListSimulationJobsRequest generates a "aws/request.Request" representing the
@@ -2432,6 +2723,12 @@ func (c *RoboMaker) ListSimulationJobsRequest(input *ListSimulationJobsInput) (r
 		Name:       opListSimulationJobs,
 		HTTPMethod: "POST",
 		HTTPPath:   "/listSimulationJobs",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"nextToken"},
+			OutputTokens:    []string{"nextToken"},
+			LimitToken:      "maxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -2484,6 +2781,146 @@ func (c *RoboMaker) ListSimulationJobs(input *ListSimulationJobsInput) (*ListSim
 // for more information on using Contexts.
 func (c *RoboMaker) ListSimulationJobsWithContext(ctx aws.Context, input *ListSimulationJobsInput, opts ...request.Option) (*ListSimulationJobsOutput, error) {
 	req, out := c.ListSimulationJobsRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+// ListSimulationJobsPages iterates over the pages of a ListSimulationJobs operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListSimulationJobs method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListSimulationJobs operation.
+//    pageNum := 0
+//    err := client.ListSimulationJobsPages(params,
+//        func(page *ListSimulationJobsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *RoboMaker) ListSimulationJobsPages(input *ListSimulationJobsInput, fn func(*ListSimulationJobsOutput, bool) bool) error {
+	return c.ListSimulationJobsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListSimulationJobsPagesWithContext same as ListSimulationJobsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *RoboMaker) ListSimulationJobsPagesWithContext(ctx aws.Context, input *ListSimulationJobsInput, fn func(*ListSimulationJobsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListSimulationJobsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListSimulationJobsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	cont := true
+	for p.Next() && cont {
+		cont = fn(p.Page().(*ListSimulationJobsOutput), !p.HasNextPage())
+	}
+	return p.Err()
+}
+
+const opListTagsForResource = "ListTagsForResource"
+
+// ListTagsForResourceRequest generates a "aws/request.Request" representing the
+// client's request for the ListTagsForResource operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ListTagsForResource for more information on using the ListTagsForResource
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the ListTagsForResourceRequest method.
+//    req, resp := client.ListTagsForResourceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/robomaker-2018-06-29/ListTagsForResource
+func (c *RoboMaker) ListTagsForResourceRequest(input *ListTagsForResourceInput) (req *request.Request, output *ListTagsForResourceOutput) {
+	op := &request.Operation{
+		Name:       opListTagsForResource,
+		HTTPMethod: "GET",
+		HTTPPath:   "/tags/{resourceArn}",
+	}
+
+	if input == nil {
+		input = &ListTagsForResourceInput{}
+	}
+
+	output = &ListTagsForResourceOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ListTagsForResource API operation for AWS RoboMaker.
+//
+// Lists all tags on a AWS RoboMaker resource.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS RoboMaker's
+// API operation ListTagsForResource for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeInternalServerException "InternalServerException"
+//   AWS RoboMaker experienced a service issue. Try your call again.
+//
+//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
+//   The specified resource does not exist.
+//
+//   * ErrCodeInvalidParameterException "InvalidParameterException"
+//   A parameter specified in a request is not valid, is unsupported, or cannot
+//   be used. The returned message provides an explanation of the error value.
+//
+//   * ErrCodeThrottlingException "ThrottlingException"
+//   AWS RoboMaker is temporarily unable to process the request. Try your call
+//   again.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/robomaker-2018-06-29/ListTagsForResource
+func (c *RoboMaker) ListTagsForResource(input *ListTagsForResourceInput) (*ListTagsForResourceOutput, error) {
+	req, out := c.ListTagsForResourceRequest(input)
+	return out, req.Send()
+}
+
+// ListTagsForResourceWithContext is the same as ListTagsForResource with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ListTagsForResource for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *RoboMaker) ListTagsForResourceWithContext(ctx aws.Context, input *ListTagsForResourceInput, opts ...request.Option) (*ListTagsForResourceOutput, error) {
+	req, out := c.ListTagsForResourceRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -2752,6 +3189,7 @@ func (c *RoboMaker) SyncDeploymentJobRequest(input *SyncDeploymentJobInput) (req
 //   of concurrent stream requests exceeds the maximum number allowed.
 //
 //   * ErrCodeConcurrentDeploymentException "ConcurrentDeploymentException"
+//   The failure percentage threshold percentage was met.
 //
 //   * ErrCodeIdempotentParameterMismatchException "IdempotentParameterMismatchException"
 //   The request uses the same client token as a previous, but non-identical request.
@@ -2775,6 +3213,198 @@ func (c *RoboMaker) SyncDeploymentJob(input *SyncDeploymentJobInput) (*SyncDeplo
 // for more information on using Contexts.
 func (c *RoboMaker) SyncDeploymentJobWithContext(ctx aws.Context, input *SyncDeploymentJobInput, opts ...request.Option) (*SyncDeploymentJobOutput, error) {
 	req, out := c.SyncDeploymentJobRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opTagResource = "TagResource"
+
+// TagResourceRequest generates a "aws/request.Request" representing the
+// client's request for the TagResource operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See TagResource for more information on using the TagResource
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the TagResourceRequest method.
+//    req, resp := client.TagResourceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/robomaker-2018-06-29/TagResource
+func (c *RoboMaker) TagResourceRequest(input *TagResourceInput) (req *request.Request, output *TagResourceOutput) {
+	op := &request.Operation{
+		Name:       opTagResource,
+		HTTPMethod: "POST",
+		HTTPPath:   "/tags/{resourceArn}",
+	}
+
+	if input == nil {
+		input = &TagResourceInput{}
+	}
+
+	output = &TagResourceOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(restjson.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// TagResource API operation for AWS RoboMaker.
+//
+// Adds or edits tags for a AWS RoboMaker resource.
+//
+// Each tag consists of a tag key and a tag value. Tag keys and tag values are
+// both required, but tag values can be empty strings.
+//
+// For information about the rules that apply to tag keys and tag values, see
+// User-Defined Tag Restrictions (https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/allocation-tag-restrictions.html)
+// in the AWS Billing and Cost Management User Guide.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS RoboMaker's
+// API operation TagResource for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeInternalServerException "InternalServerException"
+//   AWS RoboMaker experienced a service issue. Try your call again.
+//
+//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
+//   The specified resource does not exist.
+//
+//   * ErrCodeInvalidParameterException "InvalidParameterException"
+//   A parameter specified in a request is not valid, is unsupported, or cannot
+//   be used. The returned message provides an explanation of the error value.
+//
+//   * ErrCodeThrottlingException "ThrottlingException"
+//   AWS RoboMaker is temporarily unable to process the request. Try your call
+//   again.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/robomaker-2018-06-29/TagResource
+func (c *RoboMaker) TagResource(input *TagResourceInput) (*TagResourceOutput, error) {
+	req, out := c.TagResourceRequest(input)
+	return out, req.Send()
+}
+
+// TagResourceWithContext is the same as TagResource with the addition of
+// the ability to pass a context and additional request options.
+//
+// See TagResource for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *RoboMaker) TagResourceWithContext(ctx aws.Context, input *TagResourceInput, opts ...request.Option) (*TagResourceOutput, error) {
+	req, out := c.TagResourceRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opUntagResource = "UntagResource"
+
+// UntagResourceRequest generates a "aws/request.Request" representing the
+// client's request for the UntagResource operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See UntagResource for more information on using the UntagResource
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the UntagResourceRequest method.
+//    req, resp := client.UntagResourceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/robomaker-2018-06-29/UntagResource
+func (c *RoboMaker) UntagResourceRequest(input *UntagResourceInput) (req *request.Request, output *UntagResourceOutput) {
+	op := &request.Operation{
+		Name:       opUntagResource,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/tags/{resourceArn}",
+	}
+
+	if input == nil {
+		input = &UntagResourceInput{}
+	}
+
+	output = &UntagResourceOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(restjson.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// UntagResource API operation for AWS RoboMaker.
+//
+// Removes the specified tags from the specified AWS RoboMaker resource.
+//
+// To remove a tag, specify the tag key. To change the tag value of an existing
+// tag key, use TagResource (https://docs.aws.amazon.com/robomaker/latest/dg/API_TagResource.html).
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for AWS RoboMaker's
+// API operation UntagResource for usage and error information.
+//
+// Returned Error Codes:
+//   * ErrCodeInternalServerException "InternalServerException"
+//   AWS RoboMaker experienced a service issue. Try your call again.
+//
+//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
+//   The specified resource does not exist.
+//
+//   * ErrCodeInvalidParameterException "InvalidParameterException"
+//   A parameter specified in a request is not valid, is unsupported, or cannot
+//   be used. The returned message provides an explanation of the error value.
+//
+//   * ErrCodeThrottlingException "ThrottlingException"
+//   AWS RoboMaker is temporarily unable to process the request. Try your call
+//   again.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/robomaker-2018-06-29/UntagResource
+func (c *RoboMaker) UntagResource(input *UntagResourceInput) (*UntagResourceOutput, error) {
+	req, out := c.UntagResourceRequest(input)
+	return out, req.Send()
+}
+
+// UntagResourceWithContext is the same as UntagResource with the addition of
+// the ability to pass a context and additional request options.
+//
+// See UntagResource for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *RoboMaker) UntagResourceWithContext(ctx aws.Context, input *UntagResourceInput, opts ...request.Option) (*UntagResourceOutput, error) {
+	req, out := c.UntagResourceRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -3115,6 +3745,10 @@ type CreateDeploymentJobInput struct {
 	//
 	// Fleet is a required field
 	Fleet *string `locationName:"fleet" min:"1" type:"string" required:"true"`
+
+	// A map that contains tag keys and tag values that are attached to the deployment
+	// job.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -3191,6 +3825,12 @@ func (s *CreateDeploymentJobInput) SetFleet(v string) *CreateDeploymentJobInput 
 	return s
 }
 
+// SetTags sets the Tags field's value.
+func (s *CreateDeploymentJobInput) SetTags(v map[string]*string) *CreateDeploymentJobInput {
+	s.Tags = v
+	return s
+}
+
 type CreateDeploymentJobOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -3206,7 +3846,44 @@ type CreateDeploymentJobOutput struct {
 	// The deployment configuration.
 	DeploymentConfig *DeploymentConfig `locationName:"deploymentConfig" type:"structure"`
 
-	// The failure code of the deployment job if it failed.
+	// The failure code of the simulation job if it failed:
+	//
+	// BadPermissionErrorAWS Greengrass requires a service-level role permission
+	// to access other services. The role must include the AWSGreengrassResourceAccessRolePolicy
+	// (https://console.aws.amazon.com/iam/home?#/policies/arn:aws:iam::aws:policy/service-role/AWSGreengrassResourceAccessRolePolicy$jsonEditor)
+	// managed policy.
+	//
+	// ExtractingBundleFailureThe robot application could not be extracted from
+	// the bundle.
+	//
+	// FailureThresholdBreachedThe percentage of robots that could not be updated
+	// exceeded the percentage set for the deployment.
+	//
+	// GreengrassDeploymentFailedThe robot application could not be deployed to
+	// the robot.
+	//
+	// GreengrassGroupVersionDoesNotExistThe AWS Greengrass group or version associated
+	// with a robot is missing.
+	//
+	// InternalServerErrorAn internal error has occurred. Retry your request, but
+	// if the problem persists, contact us with details.
+	//
+	// MissingRobotApplicationArchitectureThe robot application does not have a
+	// source that matches the architecture of the robot.
+	//
+	// MissingRobotDeploymentResourceOne or more of the resources specified for
+	// the robot application are missing. For example, does the robot application
+	// have the correct launch package and launch file?
+	//
+	// PostLaunchFileFailureThe post-launch script failed.
+	//
+	// PreLaunchFileFailureThe pre-launch script failed.
+	//
+	// ResourceNotFoundOne or more deployment resources are missing. For example,
+	// do robot application source bundles still exist?
+	//
+	// RobotDeploymentNoResponseThere is no response from the robot. It might not
+	// be powered on or connected to the internet.
 	FailureCode *string `locationName:"failureCode" type:"string" enum:"DeploymentJobErrorCode"`
 
 	// The failure reason of the deployment job if it failed.
@@ -3217,6 +3894,9 @@ type CreateDeploymentJobOutput struct {
 
 	// The status of the deployment job.
 	Status *string `locationName:"status" type:"string" enum:"DeploymentStatus"`
+
+	// The list of all tags added to the deployment job.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -3277,6 +3957,12 @@ func (s *CreateDeploymentJobOutput) SetStatus(v string) *CreateDeploymentJobOutp
 	return s
 }
 
+// SetTags sets the Tags field's value.
+func (s *CreateDeploymentJobOutput) SetTags(v map[string]*string) *CreateDeploymentJobOutput {
+	s.Tags = v
+	return s
+}
+
 type CreateFleetInput struct {
 	_ struct{} `type:"structure"`
 
@@ -3284,6 +3970,9 @@ type CreateFleetInput struct {
 	//
 	// Name is a required field
 	Name *string `locationName:"name" min:"1" type:"string" required:"true"`
+
+	// A map that contains tag keys and tag values that are attached to the fleet.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -3318,6 +4007,12 @@ func (s *CreateFleetInput) SetName(v string) *CreateFleetInput {
 	return s
 }
 
+// SetTags sets the Tags field's value.
+func (s *CreateFleetInput) SetTags(v map[string]*string) *CreateFleetInput {
+	s.Tags = v
+	return s
+}
+
 type CreateFleetOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -3329,6 +4024,9 @@ type CreateFleetOutput struct {
 
 	// The name of the fleet.
 	Name *string `locationName:"name" min:"1" type:"string"`
+
+	// The list of all tags added to the fleet.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -3359,6 +4057,12 @@ func (s *CreateFleetOutput) SetName(v string) *CreateFleetOutput {
 	return s
 }
 
+// SetTags sets the Tags field's value.
+func (s *CreateFleetOutput) SetTags(v map[string]*string) *CreateFleetOutput {
+	s.Tags = v
+	return s
+}
+
 type CreateRobotApplicationInput struct {
 	_ struct{} `type:"structure"`
 
@@ -3376,6 +4080,10 @@ type CreateRobotApplicationInput struct {
 	//
 	// Sources is a required field
 	Sources []*SourceConfig `locationName:"sources" type:"list" required:"true"`
+
+	// A map that contains tag keys and tag values that are attached to the robot
+	// application.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -3438,6 +4146,12 @@ func (s *CreateRobotApplicationInput) SetSources(v []*SourceConfig) *CreateRobot
 	return s
 }
 
+// SetTags sets the Tags field's value.
+func (s *CreateRobotApplicationInput) SetTags(v map[string]*string) *CreateRobotApplicationInput {
+	s.Tags = v
+	return s
+}
+
 type CreateRobotApplicationOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -3459,6 +4173,9 @@ type CreateRobotApplicationOutput struct {
 
 	// The sources of the robot application.
 	Sources []*Source `locationName:"sources" type:"list"`
+
+	// The list of all tags added to the robot application.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 
 	// The version of the robot application.
 	Version *string `locationName:"version" min:"1" type:"string"`
@@ -3507,6 +4224,12 @@ func (s *CreateRobotApplicationOutput) SetRobotSoftwareSuite(v *RobotSoftwareSui
 // SetSources sets the Sources field's value.
 func (s *CreateRobotApplicationOutput) SetSources(v []*Source) *CreateRobotApplicationOutput {
 	s.Sources = v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateRobotApplicationOutput) SetTags(v map[string]*string) *CreateRobotApplicationOutput {
+	s.Tags = v
 	return s
 }
 
@@ -3665,6 +4388,9 @@ type CreateRobotInput struct {
 	//
 	// Name is a required field
 	Name *string `locationName:"name" min:"1" type:"string" required:"true"`
+
+	// A map that contains tag keys and tag values that are attached to the robot.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -3720,6 +4446,12 @@ func (s *CreateRobotInput) SetName(v string) *CreateRobotInput {
 	return s
 }
 
+// SetTags sets the Tags field's value.
+func (s *CreateRobotInput) SetTags(v map[string]*string) *CreateRobotInput {
+	s.Tags = v
+	return s
+}
+
 type CreateRobotOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -3738,6 +4470,9 @@ type CreateRobotOutput struct {
 
 	// The name of the robot.
 	Name *string `locationName:"name" min:"1" type:"string"`
+
+	// The list of all tags added to the robot.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -3780,6 +4515,12 @@ func (s *CreateRobotOutput) SetName(v string) *CreateRobotOutput {
 	return s
 }
 
+// SetTags sets the Tags field's value.
+func (s *CreateRobotOutput) SetTags(v map[string]*string) *CreateRobotOutput {
+	s.Tags = v
+	return s
+}
+
 type CreateSimulationApplicationInput struct {
 	_ struct{} `type:"structure"`
 
@@ -3807,6 +4548,10 @@ type CreateSimulationApplicationInput struct {
 	//
 	// Sources is a required field
 	Sources []*SourceConfig `locationName:"sources" type:"list" required:"true"`
+
+	// A map that contains tag keys and tag values that are attached to the simulation
+	// application.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -3887,6 +4632,12 @@ func (s *CreateSimulationApplicationInput) SetSources(v []*SourceConfig) *Create
 	return s
 }
 
+// SetTags sets the Tags field's value.
+func (s *CreateSimulationApplicationInput) SetTags(v map[string]*string) *CreateSimulationApplicationInput {
+	s.Tags = v
+	return s
+}
+
 type CreateSimulationApplicationOutput struct {
 	_ struct{} `type:"structure"`
 
@@ -3914,6 +4665,9 @@ type CreateSimulationApplicationOutput struct {
 
 	// The sources of the simulation application.
 	Sources []*Source `locationName:"sources" type:"list"`
+
+	// The list of all tags added to the simulation application.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 
 	// The version of the simulation application.
 	Version *string `locationName:"version" min:"1" type:"string"`
@@ -3974,6 +4728,12 @@ func (s *CreateSimulationApplicationOutput) SetSimulationSoftwareSuite(v *Simula
 // SetSources sets the Sources field's value.
 func (s *CreateSimulationApplicationOutput) SetSources(v []*Source) *CreateSimulationApplicationOutput {
 	s.Sources = v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateSimulationApplicationOutput) SetTags(v map[string]*string) *CreateSimulationApplicationOutput {
+	s.Tags = v
 	return s
 }
 
@@ -4147,10 +4907,9 @@ type CreateSimulationJobInput struct {
 	// FailStop the simulation job and terminate the instance.
 	FailureBehavior *string `locationName:"failureBehavior" type:"string" enum:"FailureBehavior"`
 
-	// The IAM role that allows the simulation instance to call the AWS APIs that
-	// are specified in its associated policies on your behalf. This is how credentials
-	// are passed in to your simulation job. See how to specify AWS security credentials
-	// for your application (https://docs.aws.amazon.com/toolkit-for-visual-studio/latest/user-guide/deployment-ecs-specify-credentials).
+	// The IAM role name that allows the simulation instance to call the AWS APIs
+	// that are specified in its associated policies on your behalf. This is how
+	// credentials are passed in to your simulation job.
 	//
 	// IamRole is a required field
 	IamRole *string `locationName:"iamRole" min:"1" type:"string" required:"true"`
@@ -4170,6 +4929,10 @@ type CreateSimulationJobInput struct {
 
 	// The simulation application to use in the simulation job.
 	SimulationApplications []*SimulationApplicationConfig `locationName:"simulationApplications" min:"1" type:"list"`
+
+	// A map that contains tag keys and tag values that are attached to the simulation
+	// job.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 
 	// If your simulation job accesses resources in a VPC, you provide this parameter
 	// identifying the list of security group IDs and subnet IDs. These must belong
@@ -4288,6 +5051,12 @@ func (s *CreateSimulationJobInput) SetSimulationApplications(v []*SimulationAppl
 	return s
 }
 
+// SetTags sets the Tags field's value.
+func (s *CreateSimulationJobInput) SetTags(v map[string]*string) *CreateSimulationJobInput {
+	s.Tags = v
+	return s
+}
+
 // SetVpcConfig sets the VpcConfig field's value.
 func (s *CreateSimulationJobInput) SetVpcConfig(v *VPCConfig) *CreateSimulationJobInput {
 	s.VpcConfig = v
@@ -4307,7 +5076,41 @@ type CreateSimulationJobOutput struct {
 	// the failure behavior for the simulation job.
 	FailureBehavior *string `locationName:"failureBehavior" type:"string" enum:"FailureBehavior"`
 
-	// The failure code of the simulation job if it failed.
+	// The failure code of the simulation job if it failed:
+	//
+	// InternalServiceErrorInternal service error.
+	//
+	// RobotApplicationCrashRobot application exited abnormally.
+	//
+	// SimulationApplicationCrash Simulation application exited abnormally.
+	//
+	// BadPermissionsRobotApplicationRobot application bundle could not be downloaded.
+	//
+	// BadPermissionsSimulationApplicationSimulation application bundle could not
+	// be downloaded.
+	//
+	// BadPermissionsS3OutputUnable to publish outputs to customer-provided S3 bucket.
+	//
+	// BadPermissionsCloudwatchLogsUnable to publish logs to customer-provided CloudWatch
+	// Logs resource.
+	//
+	// SubnetIpLimitExceededSubnet IP limit exceeded.
+	//
+	// ENILimitExceededENI limit exceeded.
+	//
+	// BadPermissionsUserCredentialsUnable to use the Role provided.
+	//
+	// InvalidBundleRobotApplicationRobot bundle cannot be extracted (invalid format,
+	// bundling error, or other issue).
+	//
+	// InvalidBundleSimulationApplicationSimulation bundle cannot be extracted (invalid
+	// format, bundling error, or other issue).
+	//
+	// RobotApplicationVersionMismatchedEtagEtag for RobotApplication does not match
+	// value during version creation.
+	//
+	// SimulationApplicationVersionMismatchedEtagEtag for SimulationApplication
+	// does not match value during version creation.
 	FailureCode *string `locationName:"failureCode" type:"string" enum:"SimulationJobErrorCode"`
 
 	// The IAM role that allows the simulation job to call the AWS APIs that are
@@ -4318,8 +5121,7 @@ type CreateSimulationJobOutput struct {
 	// updated.
 	LastUpdatedAt *time.Time `locationName:"lastUpdatedAt" type:"timestamp"`
 
-	// The maximum simulation job duration in seconds. The value must be 8 days
-	// (691,200 seconds) or less.
+	// The maximum simulation job duration in seconds.
 	MaxJobDurationInSeconds *int64 `locationName:"maxJobDurationInSeconds" type:"long"`
 
 	// Simulation job output files location.
@@ -4336,6 +5138,9 @@ type CreateSimulationJobOutput struct {
 
 	// The status of the simulation job.
 	Status *string `locationName:"status" type:"string" enum:"SimulationJobStatus"`
+
+	// The list of all tags added to the simulation job.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 
 	// Information about the vpc configuration.
 	VpcConfig *VPCConfigResponse `locationName:"vpcConfig" type:"structure"`
@@ -4420,6 +5225,12 @@ func (s *CreateSimulationJobOutput) SetSimulationTimeMillis(v int64) *CreateSimu
 // SetStatus sets the Status field's value.
 func (s *CreateSimulationJobOutput) SetStatus(v string) *CreateSimulationJobOutput {
 	s.Status = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *CreateSimulationJobOutput) SetTags(v map[string]*string) *CreateSimulationJobOutput {
+	s.Tags = v
 	return s
 }
 
@@ -4677,7 +5488,7 @@ func (s DeleteSimulationApplicationOutput) GoString() string {
 type DeploymentApplicationConfig struct {
 	_ struct{} `type:"structure"`
 
-	// The application.
+	// The Amazon Resource Name (ARN) of the robot application.
 	//
 	// Application is a required field
 	Application *string `locationName:"application" min:"1" type:"string" required:"true"`
@@ -4687,7 +5498,7 @@ type DeploymentApplicationConfig struct {
 	// ApplicationVersion is a required field
 	ApplicationVersion *string `locationName:"applicationVersion" min:"1" type:"string" required:"true"`
 
-	// The launch configuration, usually roslaunch.
+	// The launch configuration.
 	//
 	// LaunchConfig is a required field
 	LaunchConfig *DeploymentLaunchConfig `locationName:"launchConfig" type:"structure" required:"true"`
@@ -4891,27 +5702,27 @@ func (s *DeploymentJob) SetStatus(v string) *DeploymentJob {
 type DeploymentLaunchConfig struct {
 	_ struct{} `type:"structure"`
 
-	// An array of key/value pairs specifying environment variables for the deployment
-	// application.
+	// An array of key/value pairs specifying environment variables for the robot
+	// application
 	EnvironmentVariables map[string]*string `locationName:"environmentVariables" type:"map"`
 
-	// The deployment launch file.
+	// The launch file name.
 	//
 	// LaunchFile is a required field
-	LaunchFile *string `locationName:"launchFile" type:"string" required:"true"`
+	LaunchFile *string `locationName:"launchFile" min:"1" type:"string" required:"true"`
 
 	// The package name.
 	//
 	// PackageName is a required field
-	PackageName *string `locationName:"packageName" type:"string" required:"true"`
+	PackageName *string `locationName:"packageName" min:"1" type:"string" required:"true"`
 
-	// The deployment post-launch file. This file will be executed after the deployment
-	// launch file.
-	PostLaunchFile *string `locationName:"postLaunchFile" type:"string"`
+	// The deployment post-launch file. This file will be executed after the launch
+	// file.
+	PostLaunchFile *string `locationName:"postLaunchFile" min:"1" type:"string"`
 
-	// The deployment pre-launch file. This file will be executed prior to the deployment
-	// launch file.
-	PreLaunchFile *string `locationName:"preLaunchFile" type:"string"`
+	// The deployment pre-launch file. This file will be executed prior to the launch
+	// file.
+	PreLaunchFile *string `locationName:"preLaunchFile" min:"1" type:"string"`
 }
 
 // String returns the string representation
@@ -4930,8 +5741,20 @@ func (s *DeploymentLaunchConfig) Validate() error {
 	if s.LaunchFile == nil {
 		invalidParams.Add(request.NewErrParamRequired("LaunchFile"))
 	}
+	if s.LaunchFile != nil && len(*s.LaunchFile) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LaunchFile", 1))
+	}
 	if s.PackageName == nil {
 		invalidParams.Add(request.NewErrParamRequired("PackageName"))
+	}
+	if s.PackageName != nil && len(*s.PackageName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("PackageName", 1))
+	}
+	if s.PostLaunchFile != nil && len(*s.PostLaunchFile) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("PostLaunchFile", 1))
+	}
+	if s.PreLaunchFile != nil && len(*s.PreLaunchFile) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("PreLaunchFile", 1))
 	}
 
 	if invalidParams.Len() > 0 {
@@ -5130,6 +5953,9 @@ type DescribeDeploymentJobOutput struct {
 
 	// The status of the deployment job.
 	Status *string `locationName:"status" type:"string" enum:"DeploymentStatus"`
+
+	// The list of all tags added to the specified deployment job.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -5193,6 +6019,12 @@ func (s *DescribeDeploymentJobOutput) SetRobotDeploymentSummary(v []*RobotDeploy
 // SetStatus sets the Status field's value.
 func (s *DescribeDeploymentJobOutput) SetStatus(v string) *DescribeDeploymentJobOutput {
 	s.Status = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *DescribeDeploymentJobOutput) SetTags(v map[string]*string) *DescribeDeploymentJobOutput {
+	s.Tags = v
 	return s
 }
 
@@ -5260,6 +6092,9 @@ type DescribeFleetOutput struct {
 
 	// A list of robots.
 	Robots []*Robot `locationName:"robots" type:"list"`
+
+	// The list of all tags added to the specified fleet.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -5311,6 +6146,12 @@ func (s *DescribeFleetOutput) SetName(v string) *DescribeFleetOutput {
 // SetRobots sets the Robots field's value.
 func (s *DescribeFleetOutput) SetRobots(v []*Robot) *DescribeFleetOutput {
 	s.Robots = v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *DescribeFleetOutput) SetTags(v map[string]*string) *DescribeFleetOutput {
+	s.Tags = v
 	return s
 }
 
@@ -5389,6 +6230,9 @@ type DescribeRobotApplicationOutput struct {
 	// The sources of the robot application.
 	Sources []*Source `locationName:"sources" type:"list"`
 
+	// The list of all tags added to the specified robot application.
+	Tags map[string]*string `locationName:"tags" type:"map"`
+
 	// The version of the robot application.
 	Version *string `locationName:"version" min:"1" type:"string"`
 }
@@ -5436,6 +6280,12 @@ func (s *DescribeRobotApplicationOutput) SetRobotSoftwareSuite(v *RobotSoftwareS
 // SetSources sets the Sources field's value.
 func (s *DescribeRobotApplicationOutput) SetSources(v []*Source) *DescribeRobotApplicationOutput {
 	s.Sources = v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *DescribeRobotApplicationOutput) SetTags(v map[string]*string) *DescribeRobotApplicationOutput {
+	s.Tags = v
 	return s
 }
 
@@ -5515,6 +6365,9 @@ type DescribeRobotOutput struct {
 
 	// The status of the fleet.
 	Status *string `locationName:"status" type:"string" enum:"RobotStatus"`
+
+	// The list of all tags added to the specified robot.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 }
 
 // String returns the string representation
@@ -5578,6 +6431,12 @@ func (s *DescribeRobotOutput) SetName(v string) *DescribeRobotOutput {
 // SetStatus sets the Status field's value.
 func (s *DescribeRobotOutput) SetStatus(v string) *DescribeRobotOutput {
 	s.Status = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *DescribeRobotOutput) SetTags(v map[string]*string) *DescribeRobotOutput {
+	s.Tags = v
 	return s
 }
 
@@ -5662,6 +6521,9 @@ type DescribeSimulationApplicationOutput struct {
 	// The sources of the simulation application.
 	Sources []*Source `locationName:"sources" type:"list"`
 
+	// The list of all tags added to the specified simulation application.
+	Tags map[string]*string `locationName:"tags" type:"map"`
+
 	// The version of the simulation application.
 	Version *string `locationName:"version" min:"1" type:"string"`
 }
@@ -5721,6 +6583,12 @@ func (s *DescribeSimulationApplicationOutput) SetSimulationSoftwareSuite(v *Simu
 // SetSources sets the Sources field's value.
 func (s *DescribeSimulationApplicationOutput) SetSources(v []*Source) *DescribeSimulationApplicationOutput {
 	s.Sources = v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *DescribeSimulationApplicationOutput) SetTags(v map[string]*string) *DescribeSimulationApplicationOutput {
+	s.Tags = v
 	return s
 }
 
@@ -5786,41 +6654,44 @@ type DescribeSimulationJobOutput struct {
 
 	// The failure code of the simulation job if it failed:
 	//
-	// InternalServiceErrorInternal service error
+	// InternalServiceErrorInternal service error.
 	//
-	// RobotApplicationCrashRobot application exited abnormally (segfault, etc.)
+	// RobotApplicationCrashRobot application exited abnormally.
 	//
-	// SimulationApplicationCrash Simulation application exited abnormally (segfault,
-	// etc.)
+	// SimulationApplicationCrash Simulation application exited abnormally.
 	//
-	// BadPermissionsRobotApplicationRobot application bundle could not be downloaded
+	// BadPermissionsRobotApplicationRobot application bundle could not be downloaded.
 	//
 	// BadPermissionsSimulationApplicationSimulation application bundle could not
-	// be downloaded
+	// be downloaded.
 	//
-	// BadPermissionsS3OutputUnable to publish outputs to customer-provided S3 bucket
+	// BadPermissionsS3OutputUnable to publish outputs to customer-provided S3 bucket.
 	//
 	// BadPermissionsCloudwatchLogsUnable to publish logs to customer-provided CloudWatch
-	// Logs resource
+	// Logs resource.
 	//
-	// SubnetIpLimitExceededSubnet IP limit exceeded
+	// SubnetIpLimitExceededSubnet IP limit exceeded.
 	//
-	// ENILimitExceededENI limit exceeded
+	// ENILimitExceededENI limit exceeded.
 	//
-	// BadPermissionsUserCredentialsUnable to use the Role provided
+	// BadPermissionsUserCredentialsUnable to use the Role provided.
 	//
 	// InvalidBundleRobotApplicationRobot bundle cannot be extracted (invalid format,
-	// bundling error, etc.)
+	// bundling error, or other issue).
 	//
 	// InvalidBundleSimulationApplicationSimulation bundle cannot be extracted (invalid
-	// format, bundling error, etc.)
+	// format, bundling error, or other issue).
 	//
 	// RobotApplicationVersionMismatchedEtagEtag for RobotApplication does not match
-	// value during version creation
+	// value during version creation.
 	//
 	// SimulationApplicationVersionMismatchedEtagEtag for SimulationApplication
-	// does not match value during version creation
+	// does not match value during version creation.
 	FailureCode *string `locationName:"failureCode" type:"string" enum:"SimulationJobErrorCode"`
+
+	// Details about why the simulation job failed. For more information about troubleshooting,
+	// see Troubleshooting (https://docs.aws.amazon.com/robomaker/latest/dg/troubleshooting.html).
+	FailureReason *string `locationName:"failureReason" type:"string"`
 
 	// The IAM role that allows the simulation instance to call the AWS APIs that
 	// are specified in its associated policies on your behalf.
@@ -5851,6 +6722,9 @@ type DescribeSimulationJobOutput struct {
 
 	// The status of the simulation job.
 	Status *string `locationName:"status" type:"string" enum:"SimulationJobStatus"`
+
+	// The list of all tags added to the specified simulation job.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 
 	// The VPC configuration.
 	VpcConfig *VPCConfigResponse `locationName:"vpcConfig" type:"structure"`
@@ -5887,6 +6761,12 @@ func (s *DescribeSimulationJobOutput) SetFailureBehavior(v string) *DescribeSimu
 // SetFailureCode sets the FailureCode field's value.
 func (s *DescribeSimulationJobOutput) SetFailureCode(v string) *DescribeSimulationJobOutput {
 	s.FailureCode = &v
+	return s
+}
+
+// SetFailureReason sets the FailureReason field's value.
+func (s *DescribeSimulationJobOutput) SetFailureReason(v string) *DescribeSimulationJobOutput {
+	s.FailureReason = &v
 	return s
 }
 
@@ -5941,6 +6821,12 @@ func (s *DescribeSimulationJobOutput) SetSimulationTimeMillis(v int64) *Describe
 // SetStatus sets the Status field's value.
 func (s *DescribeSimulationJobOutput) SetStatus(v string) *DescribeSimulationJobOutput {
 	s.Status = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *DescribeSimulationJobOutput) SetTags(v map[string]*string) *DescribeSimulationJobOutput {
+	s.Tags = v
 	return s
 }
 
@@ -6075,15 +6961,15 @@ type LaunchConfig struct {
 	// The environment variables for the application launch.
 	EnvironmentVariables map[string]*string `locationName:"environmentVariables" type:"map"`
 
-	// The launch file.
+	// The launch file name.
 	//
 	// LaunchFile is a required field
-	LaunchFile *string `locationName:"launchFile" type:"string" required:"true"`
+	LaunchFile *string `locationName:"launchFile" min:"1" type:"string" required:"true"`
 
 	// The package name.
 	//
 	// PackageName is a required field
-	PackageName *string `locationName:"packageName" type:"string" required:"true"`
+	PackageName *string `locationName:"packageName" min:"1" type:"string" required:"true"`
 }
 
 // String returns the string representation
@@ -6102,8 +6988,14 @@ func (s *LaunchConfig) Validate() error {
 	if s.LaunchFile == nil {
 		invalidParams.Add(request.NewErrParamRequired("LaunchFile"))
 	}
+	if s.LaunchFile != nil && len(*s.LaunchFile) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LaunchFile", 1))
+	}
 	if s.PackageName == nil {
 		invalidParams.Add(request.NewErrParamRequired("PackageName"))
+	}
+	if s.PackageName != nil && len(*s.PackageName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("PackageName", 1))
 	}
 
 	if invalidParams.Len() > 0 {
@@ -6134,6 +7026,11 @@ type ListDeploymentJobsInput struct {
 	_ struct{} `type:"structure"`
 
 	// Optional filters to limit results.
+	//
+	// The filter names status and fleetName are supported. When filtering, you
+	// must use the complete value of the filtered item. You can use up to three
+	// filters, but they must be for the same named item. For example, if you are
+	// looking for items with the status InProgress or the status Pending.
 	Filters []*Filter `locationName:"filters" min:"1" type:"list"`
 
 	// The maximum number of deployment job results returned by ListDeploymentJobs
@@ -6248,6 +7145,9 @@ type ListFleetsInput struct {
 	_ struct{} `type:"structure"`
 
 	// Optional filters to limit results.
+	//
+	// The filter name name is supported. When filtering, you must use the complete
+	// value of the filtered item. You can use up to three filters.
 	Filters []*Filter `locationName:"filters" min:"1" type:"list"`
 
 	// The maximum number of deployment job results returned by ListFleets in paginated
@@ -6362,15 +7262,19 @@ type ListRobotApplicationsInput struct {
 	_ struct{} `type:"structure"`
 
 	// Optional filters to limit results.
+	//
+	// The filter name name is supported. When filtering, you must use the complete
+	// value of the filtered item. You can use up to three filters.
 	Filters []*Filter `locationName:"filters" min:"1" type:"list"`
 
 	// The maximum number of deployment job results returned by ListRobotApplications
 	// in paginated output. When this parameter is used, ListRobotApplications only
 	// returns maxResults results in a single page along with a nextToken response
 	// element. The remaining results of the initial request can be seen by sending
-	// another ListFleets request with the returned nextToken value. This value
-	// can be between 1 and 100. If this parameter is not used, then ListRobotApplications
-	// returns up to 100 results and a nextToken value if applicable.
+	// another ListRobotApplications request with the returned nextToken value.
+	// This value can be between 1 and 100. If this parameter is not used, then
+	// ListRobotApplications returns up to 100 results and a nextToken value if
+	// applicable.
 	MaxResults *int64 `locationName:"maxResults" type:"integer"`
 
 	// The nextToken value returned from a previous paginated ListRobotApplications
@@ -6485,12 +7389,17 @@ type ListRobotsInput struct {
 	_ struct{} `type:"structure"`
 
 	// Optional filters to limit results.
+	//
+	// The filter names status and fleetName are supported. When filtering, you
+	// must use the complete value of the filtered item. You can use up to three
+	// filters, but they must be for the same named item. For example, if you are
+	// looking for items with the status Registered or the status Available.
 	Filters []*Filter `locationName:"filters" min:"1" type:"list"`
 
 	// The maximum number of deployment job results returned by ListRobots in paginated
 	// output. When this parameter is used, ListRobots only returns maxResults results
 	// in a single page along with a nextToken response element. The remaining results
-	// of the initial request can be seen by sending another ListFleets request
+	// of the initial request can be seen by sending another ListRobots request
 	// with the returned nextToken value. This value can be between 1 and 100. If
 	// this parameter is not used, then ListRobots returns up to 100 results and
 	// a nextToken value if applicable.
@@ -6598,17 +7507,20 @@ func (s *ListRobotsOutput) SetRobots(v []*Robot) *ListRobotsOutput {
 type ListSimulationApplicationsInput struct {
 	_ struct{} `type:"structure"`
 
-	// Optional list of filters to limit results. The only valid filter name is
-	// name.
+	// Optional list of filters to limit results.
+	//
+	// The filter name name is supported. When filtering, you must use the complete
+	// value of the filtered item. You can use up to three filters.
 	Filters []*Filter `locationName:"filters" min:"1" type:"list"`
 
 	// The maximum number of deployment job results returned by ListSimulationApplications
 	// in paginated output. When this parameter is used, ListSimulationApplications
 	// only returns maxResults results in a single page along with a nextToken response
 	// element. The remaining results of the initial request can be seen by sending
-	// another ListFleets request with the returned nextToken value. This value
-	// can be between 1 and 100. If this parameter is not used, then ListSimulationApplications
-	// returns up to 100 results and a nextToken value if applicable.
+	// another ListSimulationApplications request with the returned nextToken value.
+	// This value can be between 1 and 100. If this parameter is not used, then
+	// ListSimulationApplications returns up to 100 results and a nextToken value
+	// if applicable.
 	MaxResults *int64 `locationName:"maxResults" type:"integer"`
 
 	// The nextToken value returned from a previous paginated ListSimulationApplications
@@ -6724,14 +7636,20 @@ type ListSimulationJobsInput struct {
 	_ struct{} `type:"structure"`
 
 	// Optional filters to limit results.
+	//
+	// The filter names status and simulationApplicationName and robotApplicationName
+	// are supported. When filtering, you must use the complete value of the filtered
+	// item. You can use up to three filters, but they must be for the same named
+	// item. For example, if you are looking for items with the status Preparing
+	// or the status Running.
 	Filters []*Filter `locationName:"filters" min:"1" type:"list"`
 
 	// The maximum number of deployment job results returned by ListSimulationJobs
 	// in paginated output. When this parameter is used, ListSimulationJobs only
 	// returns maxResults results in a single page along with a nextToken response
 	// element. The remaining results of the initial request can be seen by sending
-	// another ListFleets request with the returned nextToken value. This value
-	// can be between 1 and 100. If this parameter is not used, then ListSimulationJobs
+	// another ListSimulationJobs request with the returned nextToken value. This
+	// value can be between 1 and 100. If this parameter is not used, then ListSimulationJobs
 	// returns up to 100 results and a nextToken value if applicable.
 	MaxResults *int64 `locationName:"maxResults" type:"integer"`
 
@@ -6836,6 +7754,70 @@ func (s *ListSimulationJobsOutput) SetSimulationJobSummaries(v []*SimulationJobS
 	return s
 }
 
+type ListTagsForResourceInput struct {
+	_ struct{} `type:"structure"`
+
+	// The AWS RoboMaker Amazon Resource Name (ARN) with tags to be listed.
+	//
+	// ResourceArn is a required field
+	ResourceArn *string `location:"uri" locationName:"resourceArn" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s ListTagsForResourceInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTagsForResourceInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListTagsForResourceInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListTagsForResourceInput"}
+	if s.ResourceArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceArn"))
+	}
+	if s.ResourceArn != nil && len(*s.ResourceArn) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceArn", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetResourceArn sets the ResourceArn field's value.
+func (s *ListTagsForResourceInput) SetResourceArn(v string) *ListTagsForResourceInput {
+	s.ResourceArn = &v
+	return s
+}
+
+type ListTagsForResourceOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The list of all tags added to the specified resource.
+	Tags map[string]*string `locationName:"tags" type:"map"`
+}
+
+// String returns the string representation
+func (s ListTagsForResourceOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListTagsForResourceOutput) GoString() string {
+	return s.String()
+}
+
+// SetTags sets the Tags field's value.
+func (s *ListTagsForResourceOutput) SetTags(v map[string]*string) *ListTagsForResourceOutput {
+	s.Tags = v
+	return s
+}
+
 // The output location.
 type OutputLocation struct {
 	_ struct{} `type:"structure"`
@@ -6890,7 +7872,28 @@ type ProgressDetail struct {
 	_ struct{} `type:"structure"`
 
 	// The current progress status.
-	CurrentProgress *string `locationName:"currentProgress" type:"string"`
+	//
+	// ValidatingValidating the deployment.
+	//
+	// Downloading/ExtractingDownloading and extracting the bundle on the robot.
+	//
+	// Executing pre-launch script(s)Executing pre-launch script(s) if provided.
+	//
+	// LaunchingLaunching the robot application.
+	//
+	// Executing post-launch script(s)Executing post-launch script(s) if provided.
+	//
+	// FinishedDeployment is complete.
+	CurrentProgress *string `locationName:"currentProgress" type:"string" enum:"RobotDeploymentStep"`
+
+	// Estimated amount of time in seconds remaining in the step. This currently
+	// only applies to the Downloading/Extracting step of the deployment. It is
+	// empty for other steps.
+	EstimatedTimeRemainingSeconds *int64 `locationName:"estimatedTimeRemainingSeconds" type:"integer"`
+
+	// Precentage of the step that is done. This currently only applies to the Downloading/Extracting
+	// step of the deployment. It is empty for other steps.
+	PercentDone *float64 `locationName:"percentDone" type:"float"`
 
 	// The Amazon Resource Name (ARN) of the deployment job.
 	TargetResource *string `locationName:"targetResource" type:"string"`
@@ -6909,6 +7912,18 @@ func (s ProgressDetail) GoString() string {
 // SetCurrentProgress sets the CurrentProgress field's value.
 func (s *ProgressDetail) SetCurrentProgress(v string) *ProgressDetail {
 	s.CurrentProgress = &v
+	return s
+}
+
+// SetEstimatedTimeRemainingSeconds sets the EstimatedTimeRemainingSeconds field's value.
+func (s *ProgressDetail) SetEstimatedTimeRemainingSeconds(v int64) *ProgressDetail {
+	s.EstimatedTimeRemainingSeconds = &v
+	return s
+}
+
+// SetPercentDone sets the PercentDone field's value.
+func (s *ProgressDetail) SetPercentDone(v float64) *ProgressDetail {
+	s.PercentDone = &v
 	return s
 }
 
@@ -7573,6 +8588,9 @@ type SimulationJob struct {
 	// The failure code of the simulation job if it failed.
 	FailureCode *string `locationName:"failureCode" type:"string" enum:"SimulationJobErrorCode"`
 
+	// The reason why the simulation job failed.
+	FailureReason *string `locationName:"failureReason" type:"string"`
+
 	// The IAM role that allows the simulation instance to call the AWS APIs that
 	// are specified in its associated policies on your behalf. This is how credentials
 	// are passed in to your simulation job. See how to specify AWS security credentials
@@ -7604,6 +8622,10 @@ type SimulationJob struct {
 
 	// Status of the simulation job.
 	Status *string `locationName:"status" type:"string" enum:"SimulationJobStatus"`
+
+	// A map that contains tag keys and tag values that are attached to the simulation
+	// job.
+	Tags map[string]*string `locationName:"tags" type:"map"`
 
 	// VPC configuration information.
 	VpcConfig *VPCConfigResponse `locationName:"vpcConfig" type:"structure"`
@@ -7640,6 +8662,12 @@ func (s *SimulationJob) SetFailureBehavior(v string) *SimulationJob {
 // SetFailureCode sets the FailureCode field's value.
 func (s *SimulationJob) SetFailureCode(v string) *SimulationJob {
 	s.FailureCode = &v
+	return s
+}
+
+// SetFailureReason sets the FailureReason field's value.
+func (s *SimulationJob) SetFailureReason(v string) *SimulationJob {
+	s.FailureReason = &v
 	return s
 }
 
@@ -7694,6 +8722,12 @@ func (s *SimulationJob) SetSimulationTimeMillis(v int64) *SimulationJob {
 // SetStatus sets the Status field's value.
 func (s *SimulationJob) SetStatus(v string) *SimulationJob {
 	s.Status = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *SimulationJob) SetTags(v map[string]*string) *SimulationJob {
+	s.Tags = v
 	return s
 }
 
@@ -7984,7 +9018,41 @@ type SyncDeploymentJobOutput struct {
 	// Information about the deployment configuration.
 	DeploymentConfig *DeploymentConfig `locationName:"deploymentConfig" type:"structure"`
 
-	// The failure code if the job fails.
+	// The failure code if the job fails:
+	//
+	// InternalServiceErrorInternal service error.
+	//
+	// RobotApplicationCrashRobot application exited abnormally.
+	//
+	// SimulationApplicationCrash Simulation application exited abnormally.
+	//
+	// BadPermissionsRobotApplicationRobot application bundle could not be downloaded.
+	//
+	// BadPermissionsSimulationApplicationSimulation application bundle could not
+	// be downloaded.
+	//
+	// BadPermissionsS3OutputUnable to publish outputs to customer-provided S3 bucket.
+	//
+	// BadPermissionsCloudwatchLogsUnable to publish logs to customer-provided CloudWatch
+	// Logs resource.
+	//
+	// SubnetIpLimitExceededSubnet IP limit exceeded.
+	//
+	// ENILimitExceededENI limit exceeded.
+	//
+	// BadPermissionsUserCredentialsUnable to use the Role provided.
+	//
+	// InvalidBundleRobotApplicationRobot bundle cannot be extracted (invalid format,
+	// bundling error, or other issue).
+	//
+	// InvalidBundleSimulationApplicationSimulation bundle cannot be extracted (invalid
+	// format, bundling error, or other issue).
+	//
+	// RobotApplicationVersionMismatchedEtagEtag for RobotApplication does not match
+	// value during version creation.
+	//
+	// SimulationApplicationVersionMismatchedEtagEtag for SimulationApplication
+	// does not match value during version creation.
 	FailureCode *string `locationName:"failureCode" type:"string" enum:"DeploymentJobErrorCode"`
 
 	// The failure reason if the job fails.
@@ -8053,6 +9121,146 @@ func (s *SyncDeploymentJobOutput) SetFleet(v string) *SyncDeploymentJobOutput {
 func (s *SyncDeploymentJobOutput) SetStatus(v string) *SyncDeploymentJobOutput {
 	s.Status = &v
 	return s
+}
+
+type TagResourceInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the AWS RoboMaker resource you are tagging.
+	//
+	// ResourceArn is a required field
+	ResourceArn *string `location:"uri" locationName:"resourceArn" min:"1" type:"string" required:"true"`
+
+	// A map that contains tag keys and tag values that are attached to the resource.
+	//
+	// Tags is a required field
+	Tags map[string]*string `locationName:"tags" type:"map" required:"true"`
+}
+
+// String returns the string representation
+func (s TagResourceInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TagResourceInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *TagResourceInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "TagResourceInput"}
+	if s.ResourceArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceArn"))
+	}
+	if s.ResourceArn != nil && len(*s.ResourceArn) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceArn", 1))
+	}
+	if s.Tags == nil {
+		invalidParams.Add(request.NewErrParamRequired("Tags"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetResourceArn sets the ResourceArn field's value.
+func (s *TagResourceInput) SetResourceArn(v string) *TagResourceInput {
+	s.ResourceArn = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *TagResourceInput) SetTags(v map[string]*string) *TagResourceInput {
+	s.Tags = v
+	return s
+}
+
+type TagResourceOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s TagResourceOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TagResourceOutput) GoString() string {
+	return s.String()
+}
+
+type UntagResourceInput struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the AWS RoboMaker resource you are removing
+	// tags.
+	//
+	// ResourceArn is a required field
+	ResourceArn *string `location:"uri" locationName:"resourceArn" min:"1" type:"string" required:"true"`
+
+	// A map that contains tag keys and tag values that will be unattached from
+	// the resource.
+	//
+	// TagKeys is a required field
+	TagKeys []*string `location:"querystring" locationName:"tagKeys" type:"list" required:"true"`
+}
+
+// String returns the string representation
+func (s UntagResourceInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UntagResourceInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *UntagResourceInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "UntagResourceInput"}
+	if s.ResourceArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceArn"))
+	}
+	if s.ResourceArn != nil && len(*s.ResourceArn) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceArn", 1))
+	}
+	if s.TagKeys == nil {
+		invalidParams.Add(request.NewErrParamRequired("TagKeys"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetResourceArn sets the ResourceArn field's value.
+func (s *UntagResourceInput) SetResourceArn(v string) *UntagResourceInput {
+	s.ResourceArn = &v
+	return s
+}
+
+// SetTagKeys sets the TagKeys field's value.
+func (s *UntagResourceInput) SetTagKeys(v []*string) *UntagResourceInput {
+	s.TagKeys = v
+	return s
+}
+
+type UntagResourceOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s UntagResourceOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UntagResourceOutput) GoString() string {
+	return s.String()
 }
 
 type UpdateRobotApplicationInput struct {
@@ -8571,11 +9779,20 @@ const (
 	// DeploymentJobErrorCodeResourceNotFound is a DeploymentJobErrorCode enum value
 	DeploymentJobErrorCodeResourceNotFound = "ResourceNotFound"
 
+	// DeploymentJobErrorCodeEnvironmentSetupError is a DeploymentJobErrorCode enum value
+	DeploymentJobErrorCodeEnvironmentSetupError = "EnvironmentSetupError"
+
+	// DeploymentJobErrorCodeEtagMismatch is a DeploymentJobErrorCode enum value
+	DeploymentJobErrorCodeEtagMismatch = "EtagMismatch"
+
 	// DeploymentJobErrorCodeFailureThresholdBreached is a DeploymentJobErrorCode enum value
 	DeploymentJobErrorCodeFailureThresholdBreached = "FailureThresholdBreached"
 
 	// DeploymentJobErrorCodeRobotDeploymentNoResponse is a DeploymentJobErrorCode enum value
 	DeploymentJobErrorCodeRobotDeploymentNoResponse = "RobotDeploymentNoResponse"
+
+	// DeploymentJobErrorCodeRobotAgentConnectionTimeout is a DeploymentJobErrorCode enum value
+	DeploymentJobErrorCodeRobotAgentConnectionTimeout = "RobotAgentConnectionTimeout"
 
 	// DeploymentJobErrorCodeGreengrassDeploymentFailed is a DeploymentJobErrorCode enum value
 	DeploymentJobErrorCodeGreengrassDeploymentFailed = "GreengrassDeploymentFailed"
@@ -8636,6 +9853,26 @@ const (
 const (
 	// RenderingEngineTypeOgre is a RenderingEngineType enum value
 	RenderingEngineTypeOgre = "OGRE"
+)
+
+const (
+	// RobotDeploymentStepValidating is a RobotDeploymentStep enum value
+	RobotDeploymentStepValidating = "Validating"
+
+	// RobotDeploymentStepDownloadingExtracting is a RobotDeploymentStep enum value
+	RobotDeploymentStepDownloadingExtracting = "DownloadingExtracting"
+
+	// RobotDeploymentStepExecutingPreLaunch is a RobotDeploymentStep enum value
+	RobotDeploymentStepExecutingPreLaunch = "ExecutingPreLaunch"
+
+	// RobotDeploymentStepLaunching is a RobotDeploymentStep enum value
+	RobotDeploymentStepLaunching = "Launching"
+
+	// RobotDeploymentStepExecutingPostLaunch is a RobotDeploymentStep enum value
+	RobotDeploymentStepExecutingPostLaunch = "ExecutingPostLaunch"
+
+	// RobotDeploymentStepFinished is a RobotDeploymentStep enum value
+	RobotDeploymentStepFinished = "Finished"
 )
 
 const (
@@ -8713,6 +9950,15 @@ const (
 
 	// SimulationJobErrorCodeSimulationApplicationVersionMismatchedEtag is a SimulationJobErrorCode enum value
 	SimulationJobErrorCodeSimulationApplicationVersionMismatchedEtag = "SimulationApplicationVersionMismatchedEtag"
+
+	// SimulationJobErrorCodeWrongRegionS3output is a SimulationJobErrorCode enum value
+	SimulationJobErrorCodeWrongRegionS3output = "WrongRegionS3Output"
+
+	// SimulationJobErrorCodeWrongRegionRobotApplication is a SimulationJobErrorCode enum value
+	SimulationJobErrorCodeWrongRegionRobotApplication = "WrongRegionRobotApplication"
+
+	// SimulationJobErrorCodeWrongRegionSimulationApplication is a SimulationJobErrorCode enum value
+	SimulationJobErrorCodeWrongRegionSimulationApplication = "WrongRegionSimulationApplication"
 )
 
 const (
