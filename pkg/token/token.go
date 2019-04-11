@@ -212,7 +212,7 @@ func (g generator) GetWithRole(clusterID string, roleARN string) (Token, error) 
 	return g.GetWithRoleForSession(clusterID, roleARN, sess)
 }
 
-// GetWithRole assumes the given AWS IAM role for the given session and behaves
+// GetWithRoleForSession assumes the given AWS IAM role for the given session and behaves
 // like GetWithRole.
 func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (Token, error) {
 	// use an STS client based on the direct credentials
