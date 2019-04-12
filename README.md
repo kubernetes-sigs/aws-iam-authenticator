@@ -208,6 +208,68 @@ This can be helpful for quickly attempting to associate "who performed action X 
 Please note, **this should not be considered definitive** and needs to be cross referenced via the `role id` (which remains consistent) with CloudTrail logs
 as a user could potentially change this on the client side.
 
+## API Authorization from Outside a Cluster
+
+It is possible to make requests to the Kubernetes API from a client that is outside the cluster, be that using the 
+bare Kubernetes REST API or from one of the language specific Kubernetes clients 
+(e.g., [Python](https://github.com/kubernetes-client/python)). In order to do so, you must create a bearer token that
+is included with the request to the API. This bearer token requires you append the string `k8s-aws-v1.` with a 
+base64 encoded string of a signed HTTP request to the STS GetCallerIdentity Query API. This is then sent it in the 
+`Authorization`  header of the request.  Something to note though is that the IAM Authenticator explicitly omits 
+base64 padding to avoid any `=` characters thus guaranteeing a string safe to use in URLs. Below is an example in 
+Python on how this token would be constructed:
+
+```python
+import base64
+import boto3
+import re
+from botocore.signers import RequestSigner
+
+def get_bearer_token(cluster_id, region):
+    STS_TOKEN_EXPIRES_IN = 60
+    session = boto3.session.Session()
+
+    client = session.client('sts', region_name=region)
+    service_id = client.meta.service_model.service_id
+
+    signer = RequestSigner(
+        service_id,
+        region,
+        'sts',
+        'v4',
+        session.get_credentials(),
+        session.events
+    )
+
+    params = {
+        'method': 'GET',
+        'url': 'https://sts.{}.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15'.format(region),
+        'body': {},
+        'headers': {
+            'x-k8s-aws-id': cluster_id
+        },
+        'context': {}
+    }
+
+    signed_url = signer.generate_presigned_url(
+        params,
+        region_name=region,
+        expires_in=STS_TOKEN_EXPIRES_IN,
+        operation_name=''
+    )
+
+    base64_url = base64.urlsafe_b64encode(signed_url.encode('utf-8')).decode('utf-8')
+
+    # remove any base64 encoding padding:
+    return 'k8s-aws-v1.' + re.sub(r'=*', '', base64_url)
+    
+# If making a HTTP request you would create the authorization headers as follows:
+
+headers = {'Authorization': 'Bearer ' + get_bearer_token('my_cluster', 'us-east-1')}
+
+```
+
+
 ## Troubleshooting
 
 If your client fails with an error like `could not get token: AccessDenied [...]`, you can try assuming the role with the AWS CLI directly:
