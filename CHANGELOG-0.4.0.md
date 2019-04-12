@@ -1,6 +1,6 @@
+* Update aws-sdk version to 1.19.11 (https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/216, @nckturner)
 * Add credentials cache for expiring credentials (https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/193, @llamahunter)
 * Support Global Different Region STS Endpoints (https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/173, @sunfuze)
-* Update aws-sdk version to 1.16.13 (https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/182, @llamahunter)
 * Add expiration to token creation. (https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/160, @nckturner)
 * Log STS response on successful authentication. (https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/161, @nckturner)
 * Allow session names to be forwarded with `--forward-session-name`. (https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/134, @jrnt30)
