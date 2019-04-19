@@ -56,5 +56,5 @@ release:
     owner: kubernetes-sigs
     name: aws-iam-authenticator
   draft: true
-  prerelease: true
+  prerelease: false
   name_template: "v{{.Version}}"
