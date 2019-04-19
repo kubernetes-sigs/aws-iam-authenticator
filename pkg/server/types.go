@@ -17,7 +17,7 @@ limitations under the License.
 package server
 
 import (
-	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 )
 
 // Server for the authentication webhook.

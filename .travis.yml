@@ -1,5 +1,5 @@
 language: go
-go_import_path: github.com/kubernetes-sigs/aws-iam-authenticator
+go_import_path: sigs.k8s.io/aws-iam-authenticator
 go:
   - 1.10.x
 

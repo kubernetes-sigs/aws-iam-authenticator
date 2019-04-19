@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/server"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/server"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
