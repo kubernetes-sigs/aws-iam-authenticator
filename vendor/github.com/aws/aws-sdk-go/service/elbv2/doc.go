@@ -19,7 +19,7 @@
 //
 // An Application Load Balancer makes routing and load balancing decisions at
 // the application layer (HTTP/HTTPS). A Network Load Balancer makes routing
-// and load balancing decisions at the transport layer (TCP). Both Application
+// and load balancing decisions at the transport layer (TCP/TLS). Both Application
 // Load Balancers and Network Load Balancers can route requests to one or more
 // ports on each EC2 instance or container instance in your virtual private
 // cloud (VPC).
@@ -27,7 +27,7 @@
 // A Classic Load Balancer makes routing and load balancing decisions either
 // at the transport layer (TCP/SSL) or the application layer (HTTP/HTTPS), and
 // supports either EC2-Classic or a VPC. For more information, see the Elastic
-// Load Balancing User Guide (http://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/).
+// Load Balancing User Guide (https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/).
 //
 // This reference covers the 2015-12-01 API, which supports Application Load
 // Balancers and Network Load Balancers. The 2012-06-01 API supports Classic
@@ -60,7 +60,7 @@
 //
 // Using the Client
 //
-// To Elastic Load Balancing with the SDK use the New function to create
+// To contact Elastic Load Balancing with the SDK use the New function to create
 // a new service client. With that client you can make API requests to the service.
 // These clients are safe to use concurrently.
 //

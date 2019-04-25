@@ -1,7 +1,7 @@
 # AWS IAM Authenticator for Kubernetes
 
 A tool to use AWS IAM credentials to authenticate to a Kubernetes cluster.
-The initial work on this tool was driven by Heptio. The project recieves contributions from multiple community engineers and is currently maintained by Heptio and Amazon EKS OSS Engineers.
+The initial work on this tool was driven by Heptio. The project receives contributions from multiple community engineers and is currently maintained by Heptio and Amazon EKS OSS Engineers.
 
 ## Why do I want this?
 If you are an administrator running a Kubernetes cluster on AWS, you already need to manage AWS IAM credentials to provision and update the cluster.
@@ -120,51 +120,7 @@ You can also omit `-r ROLE_ARN` to sign the token with your existing credentials
 This is useful if you want to authenticate as an IAM user directly or if you want to authenticate using an EC2 instance role or a federated role.
 
 ## Kops Usage
-Clusters managed by [Kops](https://github.com/kubernetes/kops) can be configured to use Authenticator.
-Both single and HA master cluster configurations are supported.
-Perform the following steps to setup Authenticator on a Kops cluster:
-1. Pre-generate the certificate, key, and kubeconfig and upload them to the kops state store.
-   ```
-   aws-iam-authenticator init -i $CLUSTER_NAME
-   aws s3 cp cert.pem ${KOPS_STATE_STORE}/${CLUSTER_NAME}/addons/authenticator/cert.pem;
-   aws s3 cp key.pem ${KOPS_STATE_STORE}/${CLUSTER_NAME}/addons/authenticator/key.pem;
-   aws s3 cp aws-iam-authenticator.kubeconfig ${KOPS_STATE_STORE}/${CLUSTER_NAME}/addons/authenticator/kubeconfig.yaml;
-   ```
-2. Add the following sections to the cluster spec, either using `kops edit cluster ${CLUSTER_NAME}` or editing the manifest yaml file.
-   Be sure to replace `KOPS_STATE_STORE` and `CLUSTER_NAME` with their appropriate values since those environment variables are not available at runtime.
-   This downloads the files from the state store on masters to a directory that is volume mounted by kube-apiserver.
-   Kops does not support adding additional volumes to kube-apiserver so we must reuse the existing `/srv/kubernetes` hostPath volume.
-   ```
-   apiVersion: kops/v1alpha2
-   kind: Cluster
-   spec:
-     kubeAPIServer:
-       authenticationTokenWebhookConfigFile: /srv/kubernetes/aws-iam-authenticator/kubeconfig.yaml
-     hooks:
-     - name: kops-hook-authenticator-config.service
-       before:
-         - kubelet.service
-       roles: [Master]
-       manifest: |
-         [Unit]
-         Description=Download AWS Authenticator configs from S3
-         [Service]
-         Type=oneshot
-         ExecStart=/bin/mkdir -p /srv/kubernetes/aws-iam-authenticator
-         ExecStart=/usr/local/bin/aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/aws-iam-authenticator/
-   ```
-  If using a non-default AMI that does not have the AWS CLI, replace the second ExecStart statement with
-
-  ```
-  ExecStart=/usr/bin/docker run --net=host --rm -v /srv/kubernetes/aws-iam-authenticator:/srv/kubernetes/aws-iam-authenticator quay.io/coreos/awscli@sha256:7b893bfb22ac582587798b011024f40871cd7424b9026595fd99c2b69492791d aws s3 cp --recursive s3://KOPS_STATE_STORE/CLUSTER_NAME/addons/authenticator /srv/kubernetes/aws-iam-authenticator/
-  ```
-3. Apply the changes with `kops update cluster ${CLUSTER_NAME}`.
-   If the cluster already exists, roll the cluster with `kops rolling-update cluster ${CLUSTER_NAME}` in order to recreate the master nodes.
-4. Update the Authenticator DaemonSet's state and output volumes to both use `/srv/kubernetes/aws-iam-authenticator/` for their `hostPath`s.
-5. Apply the DaemonSet and ConfigMap resource manifests to launch the Authenticator server on the cluster.
-
-*Note:* Certain Kops commands will overwrite the `ExecCredential` in kubeconfig so it may need to be restored manually. See [kubernetes/kops#5051](https://github.com/kubernetes/kops/issues/5051) for more information.
-
+Clusters managed by [Kops](https://github.com/kubernetes/kops) can be configured to use Authenticator. For usage instructions see the [Kops documentation](https://github.com/kubernetes/kops/blob/master/docs/authentication.md#aws-iam-authenticator).
 
 ## How does it work?
 It works using the AWS [`sts:GetCallerIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html) API endpoint.
@@ -240,6 +196,80 @@ users:
 This method allows the appropriate profile to be used implicitly. Note that any environment variables set as part of the `exec` flow will
 take precedence over what's already set in your environment.
 
+#### Note for federated users:
+Federated AWS users often will have a "meaningful" attribute mapped onto their assumed role, such as an email address, through the account's AWS configuration.
+These assumed sessions have [a few parts](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#principaltable), the `role id`
+and `caller-specified-role-name`. By default, when a federated user uses the `--role` option of `aws-iam-authenticator` to assume a new role the
+`caller-specified-role-name` will be converted to a random token and the `role id` carries through to the newly assumed role.
+
+Using `aws-iam-authenticator token ... --forward-session-name` will map the original `caller-specified-role-name` attribute onto the new STS assumed session.
+This can be helpful for quickly attempting to associate "who performed action X on the K8 cluster".
+
+Please note, **this should not be considered definitive** and needs to be cross referenced via the `role id` (which remains consistent) with CloudTrail logs
+as a user could potentially change this on the client side.
+
+## API Authorization from Outside a Cluster
+
+It is possible to make requests to the Kubernetes API from a client that is outside the cluster, be that using the 
+bare Kubernetes REST API or from one of the language specific Kubernetes clients 
+(e.g., [Python](https://github.com/kubernetes-client/python)). In order to do so, you must create a bearer token that
+is included with the request to the API. This bearer token requires you append the string `k8s-aws-v1.` with a 
+base64 encoded string of a signed HTTP request to the STS GetCallerIdentity Query API. This is then sent it in the 
+`Authorization`  header of the request.  Something to note though is that the IAM Authenticator explicitly omits 
+base64 padding to avoid any `=` characters thus guaranteeing a string safe to use in URLs. Below is an example in 
+Python on how this token would be constructed:
+
+```python
+import base64
+import boto3
+import re
+from botocore.signers import RequestSigner
+
+def get_bearer_token(cluster_id, region):
+    STS_TOKEN_EXPIRES_IN = 60
+    session = boto3.session.Session()
+
+    client = session.client('sts', region_name=region)
+    service_id = client.meta.service_model.service_id
+
+    signer = RequestSigner(
+        service_id,
+        region,
+        'sts',
+        'v4',
+        session.get_credentials(),
+        session.events
+    )
+
+    params = {
+        'method': 'GET',
+        'url': 'https://sts.{}.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15'.format(region),
+        'body': {},
+        'headers': {
+            'x-k8s-aws-id': cluster_id
+        },
+        'context': {}
+    }
+
+    signed_url = signer.generate_presigned_url(
+        params,
+        region_name=region,
+        expires_in=STS_TOKEN_EXPIRES_IN,
+        operation_name=''
+    )
+
+    base64_url = base64.urlsafe_b64encode(signed_url.encode('utf-8')).decode('utf-8')
+
+    # remove any base64 encoding padding:
+    return 'k8s-aws-v1.' + re.sub(r'=*', '', base64_url)
+    
+# If making a HTTP request you would create the authorization headers as follows:
+
+headers = {'Authorization': 'Bearer ' + get_bearer_token('my_cluster', 'us-east-1')}
+
+```
+
+
 ## Troubleshooting
 
 If your client fails with an error like `could not get token: AccessDenied [...]`, you can try assuming the role with the AWS CLI directly:
@@ -258,6 +288,8 @@ If that fails, there are a few possible problems to check for:
  - Make sure your source principal (user/role/group) has an IAM policy that allows `sts:AssumeRole` for the target role.
 
  - Make sure you don't have any explicit deny policies attached to your user, group, or in AWS Organizations that would prevent the `sts:AssumeRole`.
+
+ - Try simulating the `sts:AssumeRole` call in the [Policy Simulator](https://policysim.aws.amazon.com/home/index.jsp).
 
 ## Full Configuration Format
 The client and server have the same configuration format.
@@ -343,3 +375,16 @@ server:
   - "456789012345"
 
 ```
+
+## Community, discussion, contribution, and support
+
+Learn how to engage with the Kubernetes community on the [community page](http://kubernetes.io/community/).
+
+You can reach the maintainers of this project at:
+
+- [Slack](https://kubernetes.slack.com/messages/sig-aws)
+- [Mailing List](https://groups.google.com/forum/#!forum/kubernetes-sig-aws)
+
+### Code of conduct
+
+Participation in the Kubernetes community is governed by the [Kubernetes Code of Conduct](code-of-conduct.md).

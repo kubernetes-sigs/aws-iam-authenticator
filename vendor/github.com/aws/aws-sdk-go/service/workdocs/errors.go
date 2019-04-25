@@ -10,6 +10,13 @@ const (
 	// The resource hierarchy is changing.
 	ErrCodeConcurrentModificationException = "ConcurrentModificationException"
 
+	// ErrCodeConflictingOperationException for service response error code
+	// "ConflictingOperationException".
+	//
+	// Another operation is in progress on the resource that conflicts with the
+	// current operation.
+	ErrCodeConflictingOperationException = "ConflictingOperationException"
+
 	// ErrCodeCustomMetadataLimitExceededException for service response error code
 	// "CustomMetadataLimitExceededException".
 	//
@@ -53,8 +60,8 @@ const (
 	// "FailedDependencyException".
 	//
 	// The AWS Directory Service cannot reach an on-premises instance. Or a dependency
-	// under the control of the organization is failing, such as a connected active
-	// directory.
+	// under the control of the organization is failing, such as a connected Active
+	// Directory.
 	ErrCodeFailedDependencyException = "FailedDependencyException"
 
 	// ErrCodeIllegalUserStateException for service response error code
@@ -66,14 +73,26 @@ const (
 	// ErrCodeInvalidArgumentException for service response error code
 	// "InvalidArgumentException".
 	//
-	// The pagination marker and/or limit fields are not valid.
+	// The pagination marker or limit fields are not valid.
 	ErrCodeInvalidArgumentException = "InvalidArgumentException"
+
+	// ErrCodeInvalidCommentOperationException for service response error code
+	// "InvalidCommentOperationException".
+	//
+	// The requested operation is not allowed on the specified comment object.
+	ErrCodeInvalidCommentOperationException = "InvalidCommentOperationException"
 
 	// ErrCodeInvalidOperationException for service response error code
 	// "InvalidOperationException".
 	//
 	// The operation is invalid.
 	ErrCodeInvalidOperationException = "InvalidOperationException"
+
+	// ErrCodeInvalidPasswordException for service response error code
+	// "InvalidPasswordException".
+	//
+	// The password is invalid.
+	ErrCodeInvalidPasswordException = "InvalidPasswordException"
 
 	// ErrCodeLimitExceededException for service response error code
 	// "LimitExceededException".
@@ -86,6 +105,13 @@ const (
 	//
 	// The specified document version is not in the INITIALIZED state.
 	ErrCodeProhibitedStateException = "ProhibitedStateException"
+
+	// ErrCodeRequestedEntityTooLargeException for service response error code
+	// "RequestedEntityTooLargeException".
+	//
+	// The response is too large to return. The request must include a filter to
+	// reduce the size of the response.
+	ErrCodeRequestedEntityTooLargeException = "RequestedEntityTooLargeException"
 
 	// ErrCodeResourceAlreadyCheckedOutException for service response error code
 	// "ResourceAlreadyCheckedOutException".

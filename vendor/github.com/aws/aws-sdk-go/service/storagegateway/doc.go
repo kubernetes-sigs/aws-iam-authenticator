@@ -12,25 +12,25 @@
 // Use the following links to get started using the AWS Storage Gateway Service
 // API Reference:
 //
-//    * AWS Storage Gateway Required Request Headers (http://docs.aws.amazon.com/storagegateway/latest/userguide/AWSStorageGatewayAPI.html#AWSStorageGatewayHTTPRequestsHeaders):
+//    * AWS Storage Gateway Required Request Headers (https://docs.aws.amazon.com/storagegateway/latest/userguide/AWSStorageGatewayAPI.html#AWSStorageGatewayHTTPRequestsHeaders):
 //    Describes the required headers that you must send with every POST request
 //    to AWS Storage Gateway.
 //
-//    * Signing Requests (http://docs.aws.amazon.com/storagegateway/latest/userguide/AWSStorageGatewayAPI.html#AWSStorageGatewaySigningRequests):
+//    * Signing Requests (https://docs.aws.amazon.com/storagegateway/latest/userguide/AWSStorageGatewayAPI.html#AWSStorageGatewaySigningRequests):
 //    AWS Storage Gateway requires that you authenticate every request you send;
 //    this topic describes how sign such a request.
 //
-//    * Error Responses (http://docs.aws.amazon.com/storagegateway/latest/userguide/AWSStorageGatewayAPI.html#APIErrorResponses):
+//    * Error Responses (https://docs.aws.amazon.com/storagegateway/latest/userguide/AWSStorageGatewayAPI.html#APIErrorResponses):
 //    Provides reference information about AWS Storage Gateway errors.
 //
-//    * Operations in AWS Storage Gateway (http://docs.aws.amazon.com/storagegateway/latest/APIReference/API_Operations.html):
+//    * Operations in AWS Storage Gateway (https://docs.aws.amazon.com/storagegateway/latest/APIReference/API_Operations.html):
 //    Contains detailed descriptions of all AWS Storage Gateway operations,
 //    their request parameters, response elements, possible errors, and examples
 //    of requests and responses.
 //
 //    * AWS Storage Gateway Regions and Endpoints: (http://docs.aws.amazon.com/general/latest/gr/rande.html#sg_region)
-//    Provides a list of each region and endpoints available for use with AWS
-//    Storage Gateway.
+//    Provides a list of each AWS region and endpoints available for use with
+//    AWS Storage Gateway.
 //
 // AWS Storage Gateway resource IDs are in uppercase. When you use these resource
 // IDs with the Amazon EC2 API, EC2 expects resource IDs in lowercase. You must
@@ -63,7 +63,7 @@
 //
 // Using the Client
 //
-// To AWS Storage Gateway with the SDK use the New function to create
+// To contact AWS Storage Gateway with the SDK use the New function to create
 // a new service client. With that client you can make API requests to the service.
 // These clients are safe to use concurrently.
 //

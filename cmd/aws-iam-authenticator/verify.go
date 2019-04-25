@@ -70,8 +70,8 @@ var verifyCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(verifyCmd)
-	verifyCmd.Flags().StringP("token", "t", "", "Verify this token")
-	verifyCmd.Flags().StringP("output", "o", "", "Output format. Only `json` is supported currenty.")
+	verifyCmd.Flags().StringP("token", "t", "", "Token to verify")
+	verifyCmd.Flags().StringP("output", "o", "", "Output format. Only `json` is supported currently.")
 	viper.BindPFlag("token", verifyCmd.Flags().Lookup("token"))
 	viper.BindPFlag("output", verifyCmd.Flags().Lookup("output"))
 }

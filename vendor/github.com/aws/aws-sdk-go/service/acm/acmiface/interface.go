@@ -72,6 +72,10 @@ type ACMAPI interface {
 	DescribeCertificateWithContext(aws.Context, *acm.DescribeCertificateInput, ...request.Option) (*acm.DescribeCertificateOutput, error)
 	DescribeCertificateRequest(*acm.DescribeCertificateInput) (*request.Request, *acm.DescribeCertificateOutput)
 
+	ExportCertificate(*acm.ExportCertificateInput) (*acm.ExportCertificateOutput, error)
+	ExportCertificateWithContext(aws.Context, *acm.ExportCertificateInput, ...request.Option) (*acm.ExportCertificateOutput, error)
+	ExportCertificateRequest(*acm.ExportCertificateInput) (*request.Request, *acm.ExportCertificateOutput)
+
 	GetCertificate(*acm.GetCertificateInput) (*acm.GetCertificateOutput, error)
 	GetCertificateWithContext(aws.Context, *acm.GetCertificateInput, ...request.Option) (*acm.GetCertificateOutput, error)
 	GetCertificateRequest(*acm.GetCertificateInput) (*request.Request, *acm.GetCertificateOutput)
@@ -95,6 +99,10 @@ type ACMAPI interface {
 	RemoveTagsFromCertificateWithContext(aws.Context, *acm.RemoveTagsFromCertificateInput, ...request.Option) (*acm.RemoveTagsFromCertificateOutput, error)
 	RemoveTagsFromCertificateRequest(*acm.RemoveTagsFromCertificateInput) (*request.Request, *acm.RemoveTagsFromCertificateOutput)
 
+	RenewCertificate(*acm.RenewCertificateInput) (*acm.RenewCertificateOutput, error)
+	RenewCertificateWithContext(aws.Context, *acm.RenewCertificateInput, ...request.Option) (*acm.RenewCertificateOutput, error)
+	RenewCertificateRequest(*acm.RenewCertificateInput) (*request.Request, *acm.RenewCertificateOutput)
+
 	RequestCertificate(*acm.RequestCertificateInput) (*acm.RequestCertificateOutput, error)
 	RequestCertificateWithContext(aws.Context, *acm.RequestCertificateInput, ...request.Option) (*acm.RequestCertificateOutput, error)
 	RequestCertificateRequest(*acm.RequestCertificateInput) (*request.Request, *acm.RequestCertificateOutput)
@@ -102,6 +110,13 @@ type ACMAPI interface {
 	ResendValidationEmail(*acm.ResendValidationEmailInput) (*acm.ResendValidationEmailOutput, error)
 	ResendValidationEmailWithContext(aws.Context, *acm.ResendValidationEmailInput, ...request.Option) (*acm.ResendValidationEmailOutput, error)
 	ResendValidationEmailRequest(*acm.ResendValidationEmailInput) (*request.Request, *acm.ResendValidationEmailOutput)
+
+	UpdateCertificateOptions(*acm.UpdateCertificateOptionsInput) (*acm.UpdateCertificateOptionsOutput, error)
+	UpdateCertificateOptionsWithContext(aws.Context, *acm.UpdateCertificateOptionsInput, ...request.Option) (*acm.UpdateCertificateOptionsOutput, error)
+	UpdateCertificateOptionsRequest(*acm.UpdateCertificateOptionsInput) (*request.Request, *acm.UpdateCertificateOptionsOutput)
+
+	WaitUntilCertificateValidated(*acm.DescribeCertificateInput) error
+	WaitUntilCertificateValidatedWithContext(aws.Context, *acm.DescribeCertificateInput, ...request.WaiterOption) error
 }
 
 var _ ACMAPI = (*acm.ACM)(nil)

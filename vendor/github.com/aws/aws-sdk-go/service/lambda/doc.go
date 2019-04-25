@@ -7,8 +7,8 @@
 //
 // This is the AWS Lambda API Reference. The AWS Lambda Developer Guide provides
 // additional information. For the service overview, see What is AWS Lambda
-// (http://docs.aws.amazon.com/lambda/latest/dg/welcome.html), and for information
-// about how the service works, see AWS Lambda: How it Works (http://docs.aws.amazon.com/lambda/latest/dg/lambda-introduction.html)
+// (https://docs.aws.amazon.com/lambda/latest/dg/welcome.html), and for information
+// about how the service works, see AWS Lambda: How it Works (https://docs.aws.amazon.com/lambda/latest/dg/lambda-introduction.html)
 // in the AWS Lambda Developer Guide.
 //
 // See https://docs.aws.amazon.com/goto/WebAPI/lambda-2015-03-31 for more information on this service.
@@ -18,7 +18,7 @@
 //
 // Using the Client
 //
-// To AWS Lambda with the SDK use the New function to create
+// To contact AWS Lambda with the SDK use the New function to create
 // a new service client. With that client you can make API requests to the service.
 // These clients are safe to use concurrently.
 //

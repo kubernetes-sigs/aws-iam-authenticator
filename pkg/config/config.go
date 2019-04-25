@@ -28,7 +28,7 @@ func (c *Config) ListenURL() string {
 }
 
 func (c *Config) ListenAddr() string {
-	return fmt.Sprintf("%d:%d", c.Hostname, c.HostPort)
+	return fmt.Sprintf("%s:%d", c.Hostname, c.HostPort)
 }
 
 func (c *Config) GenerateFiles() error {

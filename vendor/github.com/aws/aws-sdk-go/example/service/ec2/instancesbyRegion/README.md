@@ -1,17 +1,17 @@
 
 # Example  Fetch By region
 
-This is an example using the AWS SDK for Go to list ec2 instances instance state By different region . By default it fetch all running and stopped instance 
+This is an example using the AWS SDK for Go to list ec2 instances instance state By different region . By default it fetch all running and stopped instance
 
 
 # Usage
 
 
 ```sh
-# To fetch the stopped instance of all region use below:
+# To fetch the stopped and running instances of all region use below:
 ./filter_ec2_by_region --state running --state stopped
 
-# To fetch the stopped and running instance  for  region us-west-1 and eu-west-1 use below:
+# To fetch the stopped and running instances for region us-west-1 and eu-west-1 use below:
 ./filter_ec2_by_region --state running --state stopped --region us-west-1 --region=eu-west-1
 ```
 

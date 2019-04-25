@@ -57,7 +57,7 @@ func init() {
 	initCmd.Flags().String(
 		"hostname",
 		"localhost",
-		"Hostname that should be used for writing into the selfsigned certificates")
+		"Hostname that should be used for writing the self-signed certificates")
 	viper.BindPFlag("server.hostname", initCmd.Flags().Lookup("hostname"))
 
 	initCmd.Flags().String(

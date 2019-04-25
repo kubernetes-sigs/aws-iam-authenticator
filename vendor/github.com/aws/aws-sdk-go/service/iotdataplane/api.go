@@ -14,8 +14,8 @@ const opDeleteThingShadow = "DeleteThingShadow"
 
 // DeleteThingShadowRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteThingShadow operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -114,8 +114,8 @@ const opGetThingShadow = "GetThingShadow"
 
 // GetThingShadowRequest generates a "aws/request.Request" representing the
 // client's request for the GetThingShadow operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -214,8 +214,8 @@ const opPublish = "Publish"
 
 // PublishRequest generates a "aws/request.Request" representing the
 // client's request for the Publish operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -247,8 +247,7 @@ func (c *IoTDataPlane) PublishRequest(input *PublishInput) (req *request.Request
 
 	output = &PublishOutput{}
 	req = c.newRequest(op, input, output)
-	req.Handlers.Unmarshal.Remove(restjson.UnmarshalHandler)
-	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler)
+	req.Handlers.Unmarshal.Swap(restjson.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
 	return
 }
 
@@ -304,8 +303,8 @@ const opUpdateThingShadow = "UpdateThingShadow"
 
 // UpdateThingShadowRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateThingShadow operation. The "output" return
-// value will be populated with the request's response once the request complets
-// successfuly.
+// value will be populated with the request's response once the request completes
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -568,6 +567,9 @@ func (s *PublishInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "PublishInput"}
 	if s.Topic == nil {
 		invalidParams.Add(request.NewErrParamRequired("Topic"))
+	}
+	if s.Topic != nil && len(*s.Topic) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Topic", 1))
 	}
 
 	if invalidParams.Len() > 0 {

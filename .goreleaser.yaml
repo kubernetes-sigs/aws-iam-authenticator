@@ -1,9 +1,6 @@
 # Configuration for https://goreleaser.com/
 project_name: authenticator
 
-git:
-  short_hash: true
-
 builds:
   - binary: aws-iam-authenticator
     main: ./cmd/aws-iam-authenticator/
@@ -19,50 +16,45 @@ builds:
       - "-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}"
 
 dockers:
-  - image: gcr.io/heptio-images/authenticator
+  - image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator
     binary: aws-iam-authenticator
     dockerfile: Dockerfile.scratch
     tag_templates:
      - "{{ .Tag }}-scratch"
      - "{{ .Tag }}"
-    latest: false
-  - image: gcr.io/heptio-images/authenticator
+  - image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator
     binary: aws-iam-authenticator
     dockerfile: Dockerfile.alpine-3.6
     tag_templates:
      - "{{ .Tag }}-alpine-3.6"
-    latest: false
-  - image: gcr.io/heptio-images/authenticator
+  - image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator
     binary: aws-iam-authenticator
     dockerfile: Dockerfile.alpine-3.7
     tag_templates:
      - "{{ .Tag }}-alpine-3.7"
      - "{{ .Tag }}-alpine"
-    latest: false
-  - image: gcr.io/heptio-images/authenticator
+  - image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator
     binary: aws-iam-authenticator
     dockerfile: Dockerfile.debian-jessie
     tag_templates:
      - "{{ .Tag }}-debian-jessie"
-    latest: false
-  - image: gcr.io/heptio-images/authenticator
+  - image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator
     binary: aws-iam-authenticator
     dockerfile: Dockerfile.debian-stretch
     tag_templates:
      - "{{ .Tag }}-debian-stretch"
      - "{{ .Tag }}-debian"
-    latest: false
 
 snapshot:
-  name_template: "git-{{.Commit}}"
+  name_template: "git-{{.ShortCommit}}"
 
 archive:
   format: binary
 
 release:
   github:
-    owner: heptio
-    name: authenticator
+    owner: kubernetes-sigs
+    name: aws-iam-authenticator
   draft: true
-  prerelease: true
+  prerelease: false
   name_template: "v{{.Version}}"

@@ -88,6 +88,10 @@ type SFNAPI interface {
 	DescribeStateMachineWithContext(aws.Context, *sfn.DescribeStateMachineInput, ...request.Option) (*sfn.DescribeStateMachineOutput, error)
 	DescribeStateMachineRequest(*sfn.DescribeStateMachineInput) (*request.Request, *sfn.DescribeStateMachineOutput)
 
+	DescribeStateMachineForExecution(*sfn.DescribeStateMachineForExecutionInput) (*sfn.DescribeStateMachineForExecutionOutput, error)
+	DescribeStateMachineForExecutionWithContext(aws.Context, *sfn.DescribeStateMachineForExecutionInput, ...request.Option) (*sfn.DescribeStateMachineForExecutionOutput, error)
+	DescribeStateMachineForExecutionRequest(*sfn.DescribeStateMachineForExecutionInput) (*request.Request, *sfn.DescribeStateMachineForExecutionOutput)
+
 	GetActivityTask(*sfn.GetActivityTaskInput) (*sfn.GetActivityTaskOutput, error)
 	GetActivityTaskWithContext(aws.Context, *sfn.GetActivityTaskInput, ...request.Option) (*sfn.GetActivityTaskOutput, error)
 	GetActivityTaskRequest(*sfn.GetActivityTaskInput) (*request.Request, *sfn.GetActivityTaskOutput)
@@ -120,6 +124,10 @@ type SFNAPI interface {
 	ListStateMachinesPages(*sfn.ListStateMachinesInput, func(*sfn.ListStateMachinesOutput, bool) bool) error
 	ListStateMachinesPagesWithContext(aws.Context, *sfn.ListStateMachinesInput, func(*sfn.ListStateMachinesOutput, bool) bool, ...request.Option) error
 
+	ListTagsForResource(*sfn.ListTagsForResourceInput) (*sfn.ListTagsForResourceOutput, error)
+	ListTagsForResourceWithContext(aws.Context, *sfn.ListTagsForResourceInput, ...request.Option) (*sfn.ListTagsForResourceOutput, error)
+	ListTagsForResourceRequest(*sfn.ListTagsForResourceInput) (*request.Request, *sfn.ListTagsForResourceOutput)
+
 	SendTaskFailure(*sfn.SendTaskFailureInput) (*sfn.SendTaskFailureOutput, error)
 	SendTaskFailureWithContext(aws.Context, *sfn.SendTaskFailureInput, ...request.Option) (*sfn.SendTaskFailureOutput, error)
 	SendTaskFailureRequest(*sfn.SendTaskFailureInput) (*request.Request, *sfn.SendTaskFailureOutput)
@@ -139,6 +147,18 @@ type SFNAPI interface {
 	StopExecution(*sfn.StopExecutionInput) (*sfn.StopExecutionOutput, error)
 	StopExecutionWithContext(aws.Context, *sfn.StopExecutionInput, ...request.Option) (*sfn.StopExecutionOutput, error)
 	StopExecutionRequest(*sfn.StopExecutionInput) (*request.Request, *sfn.StopExecutionOutput)
+
+	TagResource(*sfn.TagResourceInput) (*sfn.TagResourceOutput, error)
+	TagResourceWithContext(aws.Context, *sfn.TagResourceInput, ...request.Option) (*sfn.TagResourceOutput, error)
+	TagResourceRequest(*sfn.TagResourceInput) (*request.Request, *sfn.TagResourceOutput)
+
+	UntagResource(*sfn.UntagResourceInput) (*sfn.UntagResourceOutput, error)
+	UntagResourceWithContext(aws.Context, *sfn.UntagResourceInput, ...request.Option) (*sfn.UntagResourceOutput, error)
+	UntagResourceRequest(*sfn.UntagResourceInput) (*request.Request, *sfn.UntagResourceOutput)
+
+	UpdateStateMachine(*sfn.UpdateStateMachineInput) (*sfn.UpdateStateMachineOutput, error)
+	UpdateStateMachineWithContext(aws.Context, *sfn.UpdateStateMachineInput, ...request.Option) (*sfn.UpdateStateMachineOutput, error)
+	UpdateStateMachineRequest(*sfn.UpdateStateMachineInput) (*request.Request, *sfn.UpdateStateMachineOutput)
 }
 
 var _ SFNAPI = (*sfn.SFN)(nil)

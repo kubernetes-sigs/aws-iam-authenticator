@@ -18,7 +18,7 @@
 // Endpoints
 //
 // For a list of region-specific endpoints that AWS Elastic Beanstalk supports,
-// go to Regions and Endpoints (http://docs.aws.amazon.com/general/latest/gr/rande.html#elasticbeanstalk_region)
+// go to Regions and Endpoints (https://docs.aws.amazon.com/general/latest/gr/rande.html#elasticbeanstalk_region)
 // in the Amazon Web Services Glossary.
 //
 // See https://docs.aws.amazon.com/goto/WebAPI/elasticbeanstalk-2010-12-01 for more information on this service.
@@ -28,7 +28,7 @@
 //
 // Using the Client
 //
-// To AWS Elastic Beanstalk with the SDK use the New function to create
+// To contact AWS Elastic Beanstalk with the SDK use the New function to create
 // a new service client. With that client you can make API requests to the service.
 // These clients are safe to use concurrently.
 //

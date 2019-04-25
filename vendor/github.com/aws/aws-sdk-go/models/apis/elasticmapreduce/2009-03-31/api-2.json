@@ -7,9 +7,9 @@
     "protocol":"json",
     "serviceAbbreviation":"Amazon EMR",
     "serviceFullName":"Amazon Elastic MapReduce",
+    "serviceId":"EMR",
     "signatureVersion":"v4",
     "targetPrefix":"ElasticMapReduce",
-    "timestampFormat":"unixTimestamp",
     "uid":"elasticmapreduce-2009-03-31"
   },
   "operations":{
@@ -602,7 +602,8 @@
         "ScaleDownBehavior":{"shape":"ScaleDownBehavior"},
         "CustomAmiId":{"shape":"XmlStringMaxLen256"},
         "EbsRootVolumeSize":{"shape":"Integer"},
-        "RepoUpgradeOnBoot":{"shape":"RepoUpgradeOnBoot"}
+        "RepoUpgradeOnBoot":{"shape":"RepoUpgradeOnBoot"},
+        "KerberosAttributes":{"shape":"KerberosAttributes"}
       }
     },
     "ClusterId":{"type":"string"},
@@ -1038,6 +1039,9 @@
         "RunningInstanceCount":{"shape":"Integer"},
         "Status":{"shape":"InstanceGroupStatus"},
         "Configurations":{"shape":"ConfigurationList"},
+        "ConfigurationsVersion":{"shape":"Long"},
+        "LastSuccessfullyAppliedConfigurations":{"shape":"ConfigurationList"},
+        "LastSuccessfullyAppliedConfigurationsVersion":{"shape":"Long"},
         "EbsBlockDevices":{"shape":"EbsBlockDeviceList"},
         "EbsOptimized":{"shape":"BooleanObject"},
         "ShrinkPolicy":{"shape":"ShrinkPolicy"},
@@ -1115,7 +1119,8 @@
         "InstanceGroupId":{"shape":"XmlStringMaxLen256"},
         "InstanceCount":{"shape":"Integer"},
         "EC2InstanceIdsToTerminate":{"shape":"EC2InstanceIdsToTerminateList"},
-        "ShrinkPolicy":{"shape":"ShrinkPolicy"}
+        "ShrinkPolicy":{"shape":"ShrinkPolicy"},
+        "Configurations":{"shape":"ConfigurationList"}
       }
     },
     "InstanceGroupModifyConfigList":{
@@ -1128,6 +1133,7 @@
         "PROVISIONING",
         "BOOTSTRAPPING",
         "RUNNING",
+        "RECONFIGURING",
         "RESIZING",
         "SUSPENDED",
         "TERMINATING",
@@ -1416,6 +1422,20 @@
         "HadoopVersion":{"shape":"XmlStringMaxLen256"}
       }
     },
+    "KerberosAttributes":{
+      "type":"structure",
+      "required":[
+        "Realm",
+        "KdcAdminPassword"
+      ],
+      "members":{
+        "Realm":{"shape":"XmlStringMaxLen256"},
+        "KdcAdminPassword":{"shape":"XmlStringMaxLen256"},
+        "CrossRealmTrustPrincipalPassword":{"shape":"XmlStringMaxLen256"},
+        "ADDomainJoinUser":{"shape":"XmlStringMaxLen256"},
+        "ADDomainJoinPassword":{"shape":"XmlStringMaxLen256"}
+      }
+    },
     "KeyValue":{
       "type":"structure",
       "members":{
@@ -1538,6 +1558,7 @@
         "Marker":{"shape":"Marker"}
       }
     },
+    "Long":{"type":"long"},
     "Marker":{"type":"string"},
     "MarketType":{
       "type":"string",
@@ -1679,7 +1700,8 @@
         "ScaleDownBehavior":{"shape":"ScaleDownBehavior"},
         "CustomAmiId":{"shape":"XmlStringMaxLen256"},
         "EbsRootVolumeSize":{"shape":"Integer"},
-        "RepoUpgradeOnBoot":{"shape":"RepoUpgradeOnBoot"}
+        "RepoUpgradeOnBoot":{"shape":"RepoUpgradeOnBoot"},
+        "KerberosAttributes":{"shape":"KerberosAttributes"}
       }
     },
     "RunJobFlowOutput":{

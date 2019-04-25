@@ -7,9 +7,9 @@
     "protocol":"json",
     "serviceAbbreviation":"Kinesis Analytics",
     "serviceFullName":"Amazon Kinesis Analytics",
+    "serviceId":"Kinesis Analytics",
     "signatureVersion":"v4",
     "targetPrefix":"KinesisAnalytics_20150814",
-    "timestampFormat":"unixTimestamp",
     "uid":"kinesisanalytics-2015-08-14"
   },
   "operations":{
@@ -25,7 +25,8 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
-        {"shape":"ConcurrentModificationException"}
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "AddApplicationInput":{
@@ -41,7 +42,8 @@
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
         {"shape":"ConcurrentModificationException"},
-        {"shape":"CodeValidationException"}
+        {"shape":"CodeValidationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "AddApplicationInputProcessingConfiguration":{
@@ -56,7 +58,8 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
-        {"shape":"ConcurrentModificationException"}
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "AddApplicationOutput":{
@@ -71,7 +74,8 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
-        {"shape":"ConcurrentModificationException"}
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "AddApplicationReferenceDataSource":{
@@ -86,7 +90,8 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
-        {"shape":"ConcurrentModificationException"}
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "CreateApplication":{
@@ -115,7 +120,8 @@
       "errors":[
         {"shape":"ConcurrentModificationException"},
         {"shape":"ResourceNotFoundException"},
-        {"shape":"ResourceInUseException"}
+        {"shape":"ResourceInUseException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "DeleteApplicationCloudWatchLoggingOption":{
@@ -130,7 +136,8 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
-        {"shape":"ConcurrentModificationException"}
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "DeleteApplicationInputProcessingConfiguration":{
@@ -145,7 +152,8 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
-        {"shape":"ConcurrentModificationException"}
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "DeleteApplicationOutput":{
@@ -160,7 +168,8 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
-        {"shape":"ConcurrentModificationException"}
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "DeleteApplicationReferenceDataSource":{
@@ -175,7 +184,8 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
-        {"shape":"ConcurrentModificationException"}
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "DescribeApplication":{
@@ -187,7 +197,8 @@
       "input":{"shape":"DescribeApplicationRequest"},
       "output":{"shape":"DescribeApplicationResponse"},
       "errors":[
-        {"shape":"ResourceNotFoundException"}
+        {"shape":"ResourceNotFoundException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "DiscoverInputSchema":{
@@ -226,7 +237,8 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
-        {"shape":"InvalidApplicationConfigurationException"}
+        {"shape":"InvalidApplicationConfigurationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "StopApplication":{
@@ -239,7 +251,8 @@
       "output":{"shape":"StopApplicationResponse"},
       "errors":[
         {"shape":"ResourceNotFoundException"},
-        {"shape":"ResourceInUseException"}
+        {"shape":"ResourceInUseException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     },
     "UpdateApplication":{
@@ -255,7 +268,8 @@
         {"shape":"ResourceNotFoundException"},
         {"shape":"ResourceInUseException"},
         {"shape":"InvalidArgumentException"},
-        {"shape":"ConcurrentModificationException"}
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"UnsupportedOperationException"}
       ]
     }
   },
@@ -354,7 +368,7 @@
     },
     "ApplicationCode":{
       "type":"string",
-      "max":51200,
+      "max":102400,
       "min":0
     },
     "ApplicationDescription":{
@@ -633,6 +647,7 @@
     },
     "DestinationSchema":{
       "type":"structure",
+      "required":["RecordFormatType"],
       "members":{
         "RecordFormatType":{"shape":"RecordFormatType"}
       }
@@ -958,6 +973,31 @@
         "RoleARNUpdate":{"shape":"RoleARN"}
       }
     },
+    "LambdaOutput":{
+      "type":"structure",
+      "required":[
+        "ResourceARN",
+        "RoleARN"
+      ],
+      "members":{
+        "ResourceARN":{"shape":"ResourceARN"},
+        "RoleARN":{"shape":"RoleARN"}
+      }
+    },
+    "LambdaOutputDescription":{
+      "type":"structure",
+      "members":{
+        "ResourceARN":{"shape":"ResourceARN"},
+        "RoleARN":{"shape":"RoleARN"}
+      }
+    },
+    "LambdaOutputUpdate":{
+      "type":"structure",
+      "members":{
+        "ResourceARNUpdate":{"shape":"ResourceARN"},
+        "RoleARNUpdate":{"shape":"RoleARN"}
+      }
+    },
     "LimitExceededException":{
       "type":"structure",
       "members":{
@@ -1011,6 +1051,7 @@
         "Name":{"shape":"InAppStreamName"},
         "KinesisStreamsOutput":{"shape":"KinesisStreamsOutput"},
         "KinesisFirehoseOutput":{"shape":"KinesisFirehoseOutput"},
+        "LambdaOutput":{"shape":"LambdaOutput"},
         "DestinationSchema":{"shape":"DestinationSchema"}
       }
     },
@@ -1021,6 +1062,7 @@
         "Name":{"shape":"InAppStreamName"},
         "KinesisStreamsOutputDescription":{"shape":"KinesisStreamsOutputDescription"},
         "KinesisFirehoseOutputDescription":{"shape":"KinesisFirehoseOutputDescription"},
+        "LambdaOutputDescription":{"shape":"LambdaOutputDescription"},
         "DestinationSchema":{"shape":"DestinationSchema"}
       }
     },
@@ -1036,6 +1078,7 @@
         "NameUpdate":{"shape":"InAppStreamName"},
         "KinesisStreamsOutputUpdate":{"shape":"KinesisStreamsOutputUpdate"},
         "KinesisFirehoseOutputUpdate":{"shape":"KinesisFirehoseOutputUpdate"},
+        "LambdaOutputUpdate":{"shape":"LambdaOutputUpdate"},
         "DestinationSchemaUpdate":{"shape":"DestinationSchema"}
       }
     },
@@ -1303,6 +1346,13 @@
         "message":{"shape":"ErrorMessage"},
         "RawInputRecords":{"shape":"RawInputRecords"},
         "ProcessedInputRecords":{"shape":"ProcessedInputRecords"}
+      },
+      "exception":true
+    },
+    "UnsupportedOperationException":{
+      "type":"structure",
+      "members":{
+        "message":{"shape":"ErrorMessage"}
       },
       "exception":true
     },
