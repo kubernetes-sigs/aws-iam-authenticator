@@ -38,6 +38,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -355,14 +356,14 @@ type EC2Provider interface {
 }
 
 type ec2ProviderImpl struct {
-	sess            *session.Session
+	ec2             ec2iface.EC2API
 	privateDNSCache map[string]string
 	lock            sync.Mutex
 }
 
 func newEC2Provider(roleARN string) EC2Provider {
 	return &ec2ProviderImpl{
-		sess:            newSession(roleARN),
+		ec2:             ec2.New(newSession(roleARN)),
 		privateDNSCache: make(map[string]string),
 	}
 }
@@ -422,10 +423,8 @@ func (p *ec2ProviderImpl) getPrivateDNSName(id string) (string, error) {
 	}
 
 	// Look up instance from EC2 API
-	instanceIds := []*string{&id}
-	ec2Service := ec2.New(p.sess)
-	output, err := ec2Service.DescribeInstances(&ec2.DescribeInstancesInput{
-		InstanceIds: instanceIds,
+	output, err := p.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
+		InstanceIds: aws.StringSlice([]string{id}),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed querying private DNS from EC2 API for node %s: %s", id, err.Error())
