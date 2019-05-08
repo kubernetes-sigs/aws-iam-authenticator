@@ -26,6 +26,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"k8s.io/component-base/featuregate"
 )
 
 var cfgFile string
@@ -34,6 +36,8 @@ var rootCmd = &cobra.Command{
 	Use:   "aws-iam-authenticator",
 	Short: "A tool to authenticate to Kubernetes using AWS IAM credentials",
 }
+
+var featureGates = featuregate.NewFeatureGate()
 
 func main() {
 	Execute()
@@ -57,10 +61,12 @@ func init() {
 		"cluster-id",
 		"i",
 		"",
-		"Specify the cluster `ID`, a unique-per-cluster identifier for your aws-iam-authenticator installation.",
-	)
+		"Specify the cluster `ID`, a unique-per-cluster identifier for your aws-iam-authenticator installation.")
 	viper.BindPFlag("clusterID", rootCmd.PersistentFlags().Lookup("cluster-id"))
 	viper.BindEnv("clusterID", "KUBERNETES_AWS_AUTHENTICATOR_CLUSTER_ID")
+
+	featureGates.Add(config.DefaultFeatureGates)
+	featureGates.AddFlag(rootCmd.PersistentFlags())
 }
 
 func initConfig() {
@@ -76,7 +82,7 @@ func initConfig() {
 }
 
 func getConfig() (config.Config, error) {
-	config := config.Config{
+	cfg := config.Config{
 		ClusterID:                         viper.GetString("clusterID"),
 		ServerEC2DescribeInstancesRoleARN: viper.GetString("server.ec2DescribeInstancesRoleARN"),
 		HostPort:                          viper.GetInt("server.port"),
@@ -85,22 +91,25 @@ func getConfig() (config.Config, error) {
 		KubeconfigPregenerated:            viper.GetBool("server.kubeconfigPregenerated"),
 		StateDir:                          viper.GetString("server.stateDir"),
 		Address:                           viper.GetString("server.address"),
+		Kubeconfig:                        viper.GetString("server.kubeconfig"),
+		Master:                            viper.GetString("server.master"),
+		FeatureGates:                      featureGates,
 	}
-	if err := viper.UnmarshalKey("server.mapRoles", &config.RoleMappings); err != nil {
-		return config, fmt.Errorf("invalid server role mappings: %v", err)
+	if err := viper.UnmarshalKey("server.mapRoles", &cfg.RoleMappings); err != nil {
+		return cfg, fmt.Errorf("invalid server role mappings: %v", err)
 	}
-	if err := viper.UnmarshalKey("server.mapUsers", &config.UserMappings); err != nil {
+	if err := viper.UnmarshalKey("server.mapUsers", &cfg.UserMappings); err != nil {
 		logrus.WithError(err).Fatal("invalid server user mappings")
 	}
-	if err := viper.UnmarshalKey("server.mapAccounts", &config.AutoMappedAWSAccounts); err != nil {
+	if err := viper.UnmarshalKey("server.mapAccounts", &cfg.AutoMappedAWSAccounts); err != nil {
 		logrus.WithError(err).Fatal("invalid server account mappings")
 	}
 
-	if config.ClusterID == "" {
-		return config, errors.New("cluster ID cannot be empty")
+	if cfg.ClusterID == "" {
+		return cfg, errors.New("cluster ID cannot be empty")
 	}
 
-	return config, nil
+	return cfg, nil
 }
 
 func getLogFormatter() logrus.Formatter {

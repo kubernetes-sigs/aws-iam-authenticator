@@ -16,6 +16,10 @@ limitations under the License.
 
 package config
 
+import (
+	"k8s.io/component-base/featuregate"
+)
+
 // RoleMapping is a mapping of an AWS Role ARN to a Kubernetes username and a
 // list of Kubernetes groups. The username and groups are specified as templates
 // that may optionally contain two template parameters:
@@ -104,4 +108,16 @@ type Config struct {
 	// Address defines the hostname or IP Address to bind the HTTPS server to listen to. This is useful when creating
 	// a local server to handle the authentication request for development.
 	Address string
+
+	// Master is an optional param which configures api servers endpoint for listening for new CRDs
+	// +optional
+	Master string
+
+	// Kubeconfig is an optional param which configures the kubeconfig path for connecting to a specific
+	// API server this is useful for local development, allowing you to connect to a remote server.
+	// +optional
+	Kubeconfig string
+
+	// FeatureGates stores all the mutable feature gates for controlling how the authenticator works
+	FeatureGates featuregate.MutableFeatureGate
 }

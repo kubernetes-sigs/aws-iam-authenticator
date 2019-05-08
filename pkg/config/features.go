@@ -14,25 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package server
+package config
 
 import (
-	"net"
-	"net/http"
-
-	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/client-go/tools/cache"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"k8s.io/component-base/featuregate"
 )
 
-// Server for the authentication webhook.
-type Server struct {
-	// Config is the whole configuration of aws-iam-authenticator used for valid keys and certs, kubeconfig, and so on
-	config.Config
-	httpServer http.Server
-	listener   net.Listener
+const (
+	// IAMIdentityMappingCRD enables using CRDs to manage allowed users
+	IAMIdentityMappingCRD featuregate.Feature = "IAMIdentityMappingCRD"
+)
 
-	iamclientset      clientset.Interface
-	iamMappingsSynced cache.InformerSynced
-	iamMappingsIndex  cache.Indexer
+var DefaultFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
+	IAMIdentityMappingCRD: {Default: false, PreRelease: featuregate.Alpha},
 }

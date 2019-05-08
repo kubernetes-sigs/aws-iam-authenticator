@@ -44,6 +44,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
+
+	"k8s.io/client-go/tools/cache"
+
+	"k8s.io/component-base/featuregate"
+
+	iamauthenticatorv1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/apis/iamauthenticator/v1alpha1"
+	informers "sigs.k8s.io/aws-iam-authenticator/pkg/generated/informers/externalversions/iamauthenticator/v1alpha1"
 )
 
 // tokenReviewDenyJSON is a static encoding (at init time) of the 'deny' TokenReview
@@ -70,10 +77,12 @@ type handler struct {
 	http.ServeMux
 	lowercaseRoleMap map[string]config.RoleMapping
 	lowercaseUserMap map[string]config.UserMapping
+	iamMappingsIndex cache.Indexer
 	accountMap       map[string]bool
 	verifier         token.Verifier
 	metrics          metrics
 	ec2Provider      EC2Provider
+	featureGates     featuregate.MutableFeatureGate
 }
 
 // metrics are handles to the collectors for prometheous for the various metrics we are tracking.
@@ -91,15 +100,16 @@ const (
 	metricSuccess   = "success"
 )
 
-// New creates a new server from a config
-func New(config config.Config) *Server {
-	return &Server{
-		Config: config,
+// New the authentication webhook server.
+func New(
+	cfg config.Config,
+	iamMappingInformer informers.IAMIdentityMappingInformer) *Server {
+	c := &Server{
+		Config:            cfg,
+		iamMappingsSynced: iamMappingInformer.Informer().HasSynced,
+		iamMappingsIndex:  iamMappingInformer.Informer().GetIndexer(),
 	}
-}
 
-// Run the authentication webhook server.
-func (c *Server) Run() {
 	for _, mapping := range c.RoleMappings {
 		logrus.WithFields(logrus.Fields{
 			"role":     mapping.RoleARN,
@@ -114,6 +124,7 @@ func (c *Server) Run() {
 			"groups":   mapping.Groups,
 		}).Infof("mapping IAM user")
 	}
+
 	for _, account := range c.AutoMappedAWSAccounts {
 		logrus.WithField("accountID", account).Infof("mapping IAM Account")
 	}
@@ -140,7 +151,6 @@ func (c *Server) Run() {
 	if err != nil {
 		logrus.WithError(err).Fatal("could not open TLS listener")
 	}
-	defer listener.Close()
 
 	// create a logrus logger for HTTP error logs
 	errLog := logrus.WithField("http", "error").Writer()
@@ -148,22 +158,41 @@ func (c *Server) Run() {
 
 	logrus.Infof("listening on %s", listenURL)
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
-	httpServer := http.Server{
+	c.httpServer = http.Server{
 		ErrorLog: log.New(errLog, "", 0),
 		Handler:  c.getHandler(),
 	}
-	logrus.WithError(httpServer.Serve(listener)).Fatal("HTTP server exited")
+	c.listener = listener
+	return c
+}
+
+// Run will run the server closing the connection if there is a struct on the channel
+func (c *Server) Run(stopCh <-chan struct{}) {
+	defer c.listener.Close()
+
+	if c.FeatureGates.Enabled(config.IAMIdentityMappingCRD) {
+		if ok := cache.WaitForCacheSync(stopCh, c.iamMappingsSynced); !ok {
+			logrus.Fatal("failed to wait for caches to sync in server")
+		}
+	}
+
+	if err := c.httpServer.Serve(c.listener); err != nil {
+		logrus.WithError(err).Fatal("http server exited")
+	}
 }
 
 func (c *Server) getHandler() *handler {
 	h := &handler{
 		lowercaseRoleMap: make(map[string]config.RoleMapping),
 		lowercaseUserMap: make(map[string]config.UserMapping),
+		iamMappingsIndex: c.iamMappingsIndex,
 		accountMap:       make(map[string]bool),
 		verifier:         token.NewVerifier(c.ClusterID),
 		metrics:          createMetrics(),
 		ec2Provider:      newEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
+		featureGates:     c.FeatureGates,
 	}
+
 	for _, m := range c.RoleMappings {
 		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
 		if err != nil {
@@ -180,6 +209,7 @@ func (c *Server) getHandler() *handler {
 		}
 		h.lowercaseUserMap[canonicalizedARN] = m
 	}
+
 	for _, m := range c.AutoMappedAWSAccounts {
 		h.accountMap[m] = true
 	}
@@ -298,24 +328,62 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 }
 
 func (h *handler) doMapping(identity *token.Identity, arn string) (string, []string, error) {
-	if roleMapping, exists := h.lowercaseRoleMap[arn]; exists {
-		username, err := h.renderTemplate(roleMapping.Username, identity)
+	// IAMIdentityMappingCRD feature gate will only us the CRD implementation to validate users
+	if h.featureGates.Enabled(config.IAMIdentityMappingCRD) {
+		var iamidentity *iamauthenticatorv1alpha1.IAMIdentityMapping
+		var ok bool
+		objects, err := h.iamMappingsIndex.ByIndex("canonicalARN", arn)
 		if err != nil {
-			return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
+			return "", nil, fmt.Errorf("ARN is not in the index: %s", arn)
 		}
-		groups := []string{}
-		for _, groupPattern := range roleMapping.Groups {
-			group, err := h.renderTemplate(groupPattern, identity)
-			if err != nil {
-				return "", nil, fmt.Errorf("failed mapping group: %s", err.Error())
+
+		if len(objects) > 0 {
+			for _, obj := range objects {
+				iamidentity, ok = obj.(*iamauthenticatorv1alpha1.IAMIdentityMapping)
+				if !ok {
+					continue
+				}
 			}
-			groups = append(groups, group)
+
+			if iamidentity != nil {
+				username, err := h.renderTemplate(iamidentity.Spec.Username, identity)
+				if err != nil {
+					return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
+				}
+
+				groups := []string{}
+				for _, groupPattern := range iamidentity.Spec.Groups {
+					group, err := h.renderTemplate(groupPattern, identity)
+					if err != nil {
+						return "", nil, fmt.Errorf("failed mapping group: %s", err.Error())
+					}
+					groups = append(groups, group)
+				}
+
+				return username, groups, nil
+			}
 		}
-		return username, groups, nil
+	} else {
+		if roleMapping, exists := h.lowercaseRoleMap[arn]; exists {
+			username, err := h.renderTemplate(roleMapping.Username, identity)
+			if err != nil {
+				return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
+			}
+			groups := []string{}
+			for _, groupPattern := range roleMapping.Groups {
+				group, err := h.renderTemplate(groupPattern, identity)
+				if err != nil {
+					return "", nil, fmt.Errorf("failed mapping group: %s", err.Error())
+				}
+				groups = append(groups, group)
+			}
+			return username, groups, nil
+		}
+		if userMapping, exists := h.lowercaseUserMap[arn]; exists {
+			return userMapping.Username, userMapping.Groups, nil
+		}
 	}
-	if userMapping, exists := h.lowercaseUserMap[arn]; exists {
-		return userMapping.Username, userMapping.Groups, nil
-	}
+
 	if _, exists := h.accountMap[identity.AccountID]; exists {
 		return identity.CanonicalARN, []string{}, nil
 	}
@@ -323,7 +391,6 @@ func (h *handler) doMapping(identity *token.Identity, arn string) (string, []str
 }
 
 func (h *handler) renderTemplate(template string, identity *token.Identity) (string, error) {
-
 	// Private DNS requires EC2 API call
 	if strings.Contains(template, "{{EC2PrivateDNSName}}") {
 		if !instanceIDPattern.MatchString(identity.SessionName) {
