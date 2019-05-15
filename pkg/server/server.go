@@ -28,9 +28,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/arn"
-	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/config"
-	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/token"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"

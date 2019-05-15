@@ -13,9 +13,9 @@ import (
 
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
 
-	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/config"
-	"github.com/kubernetes-sigs/aws-iam-authenticator/pkg/token"
 	"github.com/prometheus/client_golang/prometheus"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
 func verifyBodyContains(t *testing.T, resp *httptest.ResponseRecorder, s string) {
