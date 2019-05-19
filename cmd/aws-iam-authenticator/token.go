@@ -32,6 +32,7 @@ var tokenCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		roleARN := viper.GetString("role")
+		externalID := viper.GetString("externalID")
 		clusterID := viper.GetString("clusterID")
 		tokenOnly := viper.GetBool("tokenOnly")
 		forwardSessionName := viper.GetBool("forwardSessionName")
@@ -53,7 +54,7 @@ var tokenCmd = &cobra.Command{
 		}
 		if roleARN != "" {
 			// if a role was provided, assume that role for the token
-			tok, err = gen.GetWithRole(clusterID, roleARN)
+			tok, err = gen.GetWithRole(clusterID, roleARN, externalID)
 		} else {
 			// otherwise sign the token with immediately available credentials
 			tok, err = gen.Get(clusterID)
@@ -74,12 +75,14 @@ var tokenCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(tokenCmd)
 	tokenCmd.Flags().StringP("role", "r", "", "Assume an IAM Role ARN before signing this token")
+	tokenCmd.Flags().StringP("external-id", "e", "", "External ID to pass when assuming the IAM Role")
 	tokenCmd.Flags().Bool("token-only", false, "Return only the token for use with Bearer token based tools")
 	tokenCmd.Flags().Bool("forward-session-name",
 		false,
 		"Enable mapping a federated sessions caller-specified-role-name attribute onto newly assumed sessions. NOTE: Only applicable when a new role is requested via --role")
 	tokenCmd.Flags().Bool("cache", false, "Cache the credential on disk until it expires. Uses the aws profile specified by AWS_PROFILE or the default profile.")
 	viper.BindPFlag("role", tokenCmd.Flags().Lookup("role"))
+	viper.BindPFlag("externalID", tokenCmd.Flags().Lookup("external-id"))
 	viper.BindPFlag("tokenOnly", tokenCmd.Flags().Lookup("token-only"))
 	viper.BindPFlag("forwardSessionName", tokenCmd.Flags().Lookup("forward-session-name"))
 	viper.BindPFlag("cache", tokenCmd.Flags().Lookup("cache"))
