@@ -100,7 +100,7 @@ users:
       args:
         - "token"
         - "-i"
-        - "CLUSTER_ID"
+        - "REPLACE_ME_WITH_YOUR_CLUSTER_ID"
         - "-r"
         - "REPLACE_ME_WITH_YOUR_ROLE_ARN"
   # no client certificate/key needed here!
