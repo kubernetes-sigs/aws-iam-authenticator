@@ -54,7 +54,7 @@ You can also skip this step and use:
 ### 2. Run the server
 The server is meant to run on each of your master nodes as a DaemonSet with host networking so it can expose a localhost port.
 
-For a sample ConfigMap and DaemonSet configuration, see [`example.yaml`](./example.yaml).
+For a sample ConfigMap and DaemonSet configuration, see [`deploy/example.yaml`](./deploy/example.yaml).
 
 #### (Optional) Pre-generate a certificate, key, and kubeconfig
 If you're building an automated installer, you can also pre-generate the certificate, key, and webhook kubeconfig files easily using `aws-iam-authenticator init`.
@@ -82,11 +82,42 @@ You may also need to restart the kubelet daemon on your master node to pick up t
 systemctl restart kubelet.service
 ```
 
+### Configure IAMIdentityMapping Custom Resource Definitions
+
+In the `master` version of the AWS IAM Authenticator you can configure your users using one of two methods. The deprecated `mapUsers` and `mapRoles` as seen in the [Full Configuration Format](#full-configuration-format) or using [Kubernetes Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/). This method allows the authenticator server to always stay upto date with the latest allowed user. See [Issues #79](https://github.com/kubernetes-sigs/aws-iam-authenticator/issues/79) for more details.
+
+To setup an `IAMIdentityMapping` CRD you'll first need to `apply` the CRD manifest:
+
+```
+kubectl apply -f deploy/iamidentitymapping.yaml
+```
+
+With the CRDs deployed you can then create Custom Resources which model your IAM Identities see [`./deploy/example-iamidentitymapping.yaml`](deploy/example-iamidentitymapping.yaml) :
+
+```
+---
+apiVersion: iamauthenticator.k8s.aws/v1alpha1
+kind: IAMIdentityMapping
+metadata:
+  name: kubernetes-admin
+spec:
+  # Arn of the User or Role to be allowed to authenticate
+  arn: arn:aws:iam::XXXXXXXXXXXX:user/KubernetesAdmin
+  # Username that Kubernetes will see the user as, this is useful for setting
+  # up allowed specific permissions for different users
+  username: kubernetes-admin
+  # Groups to be attached to your users/roles. For example `system:masters` to
+  # create cluster admin, or `system:nodes`, `system:bootstrappers` for nodes to
+  # access the API server.
+  groups:
+  - system:masters
+```
+
 ### 4. Set up kubectl to use authentication tokens provided by AWS IAM Authenticator for Kubernetes
 
 > This requires a 1.10+ `kubectl` binary to work. If you receive `Please enter Username:` when trying to use `kubectl` you need to update to the latest `kubectl`
 
-Finally, once the server is set up you'll want to authenticate!
+Finally, once the server is set up you'll want to authenticate.
 You will still need a `kubeconfig` that has the public data about your cluster (cluster CA certificate, endpoint address).
 The `users` section of your configuration, however, should include an exec section ([refer to the v1.10 docs](https://kubernetes.io/docs/admin/authentication/#client-go-credential-plugins))::
 ```yaml
@@ -316,6 +347,8 @@ server:
   # role to assume before querying EC2 API in order to discover metadata like EC2 private DNS Name
   ec2DescribeInstancesRoleARN: arn:aws:iam::000000000000:role/DescribeInstancesRole
 
+  # DEPRECATED: Going forward these roles will be defined using Custom 
+  # Resource definitions. See above Custom Resource Definitions for more info.
   # each mapRoles entry maps an IAM role to a username and set of groups
   # Each username and group can optionally contain template parameters:
   #  1) "{{AccountID}}" is the 12 digit AWS ID.
@@ -359,6 +392,8 @@ server:
     groups:
     - system:masters
 
+  # DEPRECATED: Going forward these roles will be defined using Custom 
+  # Resource definitions. See above Custom Resource Definitions for more info.
   # each mapUsers entry maps an IAM role to a static username and set of groups
   mapUsers:
   # map user IAM user Alice in 000000000000 to user "alice" in group "system:masters"
