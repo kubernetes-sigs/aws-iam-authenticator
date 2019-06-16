@@ -23,14 +23,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ListenURL returns the URL to listen on.
 func (c *Config) ListenURL() string {
 	return fmt.Sprintf("https://%s/authenticate", c.ListenAddr())
 }
 
+// ListenAddr returns the IP address and port mapping to bind with
 func (c *Config) ListenAddr() string {
 	return fmt.Sprintf("%s:%d", c.Hostname, c.HostPort)
 }
 
+// GenerateFiles will generate the certificate+provate key
 func (c *Config) GenerateFiles() error {
 	// load or generate a certificate+private key
 	_, err := c.GetOrCreateCertificate()
@@ -44,6 +47,7 @@ func (c *Config) GenerateFiles() error {
 	return nil
 }
 
+// CreateKubeconfig will create a kubeconfig for the webhook server
 func (c *Config) CreateKubeconfig() error {
 	cert, err := c.LoadExistingCertificate()
 	if err != nil {

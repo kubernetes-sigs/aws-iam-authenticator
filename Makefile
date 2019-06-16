@@ -3,7 +3,7 @@ default: build
 GITHUB_REPO ?= sigs.k8s.io/aws-iam-authenticator
 GORELEASER := $(shell command -v goreleaser 2> /dev/null)
 
-.PHONY: build test format
+.PHONY: build test format codegen
 
 build:
 ifndef GORELEASER
@@ -17,3 +17,6 @@ test:
 format:
 	test -z "$$(find . -path ./vendor -prune -type f -o -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)" || \
 	test -z "$$(find . -path ./vendor -prune -type f -o -name '*.go' -exec gofmt -w {} + | tee /dev/stderr)"
+
+codegen:
+	./hack/update-codegen.sh

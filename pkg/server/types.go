@@ -17,6 +17,11 @@ limitations under the License.
 package server
 
 import (
+	"net"
+	"net/http"
+
+	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 )
 
@@ -24,4 +29,10 @@ import (
 type Server struct {
 	// Config is the whole configuration of aws-iam-authenticator used for valid keys and certs, kubeconfig, and so on
 	config.Config
+	httpServer http.Server
+	listener   net.Listener
+
+	iamclientset      clientset.Interface
+	iamMappingsSynced cache.InformerSynced
+	iamMappingsIndex  cache.Indexer
 }

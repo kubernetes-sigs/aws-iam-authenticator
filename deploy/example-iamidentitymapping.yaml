@@ -1,0 +1,10 @@
+---
+apiVersion: iamauthenticator.k8s.aws/v1alpha1
+kind: IAMIdentityMapping
+metadata:
+  name: kubernetes-admin
+spec:
+  arn: arn:aws:iam::XXXXXXXXXXXX:user/KubernetesAdmin
+  username: kubernetes-admin
+  groups:
+  - system:masters
