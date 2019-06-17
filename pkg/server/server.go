@@ -292,10 +292,9 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	}).Info("STS response")
 
 	// look up the ARN in each of our mappings to fill in the username and groups
-	arnLower := strings.ToLower(identity.CanonicalARN)
 	log = log.WithField("arn", identity.CanonicalARN)
 
-	username, groups, err := h.doMapping(identity, arnLower)
+	username, groups, err := h.doMapping(identity)
 	if err != nil {
 		h.metrics.latency.WithLabelValues(metricUnknown).Observe(duration(start))
 		log.WithError(err).Warn("access denied")
@@ -327,14 +326,16 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	})
 }
 
-func (h *handler) doMapping(identity *token.Identity, arn string) (string, []string, error) {
+func (h *handler) doMapping(identity *token.Identity) (string, []string, error) {
+	arnLower := strings.ToLower(identity.CanonicalARN)
+
 	// IAMIdentityMappingCRD feature gate will only us the CRD implementation to validate users
 	if h.featureGates.Enabled(config.IAMIdentityMappingCRD) {
 		var iamidentity *iamauthenticatorv1alpha1.IAMIdentityMapping
 		var ok bool
-		objects, err := h.iamMappingsIndex.ByIndex("canonicalARN", arn)
+		objects, err := h.iamMappingsIndex.ByIndex("canonicalARN", arnLower)
 		if err != nil {
-			return "", nil, fmt.Errorf("ARN is not in the index: %s", arn)
+			return "", nil, fmt.Errorf("ARN is not in the index: %s (lowercased from %s)", arnLower, identity.CanonicalARN)
 		}
 
 		if len(objects) > 0 {
@@ -364,7 +365,7 @@ func (h *handler) doMapping(identity *token.Identity, arn string) (string, []str
 			}
 		}
 	} else {
-		if roleMapping, exists := h.lowercaseRoleMap[arn]; exists {
+		if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
 			username, err := h.renderTemplate(roleMapping.Username, identity)
 			if err != nil {
 				return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
@@ -379,7 +380,7 @@ func (h *handler) doMapping(identity *token.Identity, arn string) (string, []str
 			}
 			return username, groups, nil
 		}
-		if userMapping, exists := h.lowercaseUserMap[arn]; exists {
+		if userMapping, exists := h.lowercaseUserMap[arnLower]; exists {
 			return userMapping.Username, userMapping.Groups, nil
 		}
 	}
@@ -387,7 +388,7 @@ func (h *handler) doMapping(identity *token.Identity, arn string) (string, []str
 	if _, exists := h.accountMap[identity.AccountID]; exists {
 		return identity.CanonicalARN, []string{}, nil
 	}
-	return "", nil, fmt.Errorf("ARN is not mapped: %s", arn)
+	return "", nil, fmt.Errorf("ARN is not mapped: %s (lowercased from %s)", arnLower, identity.CanonicalARN)
 }
 
 func (h *handler) renderTemplate(template string, identity *token.Identity) (string, error) {
