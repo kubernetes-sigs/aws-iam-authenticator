@@ -1,12 +1,11 @@
 package configmap
 
 import (
+	"encoding/json"
 	"errors"
-	"sync"
-
 	"fmt"
-
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/heptio/authenticator/pkg/config"
@@ -15,9 +14,10 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -117,17 +117,27 @@ func (ms *MapStore) parseMap(m map[string]string) ([]config.UserMapping, []confi
 	errs := make([]error, 0)
 	userMappings := make([]config.UserMapping, 0)
 	if userData, ok := m["mapUsers"]; ok {
-		err := yaml.Unmarshal([]byte(userData), &userMappings)
+		userJson, err := utilyaml.ToJSON([]byte(userData))
 		if err != nil {
 			errs = append(errs, err)
+		} else {
+			err = json.Unmarshal(userJson, &userMappings)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
 
 	roleMappings := make([]config.RoleMapping, 0)
 	if roleData, ok := m["mapRoles"]; ok {
-		err := yaml.Unmarshal([]byte(roleData), &roleMappings)
+		roleJson, err := utilyaml.ToJSON([]byte(roleData))
 		if err != nil {
 			errs = append(errs, err)
+		} else {
+			err = json.Unmarshal(roleJson, &roleMappings)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
 
