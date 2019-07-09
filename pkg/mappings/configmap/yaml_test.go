@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/heptio/authenticator/pkg/config"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 )
 
 var log = logrus.New()
@@ -120,9 +120,11 @@ func TestConfigMap(t *testing.T) {
 					t.Errorf("expected role mapping %v, got %v", em, m)
 				}
 			}
+			ms.mutex.Lock()
 			if len(tt.expectedRoleMappings) != len(ms.roles) {
 				t.Errorf("expected role mappings %v, got %v", tt.expectedRoleMappings, ms.roles)
 			}
+			ms.mutex.Unlock()
 
 			for _, em := range tt.expectedUserMappings {
 				m, err := ms.UserMapping(strings.ToLower(em.UserARN))
@@ -133,9 +135,11 @@ func TestConfigMap(t *testing.T) {
 					t.Errorf("expected user mapping %v, got %v", em, m)
 				}
 			}
+			ms.mutex.Lock()
 			if len(tt.expectedUserMappings) != len(ms.users) {
 				t.Errorf("expected user mappings %v, got %v", tt.expectedUserMappings, ms.users)
 			}
+			ms.mutex.Unlock()
 
 			for accountID, eok := range tt.expectedAWSAccounts {
 				ok := ms.AWSAccount(strings.ToLower(accountID))
@@ -143,9 +147,11 @@ func TestConfigMap(t *testing.T) {
 					t.Errorf("expected account %s %v, got %v", accountID, eok, ok)
 				}
 			}
+			ms.mutex.Lock()
 			if len(tt.expectedAWSAccounts) != len(ms.awsAccounts) {
 				t.Errorf("expected accounts %v, got %v", tt.expectedAWSAccounts, ms.awsAccounts)
 			}
+			ms.mutex.Unlock()
 		})
 	}
 }

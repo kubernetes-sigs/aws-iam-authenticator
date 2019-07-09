@@ -10,18 +10,6 @@ ifndef GORELEASER
 	$(error "goreleaser not found (`go get -u -v github.com/goreleaser/goreleaser` to fix)")
 endif
 	$(GORELEASER) --skip-publish --rm-dist --snapshot
-		
-build-eks: test
-	CGO_ENABLED=0 go build $(GITHUB_REPO)/cmd/heptio-authenticator-aws
-
-build-container-eks: 
-	docker run -v $(shell pwd):/go/src/github.com/heptio/authenticator \
-		--workdir=/go/src/github.com/heptio/authenticator \
-		--env GOPATH=/go \
-		golang:1.10 make build-eks
-
-container-eks: build-container-eks
-	docker build --network host -f Dockerfile.eks -t authenticator:latest .
 
 test:
 	go test -v -cover -race $(GITHUB_REPO)/...
