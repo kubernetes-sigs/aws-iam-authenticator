@@ -84,7 +84,7 @@ systemctl restart kubelet.service
 
 ### Configure IAMIdentityMapping Custom Resource Definitions
 
-In the `master` version of the AWS IAM Authenticator you can configure your users using one of two methods. The deprecated `mapUsers` and `mapRoles` as seen in the [Full Configuration Format](#full-configuration-format) or using [Kubernetes Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/). This method allows the authenticator server to always stay upto date with the latest allowed user. See [Issues #79](https://github.com/kubernetes-sigs/aws-iam-authenticator/issues/79) for more details.
+In the `master` version of the AWS IAM Authenticator you can configure your users using one of two methods. The `mapUsers` and `mapRoles` as seen in the [Full Configuration Format](#full-configuration-format) or using the new (alpha) [Kubernetes Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/). This method allows the authenticator server to always stay upto date with the latest allowed user. See [Issues #79](https://github.com/kubernetes-sigs/aws-iam-authenticator/issues/79) for more details.
 
 To setup an `IAMIdentityMapping` CRD you'll first need to `apply` the CRD manifest:
 
@@ -347,8 +347,6 @@ server:
   # role to assume before querying EC2 API in order to discover metadata like EC2 private DNS Name
   ec2DescribeInstancesRoleARN: arn:aws:iam::000000000000:role/DescribeInstancesRole
 
-  # DEPRECATED: Going forward these roles will be defined using Custom 
-  # Resource definitions. See above Custom Resource Definitions for more info.
   # each mapRoles entry maps an IAM role to a username and set of groups
   # Each username and group can optionally contain template parameters:
   #  1) "{{AccountID}}" is the 12 digit AWS ID.
@@ -392,8 +390,6 @@ server:
     groups:
     - system:masters
 
-  # DEPRECATED: Going forward these roles will be defined using Custom 
-  # Resource definitions. See above Custom Resource Definitions for more info.
   # each mapUsers entry maps an IAM role to a static username and set of groups
   mapUsers:
   # map user IAM user Alice in 000000000000 to user "alice" in group "system:masters"
