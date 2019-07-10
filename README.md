@@ -347,6 +347,10 @@ server:
   # role to assume before querying EC2 API in order to discover metadata like EC2 private DNS Name
   ec2DescribeInstancesRoleARN: arn:aws:iam::000000000000:role/DescribeInstancesRole
 
+  # list of AWS regions to search for instances when resolving {{EC2PrivateDNSName}}
+  # if none specified it will look only in the region running the authentcator.
+  regions: ["us-west-1", "us-east-1"]
+
   # each mapRoles entry maps an IAM role to a username and set of groups
   # Each username and group can optionally contain template parameters:
   #  1) "{{AccountID}}" is the 12 digit AWS ID.

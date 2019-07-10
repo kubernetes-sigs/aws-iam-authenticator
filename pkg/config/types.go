@@ -105,6 +105,9 @@ type Config struct {
 	// running.
 	ServerEC2DescribeInstancesRoleARN string
 
+	// List of AWS regions to search for instances when resolving {{EC2PrivateDNSName}}
+	Regions []string
+
 	// Address defines the hostname or IP Address to bind the HTTPS server to listen to. This is useful when creating
 	// a local server to handle the authentication request for development.
 	Address string

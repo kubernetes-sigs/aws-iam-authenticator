@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -82,6 +83,7 @@ type handler struct {
 	verifier         token.Verifier
 	metrics          metrics
 	ec2Provider      EC2Provider
+	regions          []string
 	featureGates     featuregate.MutableFeatureGate
 }
 
@@ -190,6 +192,7 @@ func (c *Server) getHandler() *handler {
 		verifier:         token.NewVerifier(c.ClusterID),
 		metrics:          createMetrics(),
 		ec2Provider:      newEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
+		regions:          c.Regions,
 		featureGates:     c.FeatureGates,
 	}
 
@@ -397,7 +400,7 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 		if !instanceIDPattern.MatchString(identity.SessionName) {
 			return "", fmt.Errorf("SessionName did not contain an instance id")
 		}
-		privateDNSName, err := h.ec2Provider.getPrivateDNSName(identity.SessionName)
+		privateDNSName, err := h.ec2Provider.getPrivateDNSName(identity.SessionName, h.regions)
 		if err != nil {
 			return "", err
 		}
@@ -420,18 +423,20 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 // EC2Provider configures a DNS resolving function for nodes
 type EC2Provider interface {
 	// Get a node name from instance ID
-	getPrivateDNSName(string) (string, error)
+	getPrivateDNSName(string, []string) (string, error)
 }
 
 type ec2ProviderImpl struct {
-	ec2             ec2iface.EC2API
+	roleARN         string
+	getEC2Service   func(string, *string) ec2iface.EC2API
 	privateDNSCache map[string]string
 	lock            sync.Mutex
 }
 
 func newEC2Provider(roleARN string) EC2Provider {
 	return &ec2ProviderImpl{
-		ec2:             ec2.New(newSession(roleARN)),
+		roleARN:         roleARN,
+		getEC2Service:   getEC2Service,
 		privateDNSCache: make(map[string]string),
 	}
 }
@@ -484,29 +489,66 @@ func (p *ec2ProviderImpl) setPrivateDNSNameCache(id string, privateDNSName strin
 }
 
 // GetPrivateDNS looks up the private DNS from the EC2 API
-func (p *ec2ProviderImpl) getPrivateDNSName(id string) (string, error) {
+func (p *ec2ProviderImpl) getPrivateDNSName(id string, regions []string) (string, error) {
 	privateDNSName, err := p.getPrivateDNSNameCache(id)
 	if err == nil {
 		return privateDNSName, nil
 	}
+	var instance *ec2.Instance
 
 	// Look up instance from EC2 API
-	output, err := p.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
-		InstanceIds: aws.StringSlice([]string{id}),
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed querying private DNS from EC2 API for node %s: %s", id, err.Error())
-	}
-	for _, reservation := range output.Reservations {
-		for _, instance := range reservation.Instances {
-			if aws.StringValue(instance.InstanceId) == id {
-				privateDNSName = aws.StringValue(instance.PrivateDnsName)
-				p.setPrivateDNSNameCache(id, privateDNSName)
+	if len(regions) == 0 {
+		instance, err = p.findInstanceByID(id, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed querying private DNS from EC2 API for node %s: %s", id, err.Error())
+		}
+	} else {
+		for _, region := range regions {
+			instance, err = p.findInstanceByID(id, &region)
+			if err != nil {
+				return "", fmt.Errorf("failed querying private DNS from EC2 API for node %s in %s: %s", id, region, err.Error())
+			}
+			if instance != nil {
+				break
 			}
 		}
 	}
-	if privateDNSName == "" {
+
+	if instance == nil {
 		return "", fmt.Errorf("failed to find node %s", id)
 	}
+
+	privateDNSName = aws.StringValue(instance.PrivateDnsName)
+	p.setPrivateDNSNameCache(id, privateDNSName)
 	return privateDNSName, nil
+}
+
+func (p *ec2ProviderImpl) findInstanceByID(id string, region *string) (*ec2.Instance, error) {
+	output, err := p.getEC2Service(p.roleARN, region).DescribeInstances(&ec2.DescribeInstancesInput{
+		InstanceIds: aws.StringSlice([]string{id}),
+	})
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "InvalidInstanceID.NotFound" {
+			// "not found" is not an error in this case
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	for _, reservation := range output.Reservations {
+		for _, instance := range reservation.Instances {
+			if aws.StringValue(instance.InstanceId) == id {
+				return instance, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func getEC2Service(roleARN string, region *string) ec2iface.EC2API {
+	config := aws.NewConfig()
+	if region != nil {
+		config = config.WithRegion(aws.StringValue(region))
+	}
+	return ec2.New(newSession(roleARN), config)
 }

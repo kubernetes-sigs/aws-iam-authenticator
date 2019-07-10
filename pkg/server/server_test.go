@@ -66,7 +66,7 @@ type testEC2Provider struct {
 	name string
 }
 
-func (p *testEC2Provider) getPrivateDNSName(id string) (string, error) {
+func (p *testEC2Provider) getPrivateDNSName(id string, regions []string) (string, error) {
 	return p.name, nil
 }
 

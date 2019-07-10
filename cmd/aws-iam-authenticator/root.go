@@ -95,6 +95,9 @@ func getConfig() (config.Config, error) {
 		Master:                            viper.GetString("server.master"),
 		FeatureGates:                      featureGates,
 	}
+	if err := viper.UnmarshalKey("server.regions", &cfg.Regions); err != nil {
+		return cfg, fmt.Errorf("invalid server region list: %v", err)
+	}
 	if err := viper.UnmarshalKey("server.mapRoles", &cfg.RoleMappings); err != nil {
 		return cfg, fmt.Errorf("invalid server role mappings: %v", err)
 	}
