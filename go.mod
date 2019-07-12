@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/aws/aws-sdk-go v1.19.11
-	github.com/christopherhein/go-version v0.0.0-20180807222509-fee8dd1f7c24
+	go.hein.dev/go-version v0.0.0-20180807222509-fee8dd1f7c24
 	github.com/emicklei/go-restful v2.4.0+incompatible // indirect
 	github.com/gofrs/flock v0.7.0
 	github.com/hashicorp/hcl v0.0.0-20171009174708-42e33e2d55a0 // indirect
