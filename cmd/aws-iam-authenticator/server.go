@@ -18,21 +18,17 @@ package main
 
 import (
 	"flag"
-	"time"
+	"fmt"
+	"strings"
 
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/sample-controller/pkg/signals"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/controller"
-	clientset "sigs.k8s.io/aws-iam-authenticator/pkg/generated/clientset/versioned"
-	informers "sigs.k8s.io/aws-iam-authenticator/pkg/generated/informers/externalversions"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/file"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/server"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/generated/clientset/versioned/fake"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -49,11 +45,6 @@ var serverCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
-		var k8sconfig *rest.Config
-		var kubeClient kubernetes.Interface
-		var iamClient clientset.Interface
-		var iamInformerFactory informers.SharedInformerFactory
-		var noResyncPeriodFunc = func() time.Duration { return 0 }
 
 		stopCh := signals.SetupSignalHandler()
 
@@ -62,54 +53,47 @@ var serverCmd = &cobra.Command{
 			logrus.Fatalf("%s", err)
 		}
 
-		logrus.Infof("Feature Gates %+v", cfg.FeatureGates)
-
-		if cfg.FeatureGates.Enabled(config.IAMIdentityMappingCRD) {
-			if cfg.Master != "" || cfg.Kubeconfig != "" {
-				k8sconfig, err = clientcmd.BuildConfigFromFlags(cfg.Master, cfg.Kubeconfig)
-			} else {
-				k8sconfig, err = rest.InClusterConfig()
+		mappers := buildMapperChain(cfg)
+		for _, m := range mappers {
+			logrus.Infof("starting mapper %q", m.Name())
+			if err := m.Start(stopCh); err != nil {
+				logrus.Fatalf("start mapper %q failed", m.Name())
 			}
-			if err != nil {
-				logrus.WithError(err).Fatal("can't create kubernetes config")
-			}
-
-			kubeClient, err = kubernetes.NewForConfig(k8sconfig)
-			if err != nil {
-				logrus.WithError(err).Fatal("can't create kubernetes client")
-			}
-
-			iamClient, err = clientset.NewForConfig(k8sconfig)
-			if err != nil {
-				logrus.WithError(err).Fatal("can't create iam authenticator client")
-			}
-
-			iamInformerFactory = informers.NewSharedInformerFactory(iamClient, time.Second*36000)
-
-			ctrl := controller.New(kubeClient, iamClient, iamInformerFactory.Iamauthenticator().V1alpha1().IAMIdentityMappings())
-			httpServer := server.New(cfg, iamInformerFactory.Iamauthenticator().V1alpha1().IAMIdentityMappings())
-			iamInformerFactory.Start(stopCh)
-
-			go func() {
-				httpServer.Run(stopCh)
-			}()
-
-			if err := ctrl.Run(2, stopCh); err != nil {
-				logrus.WithError(err).Fatal("controller exited")
-			}
-		} else {
-			kubeClient = k8sfake.NewSimpleClientset([]runtime.Object{}...)
-			iamClient = fake.NewSimpleClientset([]runtime.Object{}...)
-			iamInformerFactory = informers.NewSharedInformerFactory(iamClient, noResyncPeriodFunc())
-
-			iamInformerFactory.Start(stopCh)
-			httpServer := server.New(cfg, iamInformerFactory.Iamauthenticator().V1alpha1().IAMIdentityMappings())
-			go func() {
-				httpServer.Run(stopCh)
-			}()
-			<-stopCh
 		}
+
+		httpServer := server.New(cfg, mappers)
+		httpServer.Run(stopCh)
 	},
+}
+
+func buildMapperChain(cfg config.Config) []mapper.Mapper {
+	modes := cfg.BackendMode
+	mappers := []mapper.Mapper{}
+	for _, mode := range modes {
+		switch mode {
+		case mapper.ModeFile:
+			fileMapper, err := file.NewFileMapper(cfg)
+			if err != nil {
+				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+			}
+			mappers = append(mappers, fileMapper)
+		case mapper.ModeConfigMap:
+			configMapMapper, err := configmap.NewConfigMapMapper(cfg)
+			if err != nil {
+				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+			}
+			mappers = append(mappers, configMapMapper)
+		case mapper.ModeCRD:
+			crdMapper, err := crd.NewCRDMapper(cfg)
+			if err != nil {
+				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+			}
+			mappers = append(mappers, crdMapper)
+		default:
+			logrus.Fatalf("backend-mode %q is not a valid mode", mode)
+		}
+	}
+	return mappers
 }
 
 func init() {
@@ -139,11 +123,15 @@ func init() {
 		"master is the URL to the api server")
 	viper.BindPFlag("server.master", serverCmd.Flags().Lookup("master"))
 
-	serverCmd.Flags().String(
-		"address",
+	serverCmd.Flags().String("address",
 		"127.0.0.1",
 		"IP Address to bind the server to listen to. (should be a 127.0.0.1 or 0.0.0.0)")
 	viper.BindPFlag("server.address", serverCmd.Flags().Lookup("address"))
+
+	serverCmd.Flags().StringSlice("backend-mode",
+		[]string{mapper.ModeCRD, mapper.ModeConfigMap, mapper.ModeFile},
+		fmt.Sprintf("Ordered list of backends to get mappings from. Comma-delimited list of: %s", strings.Join(mapper.BackendModeChoices, ",")))
+	viper.BindPFlag("server.backendMode", serverCmd.Flags().Lookup("backend-mode"))
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	_ = fs.Parse([]string{})

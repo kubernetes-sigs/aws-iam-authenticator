@@ -15,9 +15,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/component-base/featuregate"
-	iamauthenticatorv1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/apis/iamauthenticator/v1alpha1"
+	iamauthenticatorv1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/apis/iamauthenticator/v1alpha1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/controller"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/controller"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
