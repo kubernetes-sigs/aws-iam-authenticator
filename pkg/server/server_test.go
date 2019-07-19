@@ -130,7 +130,7 @@ type validateOpts struct {
 func checkHistogramSampleCount(t *testing.T, name string, actual, expected uint64) {
 	t.Helper()
 	if actual != expected {
-		t.Errorf("expected %d samples histogram heptio_authenticator_aws_authenticate_latency_seconds with labels %s but got %d", expected, name, actual)
+		t.Errorf("expected %d samples histogram aws_iam_authenticator_authenticate_latency_seconds with labels %s but got %d", expected, name, actual)
 	}
 }
 
@@ -141,7 +141,7 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 		t.Fatalf("Unable to gather metrics to validate they are recorded")
 	}
 	for _, m := range metrics {
-		if strings.HasPrefix(m.GetName(), "heptio_authenticator_aws_authenticate_latency_seconds") {
+		if strings.HasPrefix(m.GetName(), "aws_iam_authenticator_authenticate_latency_seconds") {
 			var actualSuccess, actualMalformed, actualInvalid, actualUnknown, actualSTSError uint64
 			for _, metric := range m.GetMetric() {
 				if len(metric.Label) != 1 {
