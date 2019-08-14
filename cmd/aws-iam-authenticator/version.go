@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"os"
 
-	goVersion "github.com/christopherhein/go-version"
 	"github.com/spf13/cobra"
+	goVersion "go.hein.dev/go-version"
 )
 
 var (
@@ -16,18 +16,7 @@ var (
 		Use:   "version",
 		Short: "Version will output the current build information",
 		Long:  ``,
-		Run: func(_ *cobra.Command, _ []string) {
-			var response string
-			versionOutput := goVersion.New(version, commit, date)
-
-			if shortened {
-				response = versionOutput.ToShortened()
-			} else {
-				response = versionOutput.ToJSON()
-			}
-			fmt.Printf("%+v", response)
-			return
-		},
+		Run:   goVersion.Func(os.Stdout, shortened, version, commit, date),
 	}
 )
 
