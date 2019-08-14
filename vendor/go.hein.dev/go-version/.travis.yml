@@ -1,0 +1,19 @@
+language: go
+
+go:
+- 1.12
+
+env:
+- GO111MODULE=on
+
+branches:
+  only:
+  - master
+
+before_install:
+- go get -u golang.org/x/lint/golint
+
+script:
+- make test-fmt
+- make lint
+- make test
