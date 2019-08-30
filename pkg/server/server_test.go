@@ -721,3 +721,83 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 	validateMetrics(t, validateOpts{success: 1})
 
 }
+
+func TestRenderTemplate(t *testing.T) {
+	h := &handler{}
+	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14")
+	cases := []struct {
+		template string
+		want     string
+		identity token.Identity
+		err      bool
+	}{
+		{
+			template: "a-{{EC2PrivateDNSName}}-b",
+			want:     "a-ip-172-31-27-14-b",
+			identity: token.Identity{
+				SessionName: "i-aaaaaaaa",
+			},
+		},
+		{
+			template: "a-{{EC2PrivateDNSName}}-b",
+			want:     "a-ip-172-31-27-14-b",
+			identity: token.Identity{
+				SessionName: "i-aaaaa",
+			},
+			err: true,
+		},
+		{
+			template: "a-{{AccountID}}-b",
+			want:     "a-123-b",
+			identity: token.Identity{
+				AccountID: "123",
+			},
+		},
+		{
+			template: "a-{{SessionName}}-b",
+			want:     "a-jdoe-b",
+			identity: token.Identity{
+				SessionName: "jdoe",
+			},
+		},
+		{
+			template: "a-{{SessionName}}-b",
+			want:     "a-jdoe-example.com-b",
+			identity: token.Identity{
+				SessionName: "jdoe@example.com",
+			},
+		},
+		{
+			template: "a-{{SessionNameRaw}}-b",
+			want:     "a-jdoe@example.com-b",
+			identity: token.Identity{
+				SessionName: "jdoe@example.com",
+			},
+		},
+		{
+			template: "a-{{AccountID}}-{{SessionName}}-{{SessionNameRaw}}-b",
+			want:     "a-123-jdoe-example.com-jdoe@example.com-b",
+			identity: token.Identity{
+				AccountID:   "123",
+				SessionName: "jdoe@example.com",
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.template, func(t *testing.T) {
+			got, err := h.renderTemplate(c.template, &c.identity)
+			if err != nil {
+				if c.err {
+					return
+				}
+				t.Errorf("unexpected error: %s", err.Error())
+			} else if c.err {
+				t.Errorf("expected error")
+			}
+			if got != c.want {
+				t.Errorf("want: %v, got: %v", c.want, got)
+			}
+
+		})
+	}
+}

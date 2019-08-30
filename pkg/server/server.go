@@ -69,7 +69,6 @@ var tokenReviewDenyJSON = func() []byte {
 // Pattern to match EC2 instance IDs
 var (
 	instanceIDPattern = regexp.MustCompile("^i-(\\w{8}|\\w{17})$")
-	dns1123Pattern    = regexp.MustCompile("[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*")
 )
 
 // server state (internal)
@@ -405,14 +404,9 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 	}
 
 	template = strings.Replace(template, "{{AccountID}}", identity.AccountID, -1)
-
-	// usernames and groups must be a DNS-1123 hostname matching the regex
-	// "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
 	sessionName := strings.Replace(identity.SessionName, "@", "-", -1)
 	template = strings.Replace(template, "{{SessionName}}", sessionName, -1)
-	if !dns1123Pattern.MatchString(template) {
-		return "", fmt.Errorf("username or group is not a DNS-1123 hostname")
-	}
+	template = strings.Replace(template, "{{SessionNameRaw}}", identity.SessionName, -1)
 
 	return template, nil
 }
