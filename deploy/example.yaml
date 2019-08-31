@@ -103,6 +103,15 @@ data:
         username: admin:{{SessionName}}
         groups:
         - system:masters
+      # map federated users in my "KubernetesUsers" role to users like
+      # "alice@example.com". SessionNameRaw is sourced from the same place as
+      # SessionName with the distinction that no transformation is performed
+      # on the value. For example an email addresses passed by an identity
+      # provider will not have the `@` replaced with a `-`.
+      - roleARN: arn:aws:iam::000000000000:role/KubernetesUsers
+        username: "{{SessionNameRaw}}"
+        groups:
+        - developers
       # each mapUsers entry maps an IAM role to a static username and set of groups
       mapUsers:
       # map user IAM user Alice in 000000000000 to user "alice" in "system:masters"
