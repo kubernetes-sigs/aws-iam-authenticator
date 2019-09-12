@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	goVersion "github.com/christopherhein/go-version"
 	"github.com/spf13/cobra"
+	goversion "go.hein.dev/go-version"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 		Long:  ``,
 		Run: func(_ *cobra.Command, _ []string) {
 			var response string
-			versionOutput := goVersion.New(version, commit, date)
+			versionOutput := goversion.New(version, commit, date)
 
 			if shortened {
 				response = versionOutput.ToShortened()
