@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is an example of how to deploy Heptio Authenticator for AWS.
+# This is an example of how to deploy AWS IAM Authenticator.
 #
 # To use this, you'll at least need to edit the role ARNs in the ConfigMap. You
 # may also need to rework other bits to work in your cluster (e.g., node labels).

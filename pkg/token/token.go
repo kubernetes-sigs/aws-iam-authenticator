@@ -150,7 +150,7 @@ type getCallerIdentityWrapper struct {
 	} `json:"GetCallerIdentityResponse"`
 }
 
-// Generator provides new tokens for the heptio authenticator.
+// Generator provides new tokens for the AWS IAM Authenticator.
 type Generator interface {
 	// Get a token using credentials in the default credentials chain.
 	Get(string) (Token, error)

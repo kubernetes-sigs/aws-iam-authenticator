@@ -90,9 +90,9 @@ type metrics struct {
 	latency *prometheus.HistogramVec
 }
 
-// namespace for the heptio authenticators metrics
+// namespace for the AWS IAM Authenticator's metrics
 const (
-	metricNS        = "heptio_authenticator_aws"
+	metricNS        = "aws_iam_authenticator"
 	metricMalformed = "malformed_request"
 	metricInvalid   = "invalid_token"
 	metricSTSError  = "sts_error"
