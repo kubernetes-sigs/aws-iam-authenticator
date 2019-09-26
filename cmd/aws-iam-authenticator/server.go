@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"strings"
 
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/sample-controller/pkg/signals"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
@@ -130,7 +129,7 @@ func init() {
 
 	serverCmd.Flags().StringSlice("backend-mode",
 		[]string{mapper.ModeCRD, mapper.ModeConfigMap, mapper.ModeFile},
-		fmt.Sprintf("Ordered list of backends to get mappings from. Comma-delimited list of: %s", strings.Join(mapper.BackendModeChoices, ",")))
+		fmt.Sprintf("Ordered list of backends to get mappings from. The first one that returns a matching mapping wins. Comma-delimited list of: %s", strings.Join(mapper.BackendModeChoices, ",")))
 	viper.BindPFlag("server.backendMode", serverCmd.Flags().Lookup("backend-mode"))
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
