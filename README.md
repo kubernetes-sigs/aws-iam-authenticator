@@ -84,7 +84,7 @@ systemctl restart kubelet.service
 
 ### Configure IAMIdentityMapping Custom Resource Definitions
 
-In the `master` version of the AWS IAM Authenticator you can configure your users using one of two methods. The `mapUsers` and `mapRoles` as seen in the [Full Configuration Format](#full-configuration-format) or using the new (alpha) [Kubernetes Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/). This method allows the authenticator server to always stay upto date with the latest allowed user. See [Issues #79](https://github.com/kubernetes-sigs/aws-iam-authenticator/issues/79) for more details.
+In the `master` version of the AWS IAM Authenticator you can configure your users using one of three methods. The `mapUsers` and `mapRoles` as seen in the [Full Configuration Format](#full-configuration-format), using the new (alpha) [Kubernetes Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/), or using an [EKS aws-auth ConfigMap](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html). The `--backend-mode` flag determines which of these methods is enabled and their order of precedence (first one wins). The CRD and ConfigMap methods allow the authenticator server to always stay upto date with the latest allowed user. See [Issues #79](https://github.com/kubernetes-sigs/aws-iam-authenticator/issues/79) for more details.
 
 To setup an `IAMIdentityMapping` CRD you'll first need to `apply` the CRD manifest:
 
