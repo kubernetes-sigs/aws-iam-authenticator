@@ -64,6 +64,10 @@ func NewCRDMapper(cfg config.Config) (*CRDMapper, error) {
 	return &CRDMapper{ctrl, iamMappingsSynced, iamMappingsIndex}, nil
 }
 
+func NewCRDMapperWithIndexer(iamMappingsIndex cache.Indexer) *CRDMapper {
+	return &CRDMapper{iamMappingsIndex: iamMappingsIndex}
+}
+
 func (m *CRDMapper) Name() string {
 	return mapper.ModeCRD
 }

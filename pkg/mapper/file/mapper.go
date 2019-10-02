@@ -45,6 +45,17 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 	return fileMapper, nil
 }
 
+func NewFileMapperWithMaps(
+	lowercaseRoleMap map[string]config.RoleMapping,
+	lowercaseUserMap map[string]config.UserMapping,
+	accountMap map[string]bool) *FileMapper {
+	return &FileMapper{
+		lowercaseRoleMap: lowercaseRoleMap,
+		lowercaseUserMap: lowercaseUserMap,
+		accountMap:       accountMap,
+	}
+}
+
 func (m *FileMapper) Name() string {
 	return mapper.ModeFile
 }

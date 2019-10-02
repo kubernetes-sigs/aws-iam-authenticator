@@ -22,11 +22,7 @@ import (
 	"strings"
 
 	"k8s.io/sample-controller/pkg/signals"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/file"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/server"
 
 	"github.com/sirupsen/logrus"
@@ -52,7 +48,7 @@ var serverCmd = &cobra.Command{
 			logrus.Fatalf("%s", err)
 		}
 
-		mappers := buildMapperChain(cfg)
+		mappers := server.BuildMapperChain(cfg)
 		for _, m := range mappers {
 			logrus.Infof("starting mapper %q", m.Name())
 			if err := m.Start(stopCh); err != nil {
@@ -63,36 +59,6 @@ var serverCmd = &cobra.Command{
 		httpServer := server.New(cfg, mappers)
 		httpServer.Run(stopCh)
 	},
-}
-
-func buildMapperChain(cfg config.Config) []mapper.Mapper {
-	modes := cfg.BackendMode
-	mappers := []mapper.Mapper{}
-	for _, mode := range modes {
-		switch mode {
-		case mapper.ModeFile:
-			fileMapper, err := file.NewFileMapper(cfg)
-			if err != nil {
-				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
-			}
-			mappers = append(mappers, fileMapper)
-		case mapper.ModeConfigMap:
-			configMapMapper, err := configmap.NewConfigMapMapper(cfg)
-			if err != nil {
-				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
-			}
-			mappers = append(mappers, configMapMapper)
-		case mapper.ModeCRD:
-			crdMapper, err := crd.NewCRDMapper(cfg)
-			if err != nil {
-				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
-			}
-			mappers = append(mappers, crdMapper)
-		default:
-			logrus.Fatalf("backend-mode %q is not a valid mode", mode)
-		}
-	}
-	return mappers
 }
 
 func init() {

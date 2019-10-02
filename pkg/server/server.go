@@ -30,6 +30,9 @@ import (
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/file"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -207,6 +210,36 @@ func createMetrics() metrics {
 	return m
 }
 
+func BuildMapperChain(cfg config.Config) []mapper.Mapper {
+	modes := cfg.BackendMode
+	mappers := []mapper.Mapper{}
+	for _, mode := range modes {
+		switch mode {
+		case mapper.ModeFile:
+			fileMapper, err := file.NewFileMapper(cfg)
+			if err != nil {
+				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+			}
+			mappers = append(mappers, fileMapper)
+		case mapper.ModeConfigMap:
+			configMapMapper, err := configmap.NewConfigMapMapper(cfg)
+			if err != nil {
+				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+			}
+			mappers = append(mappers, configMapMapper)
+		case mapper.ModeCRD:
+			crdMapper, err := crd.NewCRDMapper(cfg)
+			if err != nil {
+				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+			}
+			mappers = append(mappers, crdMapper)
+		default:
+			logrus.Fatalf("backend-mode %q is not a valid mode", mode)
+		}
+	}
+	return mappers
+}
+
 func duration(start time.Time) float64 {
 	return time.Since(start).Seconds()
 }
@@ -313,12 +346,12 @@ func (h *handler) doMapping(identity *token.Identity) (string, []string, error) 
 			// Mapping found, try to render any templates like {{EC2PrivateDNSName}}
 			username, groups, err := h.renderTemplates(*mapping, identity)
 			if err != nil {
-				return "", nil, fmt.Errorf("mapper %s renderTemplates error: %v", err)
+				return "", nil, fmt.Errorf("mapper %s renderTemplates error: %v", m.Name(), err)
 			}
 			return username, groups, nil
 		} else {
 			if err != mapper.ErrNotMapped {
-				errs = append(errs, fmt.Errorf("mapper %s Map error: %v", err))
+				errs = append(errs, fmt.Errorf("mapper %s Map error: %v", m.Name(), err))
 			}
 
 			if m.IsAccountAllowed(identity.AccountID) {
