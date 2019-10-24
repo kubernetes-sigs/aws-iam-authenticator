@@ -95,6 +95,7 @@ type GetTokenOptions struct {
 	ClusterID            string
 	AssumeRoleARN        string
 	AssumeRoleExternalID string
+	SessionName          string
 	Session              *session.Session
 }
 
@@ -278,7 +279,10 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 					provider.RoleSessionName = userIDParts[1]
 				})
 			}
-
+		} else if options.SessionName != "" {
+			sessionSetters = append(sessionSetters, func(provider *stscreds.AssumeRoleProvider) {
+				provider.RoleSessionName = options.SessionName
+			})
 		}
 
 		// create STS-based credentials that will assume the given role
