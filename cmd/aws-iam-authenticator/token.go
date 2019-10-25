@@ -36,10 +36,17 @@ var tokenCmd = &cobra.Command{
 		clusterID := viper.GetString("clusterID")
 		tokenOnly := viper.GetBool("tokenOnly")
 		forwardSessionName := viper.GetBool("forwardSessionName")
+		sessionName := viper.GetString("sessionName")
 		cache := viper.GetBool("cache")
 
 		if clusterID == "" {
 			fmt.Fprintf(os.Stderr, "Error: cluster ID not specified\n")
+			cmd.Usage()
+			os.Exit(1)
+		}
+
+		if forwardSessionName && sessionName != "" {
+			fmt.Fprintf(os.Stderr, "Error: cannot specify both --forward-session-name and --session-name parameter\n")
 			cmd.Usage()
 			os.Exit(1)
 		}
@@ -57,6 +64,7 @@ var tokenCmd = &cobra.Command{
 			ClusterID:            clusterID,
 			AssumeRoleARN:        roleARN,
 			AssumeRoleExternalID: externalID,
+			SessionName:          sessionName,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
@@ -75,6 +83,7 @@ func init() {
 	rootCmd.AddCommand(tokenCmd)
 	tokenCmd.Flags().StringP("role", "r", "", "Assume an IAM Role ARN before signing this token")
 	tokenCmd.Flags().StringP("external-id", "e", "", "External ID to pass when assuming the IAM Role")
+	tokenCmd.Flags().StringP("session-name", "s", "", "Session name to pass when assuming the IAM Role")
 	tokenCmd.Flags().Bool("token-only", false, "Return only the token for use with Bearer token based tools")
 	tokenCmd.Flags().Bool("forward-session-name",
 		false,
@@ -84,6 +93,7 @@ func init() {
 	viper.BindPFlag("externalID", tokenCmd.Flags().Lookup("external-id"))
 	viper.BindPFlag("tokenOnly", tokenCmd.Flags().Lookup("token-only"))
 	viper.BindPFlag("forwardSessionName", tokenCmd.Flags().Lookup("forward-session-name"))
+	viper.BindPFlag("sessionName", tokenCmd.Flags().Lookup("session-name"))
 	viper.BindPFlag("cache", tokenCmd.Flags().Lookup("cache"))
 	viper.BindEnv("role", "DEFAULT_ROLE")
 }

@@ -147,6 +147,8 @@ To authenticate, run `kubectl --kubeconfig /path/to/kubeconfig" [...]`.
 kubectl will `exec` the `aws-iam-authenticator` binary with the supplied params in your kubeconfig which will generate a token and pass it to the apiserver.
 The token is valid for 15 minutes (the shortest value AWS permits) and can be reused multiple times.
 
+You can also specify session name when generating the token by including `--session-name or -s` parameter. This parameter cannot be used along with `--forward-session-name`.
+
 You can also omit `-r ROLE_ARN` to sign the token with your existing credentials without assuming a dedicated role.
 This is useful if you want to authenticate as an IAM user directly or if you want to authenticate using an EC2 instance role or a federated role.
 
