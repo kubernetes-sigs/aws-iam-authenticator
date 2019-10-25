@@ -25,7 +25,6 @@ type MapStore struct {
 	mutex sync.RWMutex
 	users map[string]config.UserMapping
 	roles map[string]config.RoleMapping
-	// TODO: Use kubernetes set.
 	// Used as set.
 	awsAccounts map[string]interface{}
 	configMap   v1.ConfigMapInterface
@@ -42,7 +41,6 @@ func New(masterURL, kubeConfig string) (*MapStore, error) {
 	}
 
 	ms := MapStore{}
-	// TODO: Should we use a namespace?  Make it configurable?
 	ms.configMap = clientset.CoreV1().ConfigMaps("kube-system")
 	return &ms, nil
 }
@@ -72,12 +70,6 @@ func (ms *MapStore) startLoadConfigMap() {
 					awsAccounts := make([]string, 0)
 					ms.saveMap(userMappings, roleMappings, awsAccounts)
 				case watch.Added, watch.Modified:
-					// Type assertion is not working
-					//
-					// cm, ok := r.Object.(*core_v1.ConfigMap)
-					//if !ok || cm.Name != "aws-auth" {
-					//	break
-					//}
 					switch cm := r.Object.(type) {
 					case *core_v1.ConfigMap:
 						// TODO: Only watch on configmap/awsauth
@@ -112,7 +104,6 @@ func (err ErrParsingMap) Error() string {
 
 // Acquire lock before calling
 func (ms *MapStore) parseMap(m map[string]string) ([]config.UserMapping, []config.RoleMapping, []string, error) {
-	// TODO: Look at errors.Wrap().
 	errs := make([]error, 0)
 	userMappings := make([]config.UserMapping, 0)
 	if userData, ok := m["mapUsers"]; ok {
@@ -147,8 +138,6 @@ func (ms *MapStore) parseMap(m map[string]string) ([]config.UserMapping, []confi
 			errs = append(errs, err)
 		}
 	}
-
-	// TODO: Check for empty user and role mappings.
 
 	var err error
 	if len(errs) > 0 {
