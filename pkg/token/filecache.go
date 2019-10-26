@@ -229,51 +229,50 @@ func (f *FileCacheProvider) Retrieve() (credentials.Value, error) {
 	if !f.cachedCredential.IsExpired() {
 		// use the cached credential
 		return f.cachedCredential.Credential, nil
-	} else {
-		_, _ = fmt.Fprintf(os.Stderr, "No cached credential available.  Refreshing...\n")
-		// fetch the credentials from the underlying Provider
-		credential, err := f.credentials.Get()
-		if err != nil {
-			return credential, err
-		}
-		if expiration, err := f.credentials.ExpiresAt(); err == nil {
-			// underlying provider supports Expirer interface, so we can cache
-			filename := CacheFilename()
-			// do file locking on cache to prevent inconsistent writes
-			lock := newFlock(filename)
-			defer lock.Unlock()
-			// wait up to a second for the file to lock
-			ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
-			defer cancel()
-			ok, err := lock.TryLockContext(ctx, 250*time.Millisecond) // try to lock every 1/4 second
-			if !ok {
-				// can't get write lock to create/update cache, but still return the credential
-				_, _ = fmt.Fprintf(os.Stderr, "Unable to write lock file %s: %v\n", filename, err)
-				return credential, nil
-			}
-			f.cachedCredential = cachedCredential{
-				credential,
-				expiration,
-				nil,
-			}
-			// don't really care about read error.  Either read the cache, or we create a new cache.
-			cache, _ := readCacheWhileLocked(filename)
-			cache.Put(f.cacheKey, f.cachedCredential)
-			err = writeCacheWhileLocked(filename, cache)
-			if err != nil {
-				// can't write cache, but still return the credential
-				_, _ = fmt.Fprintf(os.Stderr, "Unable to update credential cache %s: %v\n", filename, err)
-				err = nil
-			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "Updated cached credential\n")
-			}
-		} else {
-			// credential doesn't support expiration time, so can't cache, but still return the credential
-			_, _ = fmt.Fprintf(os.Stderr, "Unable to cache credential: %v\n", err)
-			err = nil
-		}
+	}
+	_, _ = fmt.Fprintf(os.Stderr, "No cached credential available.  Refreshing...\n")
+	// fetch the credentials from the underlying Provider
+	credential, err := f.credentials.Get()
+	if err != nil {
 		return credential, err
 	}
+	if expiration, err := f.credentials.ExpiresAt(); err == nil {
+		// underlying provider supports Expirer interface, so we can cache
+		filename := CacheFilename()
+		// do file locking on cache to prevent inconsistent writes
+		lock := newFlock(filename)
+		defer lock.Unlock()
+		// wait up to a second for the file to lock
+		ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+		defer cancel()
+		ok, err := lock.TryLockContext(ctx, 250*time.Millisecond) // try to lock every 1/4 second
+		if !ok {
+			// can't get write lock to create/update cache, but still return the credential
+			_, _ = fmt.Fprintf(os.Stderr, "Unable to write lock file %s: %v\n", filename, err)
+			return credential, nil
+		}
+		f.cachedCredential = cachedCredential{
+			credential,
+			expiration,
+			nil,
+		}
+		// don't really care about read error.  Either read the cache, or we create a new cache.
+		cache, _ := readCacheWhileLocked(filename)
+		cache.Put(f.cacheKey, f.cachedCredential)
+		err = writeCacheWhileLocked(filename, cache)
+		if err != nil {
+			// can't write cache, but still return the credential
+			_, _ = fmt.Fprintf(os.Stderr, "Unable to update credential cache %s: %v\n", filename, err)
+			err = nil
+		} else {
+			_, _ = fmt.Fprintf(os.Stderr, "Updated cached credential\n")
+		}
+	} else {
+		// credential doesn't support expiration time, so can't cache, but still return the credential
+		_, _ = fmt.Fprintf(os.Stderr, "Unable to cache credential: %v\n", err)
+		err = nil
+	}
+	return credential, err
 }
 
 // IsExpired() implements the Provider interface, deferring to the cached credential first,
@@ -292,9 +291,8 @@ func (f *FileCacheProvider) ExpiresAt() time.Time {
 func CacheFilename() string {
 	if filename, ok := e.LookupEnv(cacheFileNameEnv); ok {
 		return filename
-	} else {
-		return filepath.Join(UserHomeDir(), ".kube", "cache", "aws-iam-authenticator", "credentials.yaml")
 	}
+	return filepath.Join(UserHomeDir(), ".kube", "cache", "aws-iam-authenticator", "credentials.yaml")
 }
 
 // UserHomeDir returns the home directory for the user the process is
