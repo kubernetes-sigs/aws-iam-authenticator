@@ -8,8 +8,10 @@ This library supports TOML version
 [![GoDoc](https://godoc.org/github.com/pelletier/go-toml?status.svg)](http://godoc.org/github.com/pelletier/go-toml)
 [![license](https://img.shields.io/github/license/pelletier/go-toml.svg)](https://github.com/pelletier/go-toml/blob/master/LICENSE)
 [![Build Status](https://travis-ci.org/pelletier/go-toml.svg?branch=master)](https://travis-ci.org/pelletier/go-toml)
-[![Coverage Status](https://coveralls.io/repos/github/pelletier/go-toml/badge.svg?branch=master)](https://coveralls.io/github/pelletier/go-toml?branch=master)
+[![Windows Build status](https://ci.appveyor.com/api/projects/status/4aepwwjori266hkt/branch/master?svg=true)](https://ci.appveyor.com/project/pelletier/go-toml/branch/master)
+[![codecov](https://codecov.io/gh/pelletier/go-toml/branch/master/graph/badge.svg)](https://codecov.io/gh/pelletier/go-toml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pelletier/go-toml)](https://goreportcard.com/report/github.com/pelletier/go-toml)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fpelletier%2Fgo-toml.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fpelletier%2Fgo-toml?ref=badge_shield)
 
 ## Features
 
@@ -57,9 +59,9 @@ type Config struct {
 }
 
 doc := []byte(`
-[postgres]
-user = "pelletier"
-password = "mypassword"`)
+[Postgres]
+User = "pelletier"
+Password = "mypassword"`)
 
 config := Config{}
 toml.Unmarshal(doc, &config)
@@ -99,6 +101,23 @@ Go-toml provides two handy command line tools:
     tomljson --help
     ```
 
+### Docker image
+
+Those tools are also availble as a Docker image from
+[dockerhub](https://hub.docker.com/r/pelletier/go-toml). For example, to
+use `tomljson`:
+
+```
+docker run -v $PWD:/workdir pelletier/go-toml tomljson /workdir/example.toml
+```
+
+Only master (`latest`) and tagged versions are published to dockerhub. You
+can build your own image as usual:
+
+```
+docker build -t go-toml .
+```
+
 ## Contribute
 
 Feel free to report bugs and patches using GitHub's pull requests system on
@@ -107,12 +126,19 @@ much appreciated!
 
 ### Run tests
 
-You have to make sure two kind of tests run:
+`go test ./...`
 
-1. The Go unit tests
-2. The TOML examples base
+### Fuzzing
 
-You can run both of them using `./test.sh`.
+The script `./fuzz.sh` is available to
+run [go-fuzz](https://github.com/dvyukov/go-fuzz) on go-toml.
+
+## Versioning
+
+Go-toml follows [Semantic Versioning](http://semver.org/). The supported version
+of [TOML](https://github.com/toml-lang/toml) is indicated at the beginning of
+this document. The last two major versions of Go are supported
+(see [Go Release Policy](https://golang.org/doc/devel/release.html#policy)).
 
 ## License
 

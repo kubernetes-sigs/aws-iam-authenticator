@@ -1,0 +1,105 @@
+= Go Version
+
+image::https://travis-ci.org/christopherhein/go-version.svg?branch=master[link="https://travis-ci.org/christopherhein/go-version"]
+
+This package gives allows you to use https://github.com/spf13/cobra and
+https://github.com/goreleaser/goreleaser together to output your version in a
+simple way. Supporting multiple flags for mutating the output.
+
+== Usage
+
+To use this package you will need to create `cobra` command for version such as
+this.
+
+[source,go]
+----
+package main
+
+import (
+	"fmt"
+	goversion "go.hein.dev/go-version"
+	"github.com/spf13/cobra"
+)
+
+var (
+	shortened  = false
+	version    = "dev"
+	commit     = "none"
+	date       = "unknown"
+	output     = "json"
+	versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "Version will output the current build information",
+		Long:  ``,
+		Run: func(_ *cobra.Command, _ []string) {
+			resp := goVersion.FuncWithOutput(shortened, version, commit, date, output)
+			fmt.Print(resp)
+			return
+		},
+	}
+)
+
+func init() {
+	versionCmd.Flags().BoolVarP(&shortened, "short", "s", false, "Print just the version number.")
+	versionCmd.Flags().StringVarP(&output, "output", "o", "json", "Output format. One of 'yaml' or 'json'.")
+	rootCmd.AddCommand(versionCmd)
+}
+----
+
+When you do this then you can pass in these flags at build time. _If you'd like
+more control of the output you can change the `Run` function to something more
+like this.
+
+[source,go]
+----
+Run: func(_ *cobra.Command, _ []string) {
+	var response string
+	versionOutput := New(version, commit, date)
+
+	if shortened {
+		response = versionOutput.ToShortened()
+	} else {
+		response = versionOutput.ToJSON()
+	}
+	fmt.Printf("%+v", response)
+	return
+},
+----
+
+[source,shell]
+----
+go build -ldflags "-X main.commit=<SOMEHASH> -X main.date=<SOMEDATE>"
+----
+
+This then gives your CLI the ability to use this for the JSON output:
+
+[source,shell]
+----
+$ ./my-cli version
+{"Version":"dev","Commit":"<SOMEHASH>","Date":"<SOMEDATE>"}
+----
+
+Or to make this human readable you could use:
+
+[source,shell]
+----
+$ ./my-cli -s
+
+Version: dev
+Commit: <SOMEHASH>
+Date: <SOMEDATE>
+----
+
+== Testing
+
+To run the test suite all you need to do is run.
+
+[source,shell]
+----
+go test -v ./...
+----
+
+== Contributing
+
+If you want to contribute check out
+https://github.com/christopherhein/go-version/blob/master/CONTRIBUTING.adoc
