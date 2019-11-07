@@ -3,7 +3,7 @@ module sigs.k8s.io/aws-iam-authenticator
 go 1.12
 
 require (
-	github.com/aws/aws-sdk-go v1.23.11
+	github.com/aws/aws-sdk-go v1.25.29
 	github.com/gofrs/flock v0.7.0
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
