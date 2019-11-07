@@ -484,6 +484,10 @@ type EC2API interface {
 	DeletePlacementGroupWithContext(aws.Context, *ec2.DeletePlacementGroupInput, ...request.Option) (*ec2.DeletePlacementGroupOutput, error)
 	DeletePlacementGroupRequest(*ec2.DeletePlacementGroupInput) (*request.Request, *ec2.DeletePlacementGroupOutput)
 
+	DeleteQueuedReservedInstances(*ec2.DeleteQueuedReservedInstancesInput) (*ec2.DeleteQueuedReservedInstancesOutput, error)
+	DeleteQueuedReservedInstancesWithContext(aws.Context, *ec2.DeleteQueuedReservedInstancesInput, ...request.Option) (*ec2.DeleteQueuedReservedInstancesOutput, error)
+	DeleteQueuedReservedInstancesRequest(*ec2.DeleteQueuedReservedInstancesInput) (*request.Request, *ec2.DeleteQueuedReservedInstancesOutput)
+
 	DeleteRoute(*ec2.DeleteRouteInput) (*ec2.DeleteRouteOutput, error)
 	DeleteRouteWithContext(aws.Context, *ec2.DeleteRouteInput, ...request.Option) (*ec2.DeleteRouteOutput, error)
 	DeleteRouteRequest(*ec2.DeleteRouteInput) (*request.Request, *ec2.DeleteRouteOutput)
@@ -1504,6 +1508,10 @@ type EC2API interface {
 	ModifyVpnTunnelCertificate(*ec2.ModifyVpnTunnelCertificateInput) (*ec2.ModifyVpnTunnelCertificateOutput, error)
 	ModifyVpnTunnelCertificateWithContext(aws.Context, *ec2.ModifyVpnTunnelCertificateInput, ...request.Option) (*ec2.ModifyVpnTunnelCertificateOutput, error)
 	ModifyVpnTunnelCertificateRequest(*ec2.ModifyVpnTunnelCertificateInput) (*request.Request, *ec2.ModifyVpnTunnelCertificateOutput)
+
+	ModifyVpnTunnelOptions(*ec2.ModifyVpnTunnelOptionsInput) (*ec2.ModifyVpnTunnelOptionsOutput, error)
+	ModifyVpnTunnelOptionsWithContext(aws.Context, *ec2.ModifyVpnTunnelOptionsInput, ...request.Option) (*ec2.ModifyVpnTunnelOptionsOutput, error)
+	ModifyVpnTunnelOptionsRequest(*ec2.ModifyVpnTunnelOptionsInput) (*request.Request, *ec2.ModifyVpnTunnelOptionsOutput)
 
 	MonitorInstances(*ec2.MonitorInstancesInput) (*ec2.MonitorInstancesOutput, error)
 	MonitorInstancesWithContext(aws.Context, *ec2.MonitorInstancesInput, ...request.Option) (*ec2.MonitorInstancesOutput, error)
