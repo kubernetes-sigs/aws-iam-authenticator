@@ -156,7 +156,9 @@ func TestLoadConfigMap(t *testing.T) {
 			return true, watcher, nil
 		})
 
-	ms.startLoadConfigMap()
+	stopCh := make(chan struct{})
+	ms.startLoadConfigMap(stopCh)
+	defer close(stopCh)
 
 	time.Sleep(2 * time.Millisecond)
 

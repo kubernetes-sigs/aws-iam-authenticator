@@ -105,7 +105,9 @@ func TestConfigMap(t *testing.T) {
 			ms := MapStore{}
 			ms.configMap = cs.CoreV1().ConfigMaps("kube-system")
 
-			ms.startLoadConfigMap()
+			stopCh := make(chan struct{})
+			ms.startLoadConfigMap(stopCh)
+			defer close(stopCh)
 
 			time.Sleep(2 * time.Millisecond)
 			_, _ = cs.CoreV1().ConfigMaps("kube-system").Create(cm)

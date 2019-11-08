@@ -47,49 +47,53 @@ func New(masterURL, kubeConfig string) (*MapStore, error) {
 
 // Starts a go routine which will watch the configmap and update the in memory data
 // when the values change.
-func (ms *MapStore) startLoadConfigMap() {
+func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
 	go func() {
 		for {
-			watcher, err := ms.configMap.Watch(metav1.ListOptions{
-				Watch:         true,
-				FieldSelector: fields.OneTermEqualSelector("metadata.name", "aws-auth").String(),
-			})
-			if err != nil {
-				logrus.Warn("Unable to re-establish watch.  Sleeping for 5 seconds")
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			for r := range watcher.ResultChan() {
-				switch r.Type {
-				case watch.Error:
-					logrus.WithFields(logrus.Fields{"error": r}).Error("recieved a watch error")
-				case watch.Deleted:
-					logrus.Info("Resetting configmap on delete")
-					userMappings := make([]config.UserMapping, 0)
-					roleMappings := make([]config.RoleMapping, 0)
-					awsAccounts := make([]string, 0)
-					ms.saveMap(userMappings, roleMappings, awsAccounts)
-				case watch.Added, watch.Modified:
-					switch cm := r.Object.(type) {
-					case *core_v1.ConfigMap:
-						// TODO: Only watch on configmap/awsauth
-						if cm.Name != "aws-auth" {
-							break
-						}
-						logrus.Info("Received aws-auth watch event")
-						userMappings, roleMappings, awsAccounts, err := ms.parseMap(cm.Data)
-						if err != nil {
-							logrus.Errorf("There was an error parsing the config maps.  Only saving data that was good, %+v", err)
-						}
-						ms.saveMap(userMappings, roleMappings, awsAccounts)
-						if err != nil {
-							logrus.Error(err)
-						}
-					}
-
+			select {
+			case <-stopCh:
+				return
+			default:
+				watcher, err := ms.configMap.Watch(metav1.ListOptions{
+					Watch:         true,
+					FieldSelector: fields.OneTermEqualSelector("metadata.name", "aws-auth").String(),
+				})
+				if err != nil {
+					logrus.Warn("Unable to re-establish watch.  Sleeping for 5 seconds")
+					time.Sleep(5 * time.Second)
+					continue
 				}
+				for r := range watcher.ResultChan() {
+					switch r.Type {
+					case watch.Error:
+						logrus.WithFields(logrus.Fields{"error": r}).Error("recieved a watch error")
+					case watch.Deleted:
+						logrus.Info("Resetting configmap on delete")
+						userMappings := make([]config.UserMapping, 0)
+						roleMappings := make([]config.RoleMapping, 0)
+						awsAccounts := make([]string, 0)
+						ms.saveMap(userMappings, roleMappings, awsAccounts)
+					case watch.Added, watch.Modified:
+						switch cm := r.Object.(type) {
+						case *core_v1.ConfigMap:
+							if cm.Name != "aws-auth" {
+								break
+							}
+							logrus.Info("Received aws-auth watch event")
+							userMappings, roleMappings, awsAccounts, err := ms.parseMap(cm.Data)
+							if err != nil {
+								logrus.Errorf("There was an error parsing the config maps.  Only saving data that was good, %+v", err)
+							}
+							ms.saveMap(userMappings, roleMappings, awsAccounts)
+							if err != nil {
+								logrus.Error(err)
+							}
+						}
+
+					}
+				}
+				logrus.Error("Watch channel closed.")
 			}
-			logrus.Error("Watch channel closed.")
 		}
 	}()
 }

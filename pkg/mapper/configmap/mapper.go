@@ -25,9 +25,8 @@ func (m *ConfigMapMapper) Name() string {
 	return mapper.ModeConfigMap
 }
 
-func (m *ConfigMapMapper) Start(_ <-chan struct{}) error {
-	// TODO respect stopCh
-	m.startLoadConfigMap()
+func (m *ConfigMapMapper) Start(stopCh <-chan struct{}) error {
+	m.startLoadConfigMap(stopCh)
 	return nil
 }
 
