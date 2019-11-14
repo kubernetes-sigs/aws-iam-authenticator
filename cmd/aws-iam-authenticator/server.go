@@ -62,8 +62,6 @@ var serverCmd = &cobra.Command{
 }
 
 func init() {
-	viper.SetDefault("server.port", DefaultPort)
-
 	serverCmd.Flags().String("generate-kubeconfig",
 		"/etc/kubernetes/aws-iam-authenticator/kubeconfig.yaml",
 		"Output `path` where a generated webhook kubeconfig (for `--authentication-token-webhook-config-file`) will be stored (should be a hostPath mount).")
@@ -97,6 +95,12 @@ func init() {
 		[]string{mapper.ModeCRD, mapper.ModeConfigMap, mapper.ModeFile},
 		fmt.Sprintf("Ordered list of backends to get mappings from. The first one that returns a matching mapping wins. Comma-delimited list of: %s", strings.Join(mapper.BackendModeChoices, ",")))
 	viper.BindPFlag("server.backendMode", serverCmd.Flags().Lookup("backend-mode"))
+
+	serverCmd.Flags().Int(
+		"port",
+		DefaultPort,
+		"Port to bind the server to listen to")
+	viper.BindPFlag("server.port", serverCmd.Flags().Lookup("port"))
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	_ = fs.Parse([]string{})
