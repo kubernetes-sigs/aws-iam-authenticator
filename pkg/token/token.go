@@ -35,6 +35,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
@@ -162,7 +163,7 @@ type Generator interface {
 	// Get a token using the provided options
 	GetWithOptions(options *GetTokenOptions) (Token, error)
 	// GetWithSTS returns a token valid for clusterID using the given STS client.
-	GetWithSTS(clusterID string, stsAPI *sts.STS) (Token, error)
+	GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, error)
 	// FormatJSON returns the client auth formatted json for the ExecCredential auth
 	FormatJSON(Token) string
 }
@@ -205,6 +206,7 @@ func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess 
 	})
 }
 
+// StdinStderrTokenProvider gets MFA token from standard input.
 func StdinStderrTokenProvider() (string, error) {
 	var v string
 	fmt.Fprint(os.Stderr, "Assume Role MFA token code: ")
@@ -296,7 +298,7 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 }
 
 // GetWithSTS returns a token valid for clusterID using the given STS client.
-func (g generator) GetWithSTS(clusterID string, stsAPI *sts.STS) (Token, error) {
+func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, error) {
 	// generate an sts:GetCallerIdentity request and add our custom cluster ID header
 	request, _ := stsAPI.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
 	request.HTTPRequest.Header.Add(clusterIDHeader, clusterID)
