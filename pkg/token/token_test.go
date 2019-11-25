@@ -20,6 +20,17 @@ func validationErrorTest(t *testing.T, token string, expectedErr string) {
 	errorContains(t, err, expectedErr)
 }
 
+func validationSuccessTest(t *testing.T, token string) {
+	t.Helper()
+	arn := "arn:aws:iam::123456789012:user/Alice"
+	account := "123456789012"
+	userID := "Alice"
+	_, err := newVerifier(200, jsonResponse(arn, account, userID), nil).Verify(token)
+	if err != nil {
+		t.Errorf("received unexpected error: %s", err)
+	}
+}
+
 func errorContains(t *testing.T, err error, expectedErr string) {
 	t.Helper()
 	if err == nil || !strings.Contains(err.Error(), expectedErr) {
@@ -140,6 +151,11 @@ func TestVerifyTokenPreSTSValidations(t *testing.T) {
 	validationErrorTest(t, toToken(fmt.Sprintf("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=9999999", timeStr)), "invalid X-Amz-Expires parameter in pre-signed URL")
 	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=xxxxxxx&x-amz-expires=60"), "error parsing X-Amz-Date parameter")
 	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=19900422T010203Z&x-amz-expires=60"), "X-Amz-Date parameter is expired")
+	validationSuccessTest(t, toToken(fmt.Sprintf("https://sts.us-east-2.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
+	validationSuccessTest(t, toToken(fmt.Sprintf("https://sts.ap-northeast-2.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
+	validationSuccessTest(t, toToken(fmt.Sprintf("https://sts.ca-central-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
+	validationSuccessTest(t, toToken(fmt.Sprintf("https://sts.eu-west-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
+	validationSuccessTest(t, toToken(fmt.Sprintf("https://sts.sa-east-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
 }
 
 func TestVerifyHTTPError(t *testing.T) {

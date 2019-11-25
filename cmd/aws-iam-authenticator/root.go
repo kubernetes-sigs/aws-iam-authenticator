@@ -22,11 +22,13 @@ import (
 	"os"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/featuregate"
 )
 
@@ -93,7 +95,7 @@ func getConfig() (config.Config, error) {
 		Address:                           viper.GetString("server.address"),
 		Kubeconfig:                        viper.GetString("server.kubeconfig"),
 		Master:                            viper.GetString("server.master"),
-		FeatureGates:                      featureGates,
+		BackendMode:                       viper.GetStringSlice("server.backendMode"),
 	}
 	if err := viper.UnmarshalKey("server.mapRoles", &cfg.RoleMappings); err != nil {
 		return cfg, fmt.Errorf("invalid server role mappings: %v", err)
@@ -109,6 +111,10 @@ func getConfig() (config.Config, error) {
 		return cfg, errors.New("cluster ID cannot be empty")
 	}
 
+	if errs := validateBackendMode(cfg.BackendMode); len(errs) > 0 {
+		return cfg, utilerrors.NewAggregate(errs)
+	}
+
 	return cfg, nil
 }
 
@@ -122,4 +128,21 @@ func getLogFormatter() logrus.Formatter {
 	}
 
 	return &logrus.TextFormatter{FullTimestamp: true}
+}
+
+func validateBackendMode(modes []string) []error {
+	var errs []error
+
+	allowedModes := sets.NewString(mapper.BackendModeChoices...)
+	for _, mode := range modes {
+		if !allowedModes.Has(mode) {
+			errs = append(errs, fmt.Errorf("backend-mode %q is not a valid mode", mode))
+		}
+	}
+
+	if len(modes) != len(sets.NewString(modes...).List()) {
+		errs = append(errs, fmt.Errorf("backend-mode %q has duplicates", modes))
+	}
+
+	return errs
 }

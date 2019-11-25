@@ -16,9 +16,17 @@ limitations under the License.
 
 package config
 
-import (
-	"k8s.io/component-base/featuregate"
-)
+type IdentityMapping struct {
+	IdentityARN string
+
+	// Username is the username pattern that this instances assuming this
+	// role will have in Kubernetes.
+	Username string
+
+	// Groups is a list of Kubernetes groups this role will authenticate
+	// as (e.g., `system:masters`). Each group name can include placeholders.
+	Groups []string
+}
 
 // RoleMapping is a mapping of an AWS Role ARN to a Kubernetes username and a
 // list of Kubernetes groups. The username and groups are specified as templates
@@ -118,6 +126,6 @@ type Config struct {
 	// +optional
 	Kubeconfig string
 
-	// FeatureGates stores all the mutable feature gates for controlling how the authenticator works
-	FeatureGates featuregate.MutableFeatureGate
+	// BackendMode is an ordered list of backends to get mappings from. Comma-delimited list of: File,ConfigMap,CRD
+	BackendMode []string
 }

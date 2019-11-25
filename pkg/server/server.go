@@ -28,11 +28,15 @@ import (
 	"sync"
 	"time"
 
-	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/file"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/aws/aws-sdk-go/aws"
+	awsarn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -44,13 +48,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
-
-	"k8s.io/client-go/tools/cache"
-
-	"k8s.io/component-base/featuregate"
-
-	iamauthenticatorv1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/apis/iamauthenticator/v1alpha1"
-	informers "sigs.k8s.io/aws-iam-authenticator/pkg/generated/informers/externalversions/iamauthenticator/v1alpha1"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // tokenReviewDenyJSON is a static encoding (at init time) of the 'deny' TokenReview
@@ -75,14 +73,11 @@ var (
 // server state (internal)
 type handler struct {
 	http.ServeMux
-	lowercaseRoleMap map[string]config.RoleMapping
-	lowercaseUserMap map[string]config.UserMapping
-	iamMappingsIndex cache.Indexer
-	accountMap       map[string]bool
-	verifier         token.Verifier
-	metrics          metrics
-	ec2Provider      EC2Provider
-	featureGates     featuregate.MutableFeatureGate
+	verifier    token.Verifier
+	metrics     metrics
+	ec2Provider EC2Provider
+	clusterID   string
+	mappers     []mapper.Mapper
 }
 
 // metrics are handles to the collectors for prometheous for the various metrics we are tracking.
@@ -101,13 +96,9 @@ const (
 )
 
 // New the authentication webhook server.
-func New(
-	cfg config.Config,
-	iamMappingInformer informers.IAMIdentityMappingInformer) *Server {
+func New(cfg config.Config, mappers []mapper.Mapper) *Server {
 	c := &Server{
-		Config:            cfg,
-		iamMappingsSynced: iamMappingInformer.Informer().HasSynced,
-		iamMappingsIndex:  iamMappingInformer.Informer().GetIndexer(),
+		Config: cfg,
 	}
 
 	for _, mapping := range c.RoleMappings {
@@ -160,7 +151,7 @@ func New(
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
 	c.httpServer = http.Server{
 		ErrorLog: log.New(errLog, "", 0),
-		Handler:  c.getHandler(),
+		Handler:  c.getHandler(mappers),
 	}
 	c.listener = listener
 	return c
@@ -170,52 +161,40 @@ func New(
 func (c *Server) Run(stopCh <-chan struct{}) {
 	defer c.listener.Close()
 
-	if c.FeatureGates.Enabled(config.IAMIdentityMappingCRD) {
-		if ok := cache.WaitForCacheSync(stopCh, c.iamMappingsSynced); !ok {
-			logrus.Fatal("failed to wait for caches to sync in server")
-		}
-	}
-
+	go func() {
+		http.ListenAndServe(":21363", &healthzHandler{})
+	}()
 	if err := c.httpServer.Serve(c.listener); err != nil {
 		logrus.WithError(err).Fatal("http server exited")
 	}
 }
 
-func (c *Server) getHandler() *handler {
+type healthzHandler struct{}
+
+func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "ok")
+}
+func (c *Server) getHandler(mappers []mapper.Mapper) *handler {
+	if c.ServerEC2DescribeInstancesRoleARN != "" {
+		_, err := awsarn.Parse(c.ServerEC2DescribeInstancesRoleARN)
+		if err != nil {
+			panic(fmt.Sprintf("describeinstancesrole %s is not a valid arn", c.ServerEC2DescribeInstancesRoleARN))
+		}
+	}
+
 	h := &handler{
-		lowercaseRoleMap: make(map[string]config.RoleMapping),
-		lowercaseUserMap: make(map[string]config.UserMapping),
-		iamMappingsIndex: c.iamMappingsIndex,
-		accountMap:       make(map[string]bool),
-		verifier:         token.NewVerifier(c.ClusterID),
-		metrics:          createMetrics(),
-		ec2Provider:      newEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
-		featureGates:     c.FeatureGates,
-	}
-
-	for _, m := range c.RoleMappings {
-		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
-		if err != nil {
-			logrus.Errorf("Error canonicalizing ARN: %v", err)
-			continue
-		}
-		h.lowercaseRoleMap[canonicalizedARN] = m
-	}
-	for _, m := range c.UserMappings {
-		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
-		if err != nil {
-			logrus.Errorf("Error canonicalizing ARN: %v", err)
-			continue
-		}
-		h.lowercaseUserMap[canonicalizedARN] = m
-	}
-
-	for _, m := range c.AutoMappedAWSAccounts {
-		h.accountMap[m] = true
+		verifier:    token.NewVerifier(c.ClusterID),
+		metrics:     createMetrics(),
+		ec2Provider: newEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
+		clusterID:   c.ClusterID,
+		mappers:     mappers,
 	}
 
 	h.HandleFunc("/authenticate", h.authenticateEndpoint)
 	h.Handle("/metrics", promhttp.Handler())
+	h.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "ok")
+	})
 	return h
 }
 
@@ -229,6 +208,36 @@ func createMetrics() metrics {
 	}
 	prometheus.MustRegister(m.latency)
 	return m
+}
+
+func BuildMapperChain(cfg config.Config) []mapper.Mapper {
+	modes := cfg.BackendMode
+	mappers := []mapper.Mapper{}
+	for _, mode := range modes {
+		switch mode {
+		case mapper.ModeFile:
+			fileMapper, err := file.NewFileMapper(cfg)
+			if err != nil {
+				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+			}
+			mappers = append(mappers, fileMapper)
+		case mapper.ModeConfigMap:
+			configMapMapper, err := configmap.NewConfigMapMapper(cfg)
+			if err != nil {
+				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+			}
+			mappers = append(mappers, configMapMapper)
+		case mapper.ModeCRD:
+			crdMapper, err := crd.NewCRDMapper(cfg)
+			if err != nil {
+				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+			}
+			mappers = append(mappers, crdMapper)
+		default:
+			logrus.Fatalf("backend-mode %q is not a valid mode", mode)
+		}
+	}
+	return mappers
 }
 
 func duration(start time.Time) float64 {
@@ -327,68 +336,56 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 }
 
 func (h *handler) doMapping(identity *token.Identity) (string, []string, error) {
-	arnLower := strings.ToLower(identity.CanonicalARN)
+	var errs []error
 
-	// IAMIdentityMappingCRD feature gate will only us the CRD implementation to validate users
-	if h.featureGates.Enabled(config.IAMIdentityMappingCRD) {
-		var iamidentity *iamauthenticatorv1alpha1.IAMIdentityMapping
-		var ok bool
-		objects, err := h.iamMappingsIndex.ByIndex("canonicalARN", arnLower)
-		if err != nil {
-			return "", nil, fmt.Errorf("ARN is not in the index: %s (lowercased from %s)", arnLower, identity.CanonicalARN)
-		}
+	canonicalARN := strings.ToLower(identity.CanonicalARN)
 
-		if len(objects) > 0 {
-			for _, obj := range objects {
-				iamidentity, ok = obj.(*iamauthenticatorv1alpha1.IAMIdentityMapping)
-				if !ok {
-					continue
-				}
-			}
-
-			if iamidentity != nil {
-				username, err := h.renderTemplate(iamidentity.Spec.Username, identity)
-				if err != nil {
-					return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
-				}
-
-				groups := []string{}
-				for _, groupPattern := range iamidentity.Spec.Groups {
-					group, err := h.renderTemplate(groupPattern, identity)
-					if err != nil {
-						return "", nil, fmt.Errorf("failed mapping group: %s", err.Error())
-					}
-					groups = append(groups, group)
-				}
-
-				return username, groups, nil
-			}
-		}
-	} else {
-		if roleMapping, exists := h.lowercaseRoleMap[arnLower]; exists {
-			username, err := h.renderTemplate(roleMapping.Username, identity)
+	for _, m := range h.mappers {
+		mapping, err := m.Map(canonicalARN)
+		if err == nil {
+			// Mapping found, try to render any templates like {{EC2PrivateDNSName}}
+			username, groups, err := h.renderTemplates(*mapping, identity)
 			if err != nil {
-				return "", nil, fmt.Errorf("failed mapping username: %s", err.Error())
-			}
-			groups := []string{}
-			for _, groupPattern := range roleMapping.Groups {
-				group, err := h.renderTemplate(groupPattern, identity)
-				if err != nil {
-					return "", nil, fmt.Errorf("failed mapping group: %s", err.Error())
-				}
-				groups = append(groups, group)
+				return "", nil, fmt.Errorf("mapper %s renderTemplates error: %v", m.Name(), err)
 			}
 			return username, groups, nil
-		}
-		if userMapping, exists := h.lowercaseUserMap[arnLower]; exists {
-			return userMapping.Username, userMapping.Groups, nil
+		} else {
+			if err != mapper.ErrNotMapped {
+				errs = append(errs, fmt.Errorf("mapper %s Map error: %v", m.Name(), err))
+			}
+
+			if m.IsAccountAllowed(identity.AccountID) {
+				return identity.CanonicalARN, []string{}, nil
+			}
 		}
 	}
 
-	if _, exists := h.accountMap[identity.AccountID]; exists {
-		return identity.CanonicalARN, []string{}, nil
+	if len(errs) > 0 {
+		return "", nil, utilerrors.NewAggregate(errs)
 	}
-	return "", nil, fmt.Errorf("ARN is not mapped: %s (lowercased from %s)", arnLower, identity.CanonicalARN)
+	return "", nil, mapper.ErrNotMapped
+}
+
+func (h *handler) renderTemplates(mapping config.IdentityMapping, identity *token.Identity) (string, []string, error) {
+	var username string
+	groups := []string{}
+	var err error
+
+	userPattern := mapping.Username
+	username, err = h.renderTemplate(userPattern, identity)
+	if err != nil {
+		return "", nil, fmt.Errorf("error rendering username template %q: %s", userPattern, err.Error())
+	}
+
+	for _, groupPattern := range mapping.Groups {
+		group, err := h.renderTemplate(groupPattern, identity)
+		if err != nil {
+			return "", nil, fmt.Errorf("error rendering group template %q: %s", groupPattern, err.Error())
+		}
+		groups = append(groups, group)
+	}
+
+	return username, groups, nil
 }
 
 func (h *handler) renderTemplate(template string, identity *token.Identity) (string, error) {
