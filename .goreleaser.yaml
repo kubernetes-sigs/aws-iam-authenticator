@@ -44,6 +44,12 @@ dockers:
     image_templates:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-stretch"
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian"
+  - binaries:
+     - aws-iam-authenticator
+    dockerfile: Dockerfile.amazonlinux-2
+    image_templates:
+     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-2"
+     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux"
 
 snapshot:
   name_template: "git-{{.ShortCommit}}"

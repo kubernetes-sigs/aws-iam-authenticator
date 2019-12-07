@@ -26,7 +26,7 @@ chmod +x ${CODEGEN_PKG}/generate-groups.sh
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
-  sigs.k8s.io/aws-iam-authenticator/pkg/generated sigs.k8s.io/aws-iam-authenticator/pkg/apis \
+  sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/apis \
   iamauthenticator:v1alpha1 \
   --output-base "$(dirname "${BASH_SOURCE[0]}")/../../.." \
   --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt

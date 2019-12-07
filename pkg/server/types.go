@@ -20,8 +20,6 @@ import (
 	"net"
 	"net/http"
 
-	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 )
 
@@ -31,8 +29,4 @@ type Server struct {
 	config.Config
 	httpServer http.Server
 	listener   net.Listener
-
-	iamclientset      clientset.Interface
-	iamMappingsSynced cache.InformerSynced
-	iamMappingsIndex  cache.Indexer
 }

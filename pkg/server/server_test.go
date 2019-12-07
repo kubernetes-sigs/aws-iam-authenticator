@@ -11,15 +11,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/component-base/featuregate"
-	iamauthenticatorv1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/apis/iamauthenticator/v1alpha1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/controller"
-
-	"github.com/prometheus/client_golang/prometheus"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd"
+	iamauthenticatorv1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/apis/iamauthenticator/v1alpha1"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/controller"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/file"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
@@ -92,22 +93,10 @@ func newIAMIdentityMapping(arn, canonicalARN, username string, groups []string) 
 	}
 }
 
-const (
-	IAMIdentityMappingCRD featuregate.Feature = "IAMIdentityMappingCRD"
-)
-
-func newFeatureGates(crd bool) featuregate.MutableFeatureGate {
-	features := featuregate.NewFeatureGate()
-	features.Add(map[featuregate.Feature]featuregate.FeatureSpec{IAMIdentityMappingCRD: {Default: crd, PreRelease: featuregate.Alpha}})
-	return features
-}
-
-func setup(verifier token.Verifier, crd bool) *handler {
+func setup(verifier token.Verifier) *handler {
 	return &handler{
-		verifier:         verifier,
-		metrics:          createMetrics(),
-		iamMappingsIndex: createIndexer(),
-		featureGates:     newFeatureGates(crd),
+		verifier: verifier,
+		metrics:  createMetrics(),
 	}
 }
 
@@ -179,7 +168,7 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 func TestAuthenticateNonPostError(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://k8s.io/authenticate", nil)
-	h := setup(nil, false)
+	h := setup(nil)
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusMethodNotAllowed {
@@ -192,7 +181,7 @@ func TestAuthenticateNonPostError(t *testing.T) {
 func TestAuthenticateNonPostErrorCRD(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://k8s.io/authenticate", nil)
-	h := setup(nil, true)
+	h := setup(nil)
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusMethodNotAllowed {
@@ -205,7 +194,7 @@ func TestAuthenticateNonPostErrorCRD(t *testing.T) {
 func TestAuthenticateEmptyBody(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", nil)
-	h := setup(nil, false)
+	h := setup(nil)
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusBadRequest {
@@ -218,7 +207,7 @@ func TestAuthenticateEmptyBody(t *testing.T) {
 func TestAuthenticateEmptyBodyCRD(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", nil)
-	h := setup(nil, true)
+	h := setup(nil)
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusBadRequest {
@@ -231,7 +220,7 @@ func TestAuthenticateEmptyBodyCRD(t *testing.T) {
 func TestAuthenticateUnableToDecodeBody(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", strings.NewReader("not valid json"))
-	h := setup(nil, false)
+	h := setup(nil)
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusBadRequest {
@@ -244,7 +233,7 @@ func TestAuthenticateUnableToDecodeBody(t *testing.T) {
 func TestAuthenticateUnableToDecodeBodyCRD(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", strings.NewReader("not valid json"))
-	h := setup(nil, true)
+	h := setup(nil)
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusBadRequest {
@@ -277,7 +266,7 @@ func TestAuthenticateVerifierError(t *testing.T) {
 		t.Fatalf("Could not marshal in put data: %v", err)
 	}
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
-	h := setup(&testVerifier{err: errors.New("There was an error")}, false)
+	h := setup(&testVerifier{err: errors.New("There was an error")})
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusForbidden {
@@ -299,7 +288,7 @@ func TestAuthenticateVerifierErrorCRD(t *testing.T) {
 		t.Fatalf("Could not marshal in put data: %v", err)
 	}
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
-	h := setup(&testVerifier{err: errors.New("There was an error")}, true)
+	h := setup(&testVerifier{err: errors.New("There was an error")})
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusForbidden {
@@ -321,7 +310,7 @@ func TestAuthenticateVerifierSTSError(t *testing.T) {
 		t.Fatalf("Could not marshal in put data: %v", err)
 	}
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
-	h := setup(&testVerifier{err: token.NewSTSError("There was an error")}, false)
+	h := setup(&testVerifier{err: token.NewSTSError("There was an error")})
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusForbidden {
@@ -343,7 +332,7 @@ func TestAuthenticateVerifierSTSErrorCRD(t *testing.T) {
 		t.Fatalf("Could not marshal in put data: %v", err)
 	}
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
-	h := setup(&testVerifier{err: token.NewSTSError("There was an error")}, true)
+	h := setup(&testVerifier{err: token.NewSTSError("There was an error")})
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusForbidden {
@@ -371,7 +360,7 @@ func TestAuthenticateVerifierNotMapped(t *testing.T) {
 		AccountID:    "",
 		UserID:       "",
 		SessionName:  "",
-	}}, false)
+	}})
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusForbidden {
@@ -399,7 +388,7 @@ func TestAuthenticateVerifierNotMappedCRD(t *testing.T) {
 		AccountID:    "",
 		UserID:       "",
 		SessionName:  "",
-	}}, true)
+	}})
 	defer cleanup(h.metrics)
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusForbidden {
@@ -427,14 +416,15 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 		AccountID:    "0123456789012",
 		UserID:       "Test",
 		SessionName:  "",
-	}}, false)
+	}})
 	defer cleanup(h.metrics)
-	h.lowercaseRoleMap = make(map[string]config.RoleMapping)
-	h.lowercaseRoleMap["arn:aws:iam::0123456789012:role/test"] = config.RoleMapping{
-		RoleARN:  "arn:aws:iam::0123456789012:role/Test",
-		Username: "TestUser",
-		Groups:   []string{"sys:admin", "listers"},
-	}
+	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
+		"arn:aws:iam::0123456789012:role/test": config.RoleMapping{
+			RoleARN:  "arn:aws:iam::0123456789012:role/Test",
+			Username: "TestUser",
+			Groups:   []string{"sys:admin", "listers"},
+		},
+	}, nil, nil)}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -461,9 +451,11 @@ func TestAuthenticateVerifierRoleMappingCRD(t *testing.T) {
 		AccountID:    "0123456789012",
 		UserID:       "Test",
 		SessionName:  "",
-	}}, true)
+	}})
 	defer cleanup(h.metrics)
-	h.iamMappingsIndex.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/Test", "arn:aws:iam::0123456789012:role/test", "TestUser", []string{"sys:admin", "listers"}))
+	indexer := createIndexer()
+	indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/Test", "arn:aws:iam::0123456789012:role/test", "TestUser", []string{"sys:admin", "listers"}))
+	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -490,14 +482,15 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 		AccountID:    "0123456789012",
 		UserID:       "Test",
 		SessionName:  "",
-	}}, false)
+	}})
 	defer cleanup(h.metrics)
-	h.lowercaseUserMap = make(map[string]config.UserMapping)
-	h.lowercaseUserMap["arn:aws:iam::0123456789012:user/test"] = config.UserMapping{
-		UserARN:  "arn:aws:iam::0123456789012:user/Test",
-		Username: "TestUser",
-		Groups:   []string{"sys:admin", "listers"},
-	}
+	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(nil, map[string]config.UserMapping{
+		"arn:aws:iam::0123456789012:user/test": config.UserMapping{
+			UserARN:  "arn:aws:iam::0123456789012:user/Test",
+			Username: "TestUser",
+			Groups:   []string{"sys:admin", "listers"},
+		},
+	}, nil)}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -524,9 +517,11 @@ func TestAuthenticateVerifierUserMappingCRD(t *testing.T) {
 		AccountID:    "0123456789012",
 		UserID:       "Test",
 		SessionName:  "",
-	}}, true)
+	}})
 	defer cleanup(h.metrics)
-	h.iamMappingsIndex.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:user/Test", "arn:aws:iam::0123456789012:user/test", "TestUser", []string{"sys:admin", "listers"}))
+	indexer := createIndexer()
+	indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:user/Test", "arn:aws:iam::0123456789012:user/test", "TestUser", []string{"sys:admin", "listers"}))
+	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -553,10 +548,11 @@ func TestAuthenticateVerifierAccountMappingForUser(t *testing.T) {
 		AccountID:    "0123456789012",
 		UserID:       "Test",
 		SessionName:  "",
-	}}, false)
+	}})
 	defer cleanup(h.metrics)
-	h.accountMap = make(map[string]bool)
-	h.accountMap["0123456789012"] = true
+	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(nil, nil, map[string]bool{
+		"0123456789012": true,
+	})}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -583,10 +579,11 @@ func TestAuthenticateVerifierAccountMappingForUserCRD(t *testing.T) {
 		AccountID:    "0123456789012",
 		UserID:       "Test",
 		SessionName:  "",
-	}}, true)
+	}})
 	defer cleanup(h.metrics)
-	h.accountMap = make(map[string]bool)
-	h.accountMap["0123456789012"] = true
+	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(createIndexer()), file.NewFileMapperWithMaps(nil, nil, map[string]bool{
+		"0123456789012": true,
+	})}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -613,10 +610,11 @@ func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
 		AccountID:    "0123456789012",
 		UserID:       "Test",
 		SessionName:  "",
-	}}, false)
+	}})
 	defer cleanup(h.metrics)
-	h.accountMap = make(map[string]bool)
-	h.accountMap["0123456789012"] = true
+	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(nil, nil, map[string]bool{
+		"0123456789012": true,
+	})}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -643,10 +641,11 @@ func TestAuthenticateVerifierAccountMappingForRoleCRD(t *testing.T) {
 		AccountID:    "0123456789012",
 		UserID:       "Test",
 		SessionName:  "",
-	}}, true)
+	}})
 	defer cleanup(h.metrics)
-	h.accountMap = make(map[string]bool)
-	h.accountMap["0123456789012"] = true
+	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(createIndexer()), file.NewFileMapperWithMaps(nil, nil, map[string]bool{
+		"0123456789012": true,
+	})}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -673,15 +672,16 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 		AccountID:    "0123456789012",
 		UserID:       "TestNodeRole",
 		SessionName:  "i-0c6f21bf1f24f9708",
-	}}, false)
+	}})
 	defer cleanup(h.metrics)
 	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14")
-	h.lowercaseRoleMap = make(map[string]config.RoleMapping)
-	h.lowercaseRoleMap["arn:aws:iam::0123456789012:role/testnoderole"] = config.RoleMapping{
-		RoleARN:  "arn:aws:iam::0123456789012:role/TestNodeRole",
-		Username: "system:node:{{EC2PrivateDNSName}}",
-		Groups:   []string{"system:nodes", "system:bootstrappers"},
-	}
+	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
+		"arn:aws:iam::0123456789012:role/testnoderole": config.RoleMapping{
+			RoleARN:  "arn:aws:iam::0123456789012:role/TestNodeRole",
+			Username: "system:node:{{EC2PrivateDNSName}}",
+			Groups:   []string{"system:nodes", "system:bootstrappers"},
+		},
+	}, nil, nil)}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -709,10 +709,12 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 		AccountID:    "0123456789012",
 		UserID:       "TestNodeRole",
 		SessionName:  "i-0c6f21bf1f24f9708",
-	}}, true)
+	}})
 	defer cleanup(h.metrics)
 	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14")
-	h.iamMappingsIndex.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/TestNodeRole", "arn:aws:iam::0123456789012:role/testnoderole", "system:node:{{EC2PrivateDNSName}}", []string{"system:nodes", "system:bootstrappers"}))
+	indexer := createIndexer()
+	indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/TestNodeRole", "arn:aws:iam::0123456789012:role/testnoderole", "system:node:{{EC2PrivateDNSName}}", []string{"system:nodes", "system:bootstrappers"}))
+	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
