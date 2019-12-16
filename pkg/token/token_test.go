@@ -48,8 +48,8 @@ func assertSTSError(t *testing.T, err error) {
 var (
 	now        = time.Now()
 	timeStr    = now.UTC().Format("20060102T150405Z")
+	validURL   = fmt.Sprintf("https://sts.amazonaws.com/?action=GetCallerIdentity&X-Amz-Credential=ASIABCDEFGHIJKLMNOPQ%%2F20191216%%2Fus-west-2%%2Fs3%%2Faws4_request&x-amz-signedheaders=x-k8s-aws-id&x-amz-expires=60&x-amz-date=%s", timeStr)
 	validToken = toToken(validURL)
-	validURL   = fmt.Sprintf("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-expires=60&x-amz-date=%s", timeStr)
 )
 
 func toToken(url string) string {
@@ -209,15 +209,19 @@ func TestVerifyNoSession(t *testing.T) {
 	arn := "arn:aws:iam::123456789012:user/Alice"
 	account := "123456789012"
 	userID := "Alice"
+	accessKeyID := "ASIABCDEFGHIJKLMNOPQ"
 	identity, err := newVerifier(200, jsonResponse(arn, account, userID), nil).Verify(validToken)
 	if err != nil {
 		t.Errorf("expected error to be nil was %q", err)
+	}
+	if identity.AccessKeyID != accessKeyID {
+		t.Errorf("expected AccessKeyID to be %q but was %q", accessKeyID, identity.AccessKeyID)
 	}
 	if identity.ARN != arn {
 		t.Errorf("expected ARN to be %q but was %q", arn, identity.ARN)
 	}
 	if identity.CanonicalARN != arn {
-		t.Errorf("expected CannonicalARN to be %q but was %q", arn, identity.CanonicalARN)
+		t.Errorf("expected CanonicalARN to be %q but was %q", arn, identity.CanonicalARN)
 	}
 	if identity.UserID != userID {
 		t.Errorf("expected Username to be %q but was %q", userID, identity.UserID)

@@ -1,5 +1,5 @@
 /*
-Copyright 2017 by the contributors.
+Copyright 2017-2020 by the contributors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -294,10 +294,11 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	}
 
 	log.WithFields(logrus.Fields{
-		"arn":       identity.ARN,
-		"accountid": identity.AccountID,
-		"userid":    identity.UserID,
-		"session":   identity.SessionName,
+		"accesskeyid": identity.AccessKeyID,
+		"arn":         identity.ARN,
+		"accountid":   identity.AccountID,
+		"userid":      identity.UserID,
+		"session":     identity.SessionName,
 	}).Info("STS response")
 
 	// look up the ARN in each of our mappings to fill in the username and groups
