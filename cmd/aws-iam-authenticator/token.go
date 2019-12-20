@@ -31,6 +31,7 @@ var tokenCmd = &cobra.Command{
 	Short: "Authenticate using AWS IAM and get token for Kubernetes",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		region := viper.GetString("region")
 		roleARN := viper.GetString("role")
 		externalID := viper.GetString("externalID")
 		clusterID := viper.GetString("clusterID")
@@ -65,6 +66,7 @@ var tokenCmd = &cobra.Command{
 			AssumeRoleARN:        roleARN,
 			AssumeRoleExternalID: externalID,
 			SessionName:          sessionName,
+			Region:               region,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
@@ -81,6 +83,7 @@ var tokenCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(tokenCmd)
+	tokenCmd.Flags().String("region", "", "AWS region to use for assume role calls")
 	tokenCmd.Flags().StringP("role", "r", "", "Assume an IAM Role ARN before signing this token")
 	tokenCmd.Flags().StringP("external-id", "e", "", "External ID to pass when assuming the IAM Role")
 	tokenCmd.Flags().StringP("session-name", "s", "", "Session name to pass when assuming the IAM Role")
@@ -89,6 +92,7 @@ func init() {
 		false,
 		"Enable mapping a federated sessions caller-specified-role-name attribute onto newly assumed sessions. NOTE: Only applicable when a new role is requested via --role")
 	tokenCmd.Flags().Bool("cache", false, "Cache the credential on disk until it expires. Uses the aws profile specified by AWS_PROFILE or the default profile.")
+	viper.BindPFlag("region", tokenCmd.Flags().Lookup("region"))
 	viper.BindPFlag("role", tokenCmd.Flags().Lookup("role"))
 	viper.BindPFlag("externalID", tokenCmd.Flags().Lookup("external-id"))
 	viper.BindPFlag("tokenOnly", tokenCmd.Flags().Lookup("token-only"))
