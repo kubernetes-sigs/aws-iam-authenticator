@@ -29,10 +29,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
@@ -98,6 +98,7 @@ type Token struct {
 
 // GetTokenOptions is passed to GetWithOptions to provide an extensible get token interface
 type GetTokenOptions struct {
+	Region               string
 	ClusterID            string
 	AssumeRoleARN        string
 	AssumeRoleExternalID string
@@ -236,6 +237,9 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 		})
 		if err != nil {
 			return Token{}, fmt.Errorf("could not create session: %v", err)
+		}
+		if options.Region != "" {
+			sess = sess.Copy(aws.NewConfig().WithRegion(options.Region).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint))
 		}
 
 		if g.cache {
