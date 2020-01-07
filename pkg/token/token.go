@@ -1,5 +1,5 @@
 /*
-Copyright 2017 by the contributors.
+Copyright 2017-2020 by the contributors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -66,6 +66,11 @@ type Identity struct {
 	// users or other roles are allowed to assume the role, they can provide
 	// (nearly) arbitrary strings here.
 	SessionName string
+
+	// The AWS Access Key ID used to authenticate the request.  This can be used
+	// in conjuction with CloudTrail to determine the identity of the individual
+	// if the individual assumed an IAM role before making the request.
+	AccessKeyID string
 }
 
 const (
@@ -431,6 +436,9 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, FormatError{"X-Amz-Date parameter must be present in pre-signed URL"}
 	}
 
+	// Obtain AWS Access Key ID from supplied credentials
+	accessKeyID := strings.Split(queryParamsLower.Get("x-amz-credential"), "/")[0]
+
 	dateParam, err := time.Parse(dateHeaderFormat, date)
 	if err != nil {
 		return nil, FormatError{fmt.Sprintf("error parsing X-Amz-Date parameter %s into format %s: %s", date, dateHeaderFormat, err.Error())}
@@ -473,8 +481,9 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 
 	// parse the response into an Identity
 	id := &Identity{
-		ARN:       callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.Arn,
-		AccountID: callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.Account,
+		ARN:         callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.Arn,
+		AccountID:   callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.Account,
+		AccessKeyID: accessKeyID,
 	}
 	id.CanonicalARN, err = arn.Canonicalize(id.ARN)
 	if err != nil {
