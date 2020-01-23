@@ -330,6 +330,9 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 				Username: username,
 				UID:      uid,
 				Groups:   groups,
+				Extra: map[string]authenticationv1beta1.ExtraValue{
+					"awsaccesskeyid": {identity.AccessKeyID},
+				},
 			},
 		},
 	})
