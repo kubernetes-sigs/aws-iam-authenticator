@@ -59,7 +59,7 @@ func tokenReview(username, uid string, groups []string, accesskeyid string) auth
 				UID:      uid,
 				Groups:   groups,
 				Extra: map[string]authenticationv1beta1.ExtraValue{
-					"awsaccesskeyid": {accesskeyid},
+					"accessKeyId": {accesskeyid},
 				},
 			},
 		},
