@@ -50,7 +50,7 @@ func verifyAuthResult(t *testing.T, resp *httptest.ResponseRecorder, expected au
 	}
 }
 
-func tokenReview(username, uid string, groups []string) authenticationv1beta1.TokenReview {
+func tokenReview(username, uid string, groups []string, accesskeyid string) authenticationv1beta1.TokenReview {
 	return authenticationv1beta1.TokenReview{
 		Status: authenticationv1beta1.TokenReviewStatus{
 			Authenticated: true,
@@ -58,6 +58,9 @@ func tokenReview(username, uid string, groups []string) authenticationv1beta1.To
 				Username: username,
 				UID:      uid,
 				Groups:   groups,
+				Extra: map[string]authenticationv1beta1.ExtraValue{
+					"accessKeyId": {accesskeyid},
+				},
 			},
 		},
 	}
@@ -410,13 +413,15 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 		t.Fatalf("Could not marshal in put data: %v", err)
 	}
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
-	h := setup(&testVerifier{err: nil, identity: &token.Identity{
+	identity := &token.Identity{
 		ARN:          "arn:aws:iam::0123456789012:role/Test",
 		CanonicalARN: "arn:aws:iam::0123456789012:role/Test",
 		AccountID:    "0123456789012",
 		UserID:       "Test",
 		SessionName:  "",
-	}})
+		AccessKeyID:  "ABCDEF",
+	}
+	h := setup(&testVerifier{err: nil, identity: identity})
 	defer cleanup(h.metrics)
 	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
 		"arn:aws:iam::0123456789012:role/test": config.RoleMapping{
@@ -429,7 +434,7 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("TestUser", "aws-iam-authenticator:0123456789012:Test", []string{"sys:admin", "listers"}))
+	verifyAuthResult(t, resp, tokenReview("TestUser", "aws-iam-authenticator:0123456789012:Test", []string{"sys:admin", "listers"}, "ABCDEF"))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -460,7 +465,7 @@ func TestAuthenticateVerifierRoleMappingCRD(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("TestUser", "aws-iam-authenticator:0123456789012:Test", []string{"sys:admin", "listers"}))
+	verifyAuthResult(t, resp, tokenReview("TestUser", "aws-iam-authenticator:0123456789012:Test", []string{"sys:admin", "listers"}, ""))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -495,7 +500,7 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("TestUser", "aws-iam-authenticator:0123456789012:Test", []string{"sys:admin", "listers"}))
+	verifyAuthResult(t, resp, tokenReview("TestUser", "aws-iam-authenticator:0123456789012:Test", []string{"sys:admin", "listers"}, ""))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -526,7 +531,7 @@ func TestAuthenticateVerifierUserMappingCRD(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("TestUser", "aws-iam-authenticator:0123456789012:Test", []string{"sys:admin", "listers"}))
+	verifyAuthResult(t, resp, tokenReview("TestUser", "aws-iam-authenticator:0123456789012:Test", []string{"sys:admin", "listers"}, ""))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -557,7 +562,7 @@ func TestAuthenticateVerifierAccountMappingForUser(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:user/Test", "aws-iam-authenticator:0123456789012:Test", nil))
+	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:user/Test", "aws-iam-authenticator:0123456789012:Test", nil, ""))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -588,7 +593,7 @@ func TestAuthenticateVerifierAccountMappingForUserCRD(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:user/Test", "aws-iam-authenticator:0123456789012:Test", nil))
+	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:user/Test", "aws-iam-authenticator:0123456789012:Test", nil, ""))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -619,7 +624,7 @@ func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:role/Test", "aws-iam-authenticator:0123456789012:Test", nil))
+	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:role/Test", "aws-iam-authenticator:0123456789012:Test", nil, ""))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -650,7 +655,7 @@ func TestAuthenticateVerifierAccountMappingForRoleCRD(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:role/Test", "aws-iam-authenticator:0123456789012:Test", nil))
+	verifyAuthResult(t, resp, tokenReview("arn:aws:iam::0123456789012:role/Test", "aws-iam-authenticator:0123456789012:Test", nil, ""))
 	validateMetrics(t, validateOpts{success: 1})
 }
 
@@ -686,7 +691,7 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("system:node:ip-172-31-27-14", "aws-iam-authenticator:0123456789012:TestNodeRole", []string{"system:nodes", "system:bootstrappers"}))
+	verifyAuthResult(t, resp, tokenReview("system:node:ip-172-31-27-14", "aws-iam-authenticator:0123456789012:TestNodeRole", []string{"system:nodes", "system:bootstrappers"}, ""))
 	validateMetrics(t, validateOpts{success: 1})
 
 }
@@ -719,7 +724,7 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
-	verifyAuthResult(t, resp, tokenReview("system:node:ip-172-31-27-14", "aws-iam-authenticator:0123456789012:TestNodeRole", []string{"system:nodes", "system:bootstrappers"}))
+	verifyAuthResult(t, resp, tokenReview("system:node:ip-172-31-27-14", "aws-iam-authenticator:0123456789012:TestNodeRole", []string{"system:nodes", "system:bootstrappers"}, ""))
 	validateMetrics(t, validateOpts{success: 1})
 
 }
