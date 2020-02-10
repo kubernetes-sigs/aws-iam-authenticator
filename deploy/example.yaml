@@ -27,9 +27,18 @@ rules:
 - apiGroups:
   - iamauthenticator.k8s.aws
   resources:
-  - "*"
+  - iamidentitymappings
   verbs:
-  - "*"
+  - get
+  - list
+  - watch
+- apiGroups:
+  - iamauthenticator.k8s.aws
+  resources:
+  - iamidentitymappings/status
+  verbs:
+  - patch
+  - update
 - apiGroups:
   - ""
   resources:
