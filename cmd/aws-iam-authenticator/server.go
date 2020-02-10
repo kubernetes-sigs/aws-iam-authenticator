@@ -30,8 +30,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-// DefaultPort is the default localhost port (chosen randomly).
-const DefaultPort = 21362
+const (
+	// DefaultPort is the default localhost port (chosen randomly).
+	DefaultPort = 21362
+	// Default Ec2 TPS Variables
+	DefaultEC2DescribeInstancesQps   = 15
+	DefaultEC2DescribeInstancesBurst = 5
+)
 
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
@@ -101,6 +106,18 @@ func init() {
 		DefaultPort,
 		"Port to bind the server to listen to")
 	viper.BindPFlag("server.port", serverCmd.Flags().Lookup("port"))
+
+	serverCmd.Flags().Int(
+		"ec2-describeInstances-qps",
+		DefaultEC2DescribeInstancesQps,
+		"AWS EC2 rate limiting with qps")
+	viper.BindPFlag("server.ec2DescribeInstancesQps", serverCmd.Flags().Lookup("ec2-describeInstances-qps"))
+
+	serverCmd.Flags().Int(
+		"ec2-describeInstances-burst",
+		DefaultEC2DescribeInstancesBurst,
+		"AWS EC2 rate Limiting with burst")
+	viper.BindPFlag("server.ec2DescribeInstancesBurst", serverCmd.Flags().Lookup("ec2-describeInstances-burst"))
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	_ = fs.Parse([]string{})

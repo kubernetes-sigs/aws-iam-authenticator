@@ -1,6 +1,6 @@
 module sigs.k8s.io/aws-iam-authenticator
 
-go 1.12
+go 1.13
 
 require (
 	github.com/aws/aws-sdk-go v1.26.7
@@ -10,6 +10,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.4.0
 	go.hein.dev/go-version v0.1.0
+	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190425012535-181e1f9c52c1
 	k8s.io/apimachinery v0.0.0-20190612125636-6a5db36e93ad

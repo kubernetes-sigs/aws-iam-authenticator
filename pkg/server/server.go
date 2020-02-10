@@ -19,31 +19,22 @@ package server
 import (
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/file"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
-	"github.com/aws/aws-sdk-go/aws"
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -74,7 +65,7 @@ type handler struct {
 	http.ServeMux
 	verifier    token.Verifier
 	metrics     metrics
-	ec2Provider EC2Provider
+	ec2Provider ec2provider.EC2Provider
 	clusterID   string
 	mappers     []mapper.Mapper
 }
@@ -150,7 +141,7 @@ func New(cfg config.Config, mappers []mapper.Mapper) *Server {
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
 	c.httpServer = http.Server{
 		ErrorLog: log.New(errLog, "", 0),
-		Handler:  c.getHandler(mappers),
+		Handler:  c.getHandler(mappers, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst),
 	}
 	c.listener = listener
 	return c
@@ -173,7 +164,7 @@ type healthzHandler struct{}
 func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
-func (c *Server) getHandler(mappers []mapper.Mapper) *handler {
+func (c *Server) getHandler(mappers []mapper.Mapper, ec2DescribeQps int, ec2DescribeBurst int) *handler {
 	if c.ServerEC2DescribeInstancesRoleARN != "" {
 		_, err := awsarn.Parse(c.ServerEC2DescribeInstancesRoleARN)
 		if err != nil {
@@ -184,7 +175,7 @@ func (c *Server) getHandler(mappers []mapper.Mapper) *handler {
 	h := &handler{
 		verifier:    token.NewVerifier(c.ClusterID),
 		metrics:     createMetrics(),
-		ec2Provider: newEC2Provider(c.ServerEC2DescribeInstancesRoleARN),
+		ec2Provider: ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, ec2DescribeQps, ec2DescribeBurst),
 		clusterID:   c.ClusterID,
 		mappers:     mappers,
 	}
@@ -194,6 +185,8 @@ func (c *Server) getHandler(mappers []mapper.Mapper) *handler {
 	h.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "ok")
 	})
+	logrus.Infof("Starting the h.ec2Provider.startEc2DescribeBatchProcessing ")
+	go h.ec2Provider.StartEc2DescribeBatchProcessing()
 	return h
 }
 
@@ -397,7 +390,7 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 		if !instanceIDPattern.MatchString(identity.SessionName) {
 			return "", fmt.Errorf("SessionName did not contain an instance id")
 		}
-		privateDNSName, err := h.ec2Provider.getPrivateDNSName(identity.SessionName)
+		privateDNSName, err := h.ec2Provider.GetPrivateDNSName(identity.SessionName)
 		if err != nil {
 			return "", err
 		}
@@ -410,98 +403,4 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 	template = strings.Replace(template, "{{SessionNameRaw}}", identity.SessionName, -1)
 
 	return template, nil
-}
-
-// EC2Provider configures a DNS resolving function for nodes
-type EC2Provider interface {
-	// Get a node name from instance ID
-	getPrivateDNSName(string) (string, error)
-}
-
-type ec2ProviderImpl struct {
-	ec2             ec2iface.EC2API
-	privateDNSCache map[string]string
-	lock            sync.Mutex
-}
-
-func newEC2Provider(roleARN string) EC2Provider {
-	return &ec2ProviderImpl{
-		ec2:             ec2.New(newSession(roleARN)),
-		privateDNSCache: make(map[string]string),
-	}
-}
-
-func newSession(roleARN string) *session.Session {
-	// Initial credentials loaded from SDK's default credential chain, such as
-	// the environment, shared credentials (~/.aws/credentials), or EC2 Instance
-	// Role.
-
-	sess := session.Must(session.NewSession())
-	if aws.StringValue(sess.Config.Region) == "" {
-		ec2metadata := ec2metadata.New(sess)
-		regionFound, err := ec2metadata.Region()
-		if err != nil {
-			logrus.WithError(err).Fatal("Region not found in shared credentials, environment variable, or instance metadata.")
-		}
-		sess.Config.Region = aws.String(regionFound)
-	}
-
-	if roleARN != "" {
-		logrus.WithFields(logrus.Fields{
-			"roleARN": roleARN,
-		}).Infof("Using assumed role for EC2 API")
-
-		ap := &stscreds.AssumeRoleProvider{
-			Client:   sts.New(sess),
-			RoleARN:  roleARN,
-			Duration: time.Duration(60) * time.Minute,
-		}
-
-		sess.Config.Credentials = credentials.NewCredentials(ap)
-	}
-	return sess
-}
-
-func (p *ec2ProviderImpl) getPrivateDNSNameCache(id string) (string, error) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	name, ok := p.privateDNSCache[id]
-	if ok {
-		return name, nil
-	}
-	return "", errors.New("instance id not found")
-}
-
-func (p *ec2ProviderImpl) setPrivateDNSNameCache(id string, privateDNSName string) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.privateDNSCache[id] = privateDNSName
-}
-
-// GetPrivateDNS looks up the private DNS from the EC2 API
-func (p *ec2ProviderImpl) getPrivateDNSName(id string) (string, error) {
-	privateDNSName, err := p.getPrivateDNSNameCache(id)
-	if err == nil {
-		return privateDNSName, nil
-	}
-
-	// Look up instance from EC2 API
-	output, err := p.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
-		InstanceIds: aws.StringSlice([]string{id}),
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed querying private DNS from EC2 API for node %s: %s", id, err.Error())
-	}
-	for _, reservation := range output.Reservations {
-		for _, instance := range reservation.Instances {
-			if aws.StringValue(instance.InstanceId) == id {
-				privateDNSName = aws.StringValue(instance.PrivateDnsName)
-				p.setPrivateDNSNameCache(id, privateDNSName)
-			}
-		}
-	}
-	if privateDNSName == "" {
-		return "", fmt.Errorf("failed to find node %s", id)
-	}
-	return privateDNSName, nil
 }

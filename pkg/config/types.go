@@ -128,4 +128,9 @@ type Config struct {
 
 	// BackendMode is an ordered list of backends to get mappings from. Comma-delimited list of: File,ConfigMap,CRD
 	BackendMode []string
+
+	// Ec2 DescribeInstances rate limiting variables initially set to defaults until we completely
+	// understand we don't need to change
+	EC2DescribeInstancesQps   int
+	EC2DescribeInstancesBurst int
 }
