@@ -56,3 +56,7 @@ cscope.*
 
 # local dot files
 .envrc
+
+# coverage.out file
+coverage.out
+coverage.html

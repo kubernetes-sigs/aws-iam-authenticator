@@ -12,7 +12,8 @@ endif
 	$(GORELEASER) --skip-publish --rm-dist --snapshot
 
 test:
-	go test -v -cover -race $(GITHUB_REPO)/...
+	go test -v -coverprofile=coverage.out -race $(GITHUB_REPO)/...
+	go tool cover -html=coverage.out -o coverage.html
 
 format:
 	test -z "$$(find . -path ./vendor -prune -type f -o -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)" || \

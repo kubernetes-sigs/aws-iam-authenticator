@@ -67,16 +67,22 @@ func tokenReview(username, uid string, groups []string, accesskeyid string) auth
 }
 
 type testEC2Provider struct {
-	name string
+	name  string
+	qps   int
+	burst int
 }
 
-func (p *testEC2Provider) getPrivateDNSName(id string) (string, error) {
+func (p *testEC2Provider) GetPrivateDNSName(id string) (string, error) {
 	return p.name, nil
 }
 
-func newTestEC2Provider(name string) *testEC2Provider {
+func (p *testEC2Provider) StartEc2DescribeBatchProcessing() {}
+
+func newTestEC2Provider(name string, qps int, burst int) *testEC2Provider {
 	return &testEC2Provider{
-		name: name,
+		name:  name,
+		qps:   qps,
+		burst: burst,
 	}
 }
 
@@ -679,7 +685,7 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 		SessionName:  "i-0c6f21bf1f24f9708",
 	}})
 	defer cleanup(h.metrics)
-	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14")
+	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14", 15, 5)
 	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
 		"arn:aws:iam::0123456789012:role/testnoderole": config.RoleMapping{
 			RoleARN:  "arn:aws:iam::0123456789012:role/TestNodeRole",
@@ -716,7 +722,7 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 		SessionName:  "i-0c6f21bf1f24f9708",
 	}})
 	defer cleanup(h.metrics)
-	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14")
+	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14", 15, 5)
 	indexer := createIndexer()
 	indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/TestNodeRole", "arn:aws:iam::0123456789012:role/testnoderole", "system:node:{{EC2PrivateDNSName}}", []string{"system:nodes", "system:bootstrappers"}))
 	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)}
@@ -731,7 +737,7 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 
 func TestRenderTemplate(t *testing.T) {
 	h := &handler{}
-	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14")
+	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14", 15, 5)
 	cases := []struct {
 		template string
 		want     string
