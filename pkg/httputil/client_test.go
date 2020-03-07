@@ -19,32 +19,37 @@ func TestNewRateLimitedClient(t *testing.T) {
 
 	u := ts.URL + "/test"
 
-	// requests are to be throttled if qps*burst < reqs
-	// estimated time: reqs / (qps*burst) seconds
+	// requests are to be throttled if qps+burst < reqs
+	// estimated time: reqs / (qps+burst) seconds
 	tbs := []struct {
 		ctxTimeout time.Duration
 		qps        int
 		burst      int
-		reqs       int // concurrent requests
+		requests   int // concurrent requests
 		err        string
 	}{
 		{
-			qps:   1,
-			burst: 1,
-			reqs:  5,
+			qps:      1,
+			burst:    1,
+			requests: 10,
 		},
 		{
-			qps:   10,
-			burst: 1,
-			reqs:  10,
+			qps:      15,
+			burst:    5,
+			requests: 100,
 		},
 		{
-			// 20 concurrent encrypt requests should exceed 1 QPS before 10ms
+			qps:      8,
+			burst:    2,
+			requests: 20,
+		},
+		{
+			// 20 concurrent ec2 API requests should exceed 1 QPS before 10ms
 			// thus rate limiter returns an error
 			ctxTimeout: 10 * time.Millisecond,
 			qps:        1,
 			burst:      1,
-			reqs:       20,
+			requests:   20,
 			err:        `context deadline`,
 			// "Wait(n=1) would exceed context deadline" for requests before timeout
 			// "context deadline exceeded" for requests after timeout
@@ -56,10 +61,10 @@ func TestNewRateLimitedClient(t *testing.T) {
 			t.Fatalf("#%d: failed to create a new client (%v)", idx, err)
 		}
 
-		now := time.Now()
+		start := time.Now()
 
-		errc := make(chan error, tt.reqs)
-		for i := 0; i < tt.reqs; i++ {
+		errc := make(chan error, tt.requests)
+		for i := 0; i < tt.requests; i++ {
 			go func() {
 				var ctx context.Context
 				if tt.ctxTimeout > 0 {
@@ -80,7 +85,7 @@ func TestNewRateLimitedClient(t *testing.T) {
 		}
 
 		failed := false
-		for i := 0; i < tt.reqs; i++ {
+		for i := 0; i < tt.requests; i++ {
 			err = <-errc
 			switch {
 			case tt.err == "": // expects no error
@@ -89,6 +94,7 @@ func TestNewRateLimitedClient(t *testing.T) {
 				}
 			case tt.err != "": // expects error
 				if err == nil {
+					// this means that the request did not get throttled.
 					continue
 				}
 				if !strings.Contains(err.Error(), tt.err) &&
@@ -106,15 +112,13 @@ func TestNewRateLimitedClient(t *testing.T) {
 		}
 
 		if tt.err == "" {
-			took := time.Since(now)
-			expectedTook := time.Duration(0)
-			if tt.qps*tt.burst < tt.reqs {
-				expectedTook = time.Duration(tt.reqs/(tt.qps*tt.burst)) * time.Second
-				// bursty requests may be served concurrently
-				expectedTook /= 2
+			observedDuration := time.Since(start).Round(time.Second)
+			expectedDuration := time.Duration(0)
+			if tt.qps + tt.burst < tt.requests {
+				expectedDuration = (time.Duration(tt.requests/(tt.qps)) * time.Second)
 			}
-			if expectedTook > 0 && took < expectedTook {
-				t.Fatalf("with rate limit, requests expected took %v, got %v", expectedTook, took)
+			if expectedDuration > 0 && observedDuration > expectedDuration {
+				t.Fatalf("with rate limit, requests expected duration %v, got %v", expectedDuration, observedDuration)
 			}
 		}
 	}
