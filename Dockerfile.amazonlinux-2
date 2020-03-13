@@ -21,5 +21,6 @@ RUN yum install -y shadow-utils && \
     aws-iam-authenticator && \
     yum update -y
 COPY aws-iam-authenticator /
+RUN chown aws-iam-authenticator /aws-iam-authenticator
 USER aws-iam-authenticator
 ENTRYPOINT ["/aws-iam-authenticator"]
