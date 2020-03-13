@@ -13,16 +13,5 @@
 # limitations under the License.
 
 FROM debian:jessie
-RUN adduser \
-    --system \
-    --no-create-home \
-    --uid 10000 \
-    --disabled-password \
-    --disabled-login \
-    aws-iam-authenticator && \
-    apt-get update && \
-    apt-get install -y ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
 COPY aws-iam-authenticator /
-USER aws-iam-authenticator
 ENTRYPOINT ["/aws-iam-authenticator"]

@@ -13,13 +13,5 @@
 # limitations under the License.
 
 FROM amazonlinux:2
-RUN yum install -y shadow-utils && \
-    adduser \
-    --system \
-    --no-create-home \
-    --uid 10000 \
-    aws-iam-authenticator && \
-    yum update -y
 COPY aws-iam-authenticator /
-USER aws-iam-authenticator
 ENTRYPOINT ["/aws-iam-authenticator"]
