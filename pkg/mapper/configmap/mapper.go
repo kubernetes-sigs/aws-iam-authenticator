@@ -22,7 +22,8 @@ func NewConfigMapMapper(cfg config.Config) (*ConfigMapMapper, error) {
 }
 
 func (m *ConfigMapMapper) Name() string {
-	return mapper.ModeConfigMap
+	// TODO refactor & rename this package to EKSConfigMap
+	return mapper.ModeEKSConfigMap
 }
 
 func (m *ConfigMapMapper) Start(stopCh <-chan struct{}) error {
