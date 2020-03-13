@@ -19,6 +19,8 @@ import (
 
 type CRDMapper struct {
 	*controller.Controller
+	// iamInformerFactory is an informer factory that must be Started
+	iamInformerFactory informers.SharedInformerFactory
 	// iamMappingsSynced is a function to get if the informers have synced
 	iamMappingsSynced cache.InformerSynced
 	// iamMappingsIndex is a custom indexer which allows for indexing on canonical arns
@@ -61,7 +63,7 @@ func NewCRDMapper(cfg config.Config) (*CRDMapper, error) {
 
 	ctrl := controller.New(kubeClient, iamClient, iamMappingInformer)
 
-	return &CRDMapper{ctrl, iamMappingsSynced, iamMappingsIndex}, nil
+	return &CRDMapper{ctrl, iamInformerFactory, iamMappingsSynced, iamMappingsIndex}, nil
 }
 
 func NewCRDMapperWithIndexer(iamMappingsIndex cache.Indexer) *CRDMapper {
@@ -73,15 +75,14 @@ func (m *CRDMapper) Name() string {
 }
 
 func (m *CRDMapper) Start(stopCh <-chan struct{}) error {
+	m.iamInformerFactory.Start(stopCh)
 	go func() {
 		// Run starts worker goroutines and blocks
 		if err := m.Controller.Run(2, stopCh); err != nil {
 			panic(err)
 		}
 	}()
-	if ok := cache.WaitForCacheSync(stopCh, m.iamMappingsSynced); !ok {
-		return fmt.Errorf("failed to wait for caches to sync")
-	}
+
 	return nil
 }
 
