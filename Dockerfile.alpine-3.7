@@ -16,5 +16,6 @@ FROM alpine:3.7
 RUN adduser -D -u 10000 aws-iam-authenticator
 RUN apk add --update ca-certificates
 COPY aws-iam-authenticator /
+RUN chown aws-iam-authenticator /aws-iam-authenticator
 USER aws-iam-authenticator
 ENTRYPOINT ["/aws-iam-authenticator"]
