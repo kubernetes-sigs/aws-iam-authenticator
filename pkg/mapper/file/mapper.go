@@ -57,8 +57,8 @@ func NewFileMapperWithMaps(
 }
 
 func (m *FileMapper) Name() string {
-	// TODO refactor and rename this package to MountedConfigMap
-	return mapper.ModeMountedConfigMap
+	// TODO refactor and rename this package to MountedFile
+	return mapper.ModeMountedFile
 }
 
 func (m *FileMapper) Start(_ <-chan struct{}) error {

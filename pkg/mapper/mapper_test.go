@@ -15,7 +15,7 @@ func TestValidateBackendMode(t *testing.T) {
 		{
 			name: "valid backend mode",
 			cfg: config.Config{
-				BackendMode: []string{ModeMountedConfigMap, ModeEKSConfigMap, ModeCRD},
+				BackendMode: []string{ModeMountedFile, ModeEKSConfigMap, ModeCRD},
 			},
 		},
 		{
@@ -41,7 +41,7 @@ func TestValidateBackendMode(t *testing.T) {
 		{
 			name: "duplicate backend mode",
 			cfg: config.Config{
-				BackendMode: []string{ModeMountedConfigMap, ModeMountedConfigMap},
+				BackendMode: []string{ModeMountedFile, ModeMountedFile},
 			},
 			wantErrs: true,
 		},

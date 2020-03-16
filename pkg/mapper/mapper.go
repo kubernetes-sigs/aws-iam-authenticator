@@ -10,12 +10,12 @@ import (
 )
 
 const (
-	// Deprecated: use ModeMountedConfigMap instead
+	// Deprecated: use ModeMountedFile instead
 	ModeFile string = "File"
 	// Deprecated: use ModeEKSConfigMap instead
 	ModeConfigMap string = "ConfigMap"
 
-	ModeMountedConfigMap string = "MountedConfigMap"
+	ModeMountedFile string = "MountedFile"
 
 	ModeEKSConfigMap string = "EKSConfigMap"
 
@@ -23,12 +23,12 @@ const (
 )
 
 var (
-	ValidBackendModeChoices      = []string{ModeFile, ModeConfigMap, ModeMountedConfigMap, ModeEKSConfigMap, ModeCRD}
+	ValidBackendModeChoices      = []string{ModeFile, ModeConfigMap, ModeMountedFile, ModeEKSConfigMap, ModeCRD}
 	DeprecatedBackendModeChoices = map[string]string{
-		ModeFile:      ModeMountedConfigMap,
+		ModeFile:      ModeMountedFile,
 		ModeConfigMap: ModeEKSConfigMap,
 	}
-	BackendModeChoices = []string{ModeMountedConfigMap, ModeEKSConfigMap, ModeCRD}
+	BackendModeChoices = []string{ModeMountedFile, ModeEKSConfigMap, ModeCRD}
 )
 
 var ErrNotMapped = errors.New("ARN is not mapped")

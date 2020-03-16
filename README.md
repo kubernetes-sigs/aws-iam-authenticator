@@ -90,16 +90,25 @@ Format](#full-configuration-format) below for details.
 Using the `--backend-mode` flag, you can configure the server to source
 mappings from two additional backends: an EKS-style ConfigMap
 (`--backend-mode=EKSConfigMap`) or `IAMIdentityMapping` custom resources
-(`--backend-mode=CRD`). The default backend, the server configuration ConfigMap
-that's mounted by the server pod, corresponds to
-`--backend-mode=MountedConfigMap`. You can pass a comma-separated list of these
-backends to have the server search them in order. For example, with
-`--backend-mode=EKSConfigMap,MountedConfigMap`, the server will search the
-EKS-style ConfigMap for a mapping then the server configuration ConfigMap if it
-doesn't find one. This is useful if you're migrating your mappings from one
-backend to another.
+(`--backend-mode=CRD`). The default backend, the server configuration file
+that's mounted by the server pod, corresponds to `--backend-mode=MountedFile`.
 
-#### `MountedConfigMap`
+You can pass a comma-separated list of these backends to have the server search
+them in order. For example, with `--backend-mode=EKSConfigMap,MountedFile`, the
+server will search the EKS-style ConfigMap for mappings then, if it doesn't
+find a mapping for the given IAM role/user, the server configuration file. If a
+mapping for the same IAM role/user exists in multiple backends, the server will
+use the mapping in the backend that occurs first in the comma-separated list.
+In this example, if a mapping is found in the EKS ConfigMap then it will be
+used whether or not a duplicate or conflicting mapping exists in the server
+configuration file.
+
+Note that when setting a single backend, the server will *only* source from
+that one and ignore the others even if they exist. For example, with
+`--backend-mode=CRD`, the server will *only* source from `IAMIdentityMappings`
+and ignore the mounted file and EKS ConfigMap.
+
+#### `MountedFile`
 This is the default backend of mappings and sufficient for most users. See
 [Full Configuration Format](#full-configuration-format) below for details.
 
@@ -440,9 +449,9 @@ server:
   - "012345678901"
   - "456789012345"
 
-  # source mappings from this ConfigMap (mapUsers, mapRoles, & mapAccounts)
+  # source mappings from this file (mapUsers, mapRoles, & mapAccounts)
   backendMode:
-  - MountedConfigMap
+  - MountedFile
 ```
 
 ## Community, discussion, contribution, and support

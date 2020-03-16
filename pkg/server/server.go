@@ -209,7 +209,7 @@ func BuildMapperChain(cfg config.Config) ([]mapper.Mapper, error) {
 		switch mode {
 		case mapper.ModeFile:
 			fallthrough
-		case mapper.ModeMountedConfigMap:
+		case mapper.ModeMountedFile:
 			fileMapper, err := file.NewFileMapper(cfg)
 			if err != nil {
 				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
