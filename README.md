@@ -84,8 +84,8 @@ systemctl restart kubelet.service
 
 ### 4. Create IAM role/user to kubernetes user/group mappings
 The default behavior of the server is to source mappings exclusively from the
-`mapUsers` and `mapRoles` fields of its configuration. See [Full Configuration
-Format](#full-configuration-format) below for details.
+`mapUsers` and `mapRoles` fields of its configuration file. See [Full
+Configuration Format](#full-configuration-format) below for details.
 
 Using the `--backend-mode` flag, you can configure the server to source
 mappings from two additional backends: an EKS-style ConfigMap
@@ -116,6 +116,9 @@ This is the default backend of mappings and sufficient for most users. See
 This backend models each IAM mapping as an `IAMIdentityMapping` [Kubernetes
 Custom
 Resource](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+This approach enables you to maintain mappings in a Kubernetes-native way using
+kubectl or the API. Plus, syntax errors (like misaligned YAML) can be more
+easily caught and won't affect all mappings.
 
 To setup an `IAMIdentityMapping` CRD you'll first need to `apply` the CRD
 manifest:

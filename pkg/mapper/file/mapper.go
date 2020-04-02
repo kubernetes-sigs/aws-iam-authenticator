@@ -57,7 +57,6 @@ func NewFileMapperWithMaps(
 }
 
 func (m *FileMapper) Name() string {
-	// TODO refactor and rename this package to MountedFile
 	return mapper.ModeMountedFile
 }
 

@@ -57,7 +57,7 @@ func ValidateBackendMode(modes []string) []error {
 		}
 	}
 
-	if len(modes) != len(sets.NewString(modes...).List()) {
+	if len(modes) != sets.NewString(modes...).Len() {
 		errs = append(errs, fmt.Errorf("backend-mode %q has duplicates", modes))
 	}
 

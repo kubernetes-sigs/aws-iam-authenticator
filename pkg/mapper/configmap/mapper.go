@@ -22,7 +22,6 @@ func NewConfigMapMapper(cfg config.Config) (*ConfigMapMapper, error) {
 }
 
 func (m *ConfigMapMapper) Name() string {
-	// TODO refactor & rename this package to EKSConfigMap
 	return mapper.ModeEKSConfigMap
 }
 
