@@ -28,7 +28,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/featuregate"
 )
 
@@ -113,7 +112,7 @@ func getConfig() (config.Config, error) {
 		return cfg, errors.New("cluster ID cannot be empty")
 	}
 
-	if errs := validateBackendMode(cfg.BackendMode); len(errs) > 0 {
+	if errs := mapper.ValidateBackendMode(cfg.BackendMode); len(errs) > 0 {
 		return cfg, utilerrors.NewAggregate(errs)
 	}
 
@@ -130,21 +129,4 @@ func getLogFormatter() logrus.Formatter {
 	}
 
 	return &logrus.TextFormatter{FullTimestamp: true}
-}
-
-func validateBackendMode(modes []string) []error {
-	var errs []error
-
-	allowedModes := sets.NewString(mapper.BackendModeChoices...)
-	for _, mode := range modes {
-		if !allowedModes.Has(mode) {
-			errs = append(errs, fmt.Errorf("backend-mode %q is not a valid mode", mode))
-		}
-	}
-
-	if len(modes) != len(sets.NewString(modes...).List()) {
-		errs = append(errs, fmt.Errorf("backend-mode %q has duplicates", modes))
-	}
-
-	return errs
 }

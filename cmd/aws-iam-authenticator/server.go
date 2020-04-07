@@ -53,7 +53,10 @@ var serverCmd = &cobra.Command{
 			logrus.Fatalf("%s", err)
 		}
 
-		mappers := server.BuildMapperChain(cfg)
+		mappers, err := server.BuildMapperChain(cfg)
+		if err != nil {
+			logrus.Fatalf("failed to build mapper chain: %v", err)
+		}
 		for _, m := range mappers {
 			logrus.Infof("starting mapper %q", m.Name())
 			if err := m.Start(stopCh); err != nil {
@@ -97,7 +100,7 @@ func init() {
 	viper.BindPFlag("server.address", serverCmd.Flags().Lookup("address"))
 
 	serverCmd.Flags().StringSlice("backend-mode",
-		[]string{mapper.ModeCRD, mapper.ModeConfigMap, mapper.ModeFile},
+		[]string{mapper.ModeMountedFile},
 		fmt.Sprintf("Ordered list of backends to get mappings from. The first one that returns a matching mapping wins. Comma-delimited list of: %s", strings.Join(mapper.BackendModeChoices, ",")))
 	viper.BindPFlag("server.backendMode", serverCmd.Flags().Lookup("backend-mode"))
 

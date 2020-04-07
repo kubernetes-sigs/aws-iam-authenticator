@@ -82,17 +82,54 @@ You may also need to restart the kubelet daemon on your master node to pick up t
 systemctl restart kubelet.service
 ```
 
-### Configure IAMIdentityMapping Custom Resource Definitions
+### 4. Create IAM role/user to kubernetes user/group mappings
+The default behavior of the server is to source mappings exclusively from the
+`mapUsers` and `mapRoles` fields of its configuration file. See [Full
+Configuration Format](#full-configuration-format) below for details.
 
-In the `master` version of the AWS IAM Authenticator you can configure your users using one of three methods. The `mapUsers` and `mapRoles` as seen in the [Full Configuration Format](#full-configuration-format), using the new (alpha) [Kubernetes Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/), or using an [EKS aws-auth ConfigMap](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html). The `--backend-mode` flag determines which of these methods is enabled and their order of precedence (first match wins). The CRD and ConfigMap allow the authenticator server to update its IAM identity mappings without restarting. See [Issues #79](https://github.com/kubernetes-sigs/aws-iam-authenticator/issues/79) for more details.
+Using the `--backend-mode` flag, you can configure the server to source
+mappings from two additional backends: an EKS-style ConfigMap
+(`--backend-mode=EKSConfigMap`) or `IAMIdentityMapping` custom resources
+(`--backend-mode=CRD`). The default backend, the server configuration file
+that's mounted by the server pod, corresponds to `--backend-mode=MountedFile`.
 
-To setup an `IAMIdentityMapping` CRD you'll first need to `apply` the CRD manifest:
+You can pass a comma-separated list of these backends to have the server search
+them in order. For example, with `--backend-mode=EKSConfigMap,MountedFile`, the
+server will search the EKS-style ConfigMap for mappings then, if it doesn't
+find a mapping for the given IAM role/user, the server configuration file. If a
+mapping for the same IAM role/user exists in multiple backends, the server will
+use the mapping in the backend that occurs first in the comma-separated list.
+In this example, if a mapping is found in the EKS ConfigMap then it will be
+used whether or not a duplicate or conflicting mapping exists in the server
+configuration file.
+
+Note that when setting a single backend, the server will *only* source from
+that one and ignore the others even if they exist. For example, with
+`--backend-mode=CRD`, the server will *only* source from `IAMIdentityMappings`
+and ignore the mounted file and EKS ConfigMap.
+
+#### `MountedFile`
+This is the default backend of mappings and sufficient for most users. See
+[Full Configuration Format](#full-configuration-format) below for details.
+
+#### `CRD` (alpha)
+This backend models each IAM mapping as an `IAMIdentityMapping` [Kubernetes
+Custom
+Resource](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+This approach enables you to maintain mappings in a Kubernetes-native way using
+kubectl or the API. Plus, syntax errors (like misaligned YAML) can be more
+easily caught and won't affect all mappings.
+
+To setup an `IAMIdentityMapping` CRD you'll first need to `apply` the CRD
+manifest:
 
 ```
 kubectl apply -f deploy/iamidentitymapping.yaml
 ```
 
-With the CRDs deployed you can then create Custom Resources which model your IAM Identities see [`./deploy/example-iamidentitymapping.yaml`](deploy/example-iamidentitymapping.yaml) :
+With the CRDs deployed you can then create Custom Resources which model your
+IAM Identities. See
+[`./deploy/example-iamidentitymapping.yaml`](deploy/example-iamidentitymapping.yaml):
 
 ```
 ---
@@ -113,7 +150,15 @@ spec:
   - system:masters
 ```
 
-### 4. Set up kubectl to use authentication tokens provided by AWS IAM Authenticator for Kubernetes
+#### `EKSConfigMap`
+The EKS-style `kube-system/aws-auth` ConfigMap serves as the backend. The
+ConfigMap is expected to be in exactly the same format as in EKS clusters:
+https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html. This is
+useful if you're migrating from/to EKS and want to keep your mappings, or are
+running EKS in addition to some other AWS cluster(s) and want to have the same
+mappings in each.
+
+### 5. Set up kubectl to use authentication tokens provided by AWS IAM Authenticator for Kubernetes
 
 > This requires a 1.10+ `kubectl` binary to work. If you receive `Please enter Username:` when trying to use `kubectl` you need to update to the latest `kubectl`
 
@@ -407,6 +452,9 @@ server:
   - "012345678901"
   - "456789012345"
 
+  # source mappings from this file (mapUsers, mapRoles, & mapAccounts)
+  backendMode:
+  - MountedFile
 ```
 
 ## Community, discussion, contribution, and support

@@ -202,34 +202,38 @@ func createMetrics() metrics {
 	return m
 }
 
-func BuildMapperChain(cfg config.Config) []mapper.Mapper {
+func BuildMapperChain(cfg config.Config) ([]mapper.Mapper, error) {
 	modes := cfg.BackendMode
 	mappers := []mapper.Mapper{}
 	for _, mode := range modes {
 		switch mode {
 		case mapper.ModeFile:
+			fallthrough
+		case mapper.ModeMountedFile:
 			fileMapper, err := file.NewFileMapper(cfg)
 			if err != nil {
-				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
 			mappers = append(mappers, fileMapper)
 		case mapper.ModeConfigMap:
+			fallthrough
+		case mapper.ModeEKSConfigMap:
 			configMapMapper, err := configmap.NewConfigMapMapper(cfg)
 			if err != nil {
-				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
 			mappers = append(mappers, configMapMapper)
 		case mapper.ModeCRD:
 			crdMapper, err := crd.NewCRDMapper(cfg)
 			if err != nil {
-				logrus.Fatalf("backend-mode %q creation failed: %v", mode, err)
+				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
 			mappers = append(mappers, crdMapper)
 		default:
-			logrus.Fatalf("backend-mode %q is not a valid mode", mode)
+			return nil, fmt.Errorf("backend-mode %q is not a valid mode", mode)
 		}
 	}
-	return mappers
+	return mappers, nil
 }
 
 func duration(start time.Time) float64 {

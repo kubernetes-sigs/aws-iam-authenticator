@@ -57,7 +57,7 @@ func NewFileMapperWithMaps(
 }
 
 func (m *FileMapper) Name() string {
-	return mapper.ModeFile
+	return mapper.ModeMountedFile
 }
 
 func (m *FileMapper) Start(_ <-chan struct{}) error {

@@ -22,7 +22,7 @@ func NewConfigMapMapper(cfg config.Config) (*ConfigMapMapper, error) {
 }
 
 func (m *ConfigMapMapper) Name() string {
-	return mapper.ModeConfigMap
+	return mapper.ModeEKSConfigMap
 }
 
 func (m *ConfigMapMapper) Start(stopCh <-chan struct{}) error {
