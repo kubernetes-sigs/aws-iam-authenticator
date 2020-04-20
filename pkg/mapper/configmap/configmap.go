@@ -59,7 +59,7 @@ func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
 					FieldSelector: fields.OneTermEqualSelector("metadata.name", "aws-auth").String(),
 				})
 				if err != nil {
-					logrus.Warn("Unable to re-establish watch.  Sleeping for 5 seconds")
+					logrus.Warnf("Unable to re-establish watch: %v.  Sleeping for 5 seconds", err)
 					time.Sleep(5 * time.Second)
 					continue
 				}
