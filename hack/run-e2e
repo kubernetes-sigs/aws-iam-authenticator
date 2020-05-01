@@ -1,0 +1,118 @@
+#!/bin/bash
+
+# Copyright 2019 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -euo pipefail
+
+OS_ARCH=$(go env GOOS)-amd64
+TEST_ID=$RANDOM
+CLUSTER_NAME=aws-iam-authenticator-e2e-cluster-$TEST_ID
+TEST_DIR=/tmp/aws-iam-authenticator-e2e
+BASE_DIR=$(dirname $0)
+REGION=${AWS_REGION-us-west-2}
+ZONES=${AWS_AVAILABILITY_ZONES-us-west-2a,us-west-2b,us-west-2c}
+FOCUS=${GINKGO_FOCUS-"[aws-iam-authenticator]"}
+NODES=${GINKGO_NODES:-1}
+K8S_VERSION=${K8S_VERSION-1.16.0}
+INSTANCE_TYPE=${INSTANCE_TYPE-c4.large}
+
+echo "Testing in region: $REGION and zones: $ZONES"
+
+KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/v1.16.1/kops-$OS_ARCH
+KOPS_PATH=$TEST_DIR/kops
+KOPS_STATE_FILE=s3://${USER}-$(date +"%Y-%m-%d")-aws-iam-authenticator-e2e
+
+aws s3 mb $KOPS_STATE_FILE || true
+
+# Download kops if not yet
+if [[ ! -e $KOPS_PATH ]]; then
+    mkdir -p $TEST_DIR
+    echo "Downloading KOPS from $KOPS_DOWNLOAD_URL to $KOPS_PATH"
+    curl -L -X GET $KOPS_DOWNLOAD_URL -o $KOPS_PATH
+fi
+
+chmod +x $KOPS_PATH
+
+echo "Build aws-iam-authenticator"
+eval $(aws ecr get-login --region $REGION --no-include-email)
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+IMAGE_TAG=$TEST_ID
+IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/amazon/aws-iam-authenticator
+docker build -t $IMAGE_NAME:$IMAGE_TAG -f Dockerfile.amazonlinux-2 .
+docker push $IMAGE_NAME:$IMAGE_TAG
+
+set +e
+echo "Creating cluster $CLUSTER_NAME"
+CLUSTER_YAML_PATH=$TEST_DIR/$CLUSTER_NAME.yaml
+SSH_KEY_PATH=$TEST_DIR/id_rsa
+ssh-keygen -t rsa -f $SSH_KEY_PATH -q -N ""
+
+$KOPS_PATH create cluster \
+    --state $KOPS_STATE_FILE \
+    --zones $ZONES \
+    --node-count=$NODES \
+    --node-size=$INSTANCE_TYPE \
+    --kubernetes-version=$K8S_VERSION \
+    --ssh-public-key=$SSH_KEY_PATH.pub \
+        $CLUSTER_NAME.k8s.local
+
+$KOPS_PATH get cluster --state $KOPS_STATE_FILE $CLUSTER_NAME.k8s.local -o yaml > $CLUSTER_YAML_PATH
+cat $BASE_DIR/authentication.yaml >> $CLUSTER_YAML_PATH
+
+echo "Replacing cluster yaml"
+cat $CLUSTER_YAML_PATH
+
+$KOPS_PATH replace --state $KOPS_STATE_FILE -f $CLUSTER_YAML_PATH
+$KOPS_PATH update cluster --state $KOPS_STATE_FILE $CLUSTER_NAME.k8s.local --yes
+
+# Wait for cluster creation
+while [[ 1 ]]; do
+    $KOPS_PATH validate cluster --state $KOPS_STATE_FILE
+    ret=$?
+    if [[ $ret -eq 0 ]]; then
+        break
+    else
+        echo "Waiting for cluster to be created"
+        sleep 30
+    fi
+done;
+
+# install aws-iam-authenticator
+
+echo $KOPS_PATH delete cluster --name $CLUSTER_NAME.k8s.local --state $KOPS_STATE_FILE --yes
+exit 1
+
+# Run the test
+pushd ./tests/e2e
+go get -u github.com/onsi/ginkgo/ginkgo
+ginkgo -p -nodes=$NODES -v --focus="$FOCUS" --noColor ./... -- -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS
+TEST_PASS=$?
+popd
+
+echo "TEST_PASS: $TEST_PASS"
+#go get -u github.com/onsi/ginkgo/ginkgo
+#export KUBECONFIG=$HOME/.kube/config
+#ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e -- -report-dir=$ARTIFACTS
+#TEST_PASS=$?
+
+echo "Deleting cluster $CLUSTER_NAME"
+$KOPS_PATH delete cluster --name $CLUSTER_NAME.k8s.local --state $KOPS_STATE_FILE --yes
+
+rm -rf $TEST_DIR
+
+if [[ $TEST_PASS -ne 0 ]]; then
+    exit 1
+fi
+
