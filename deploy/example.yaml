@@ -47,14 +47,20 @@ rules:
   - create
   - update
   - patch
-
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: aws-iam-authenticator
   namespace: kube-system
-
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1

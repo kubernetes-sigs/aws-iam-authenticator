@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: kube-system
+  name: aws-auth
+data:
+
+  # each mapRoles entry maps an IAM role to a username and set of groups
+  # Each username and group can optionally contain template parameters:
+  #  1) "{{AccountID}}" is the 12 digit AWS ID.
+  #  2) "{{SessionName}}" is the role session name.
+  mapRoles: |
+    # map federated users in my "KubernetesAdmin" role to users like
+    # "admin:alice-example.com". The SessionName is an arbitrary role name
+    # like an e-mail address passed by the identity provider. Note that if this
+    # role is assumed directly by an IAM User (not via federation), the user
+    # can control the SessionName.
+    - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
+      username: admin:{{SessionName}}
+      groups:
+        - system:masters
+
+  # each mapUsers entry maps an IAM role to a static username and set of groups
+  mapUsers: |
+    # map user IAM user Alice in 000000000000 to user "alice" in group "system:masters"
+    - userARN: arn:aws:iam::000000000000:user/Alice
+      username: alice
+      groups:
+        - system:masters
+
+  # automatically map IAM ARN from these accounts to username.
+  # NOTE: Always use quotes to avoid the account numbers being recognized as numbers
+  # instead of strings by the yaml parser.
+  mapAccounts: |
+    - "012345678901"
