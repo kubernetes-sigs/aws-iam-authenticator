@@ -397,7 +397,10 @@ server:
   # each mapRoles entry maps an IAM role to a username and set of groups
   # Each username and group can optionally contain template parameters:
   #  1) "{{AccountID}}" is the 12 digit AWS ID.
-  #  2) "{{SessionName}}" is the role session name.
+  #  2) "{{SessionName}}" is the role session name, with `@` characters
+  #     transliterated to `-` characters.
+  #  3) "{{SessionNameRaw}}" is the role session name, without character
+  #     transliteration (available in version >= 0.5).
   mapRoles:
   # statically map arn:aws:iam::000000000000:role/KubernetesAdmin to cluster admin
   - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
@@ -434,6 +437,17 @@ server:
   # can control the SessionName.
   - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
     username: admin:{{SessionName}}
+    groups:
+    - system:masters
+
+  # map federated users in my "KubernetesOtherAdmin" role to users like
+  # "alice-example.com". The SessionName is an arbitrary role name
+  # like an e-mail address passed by the identity provider. Note that if this
+  # role is assumed directly by an IAM User (not via federation), the user
+  # can control the SessionName.  Note that the "{{SessionName}}" macro is
+  # quoted to ensure it is properly parsed as a string.
+  - roleARN: arn:aws:iam::000000000000:role/KubernetesOtherAdmin
+    username: "{{SessionName}}"
     groups:
     - system:masters
 
