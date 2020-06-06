@@ -32,7 +32,12 @@ dockers:
     dockerfile: Dockerfile.alpine-3.7
     image_templates:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.7"
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine"
+  - binaries:
+    - aws-iam-authenticator
+    dockerfile: Dockerfile.alpine-3.11
+    image_templates:
+    - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.11"
+    - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine"
   - binaries:
      - aws-iam-authenticator
     dockerfile: Dockerfile.debian-jessie
@@ -43,7 +48,12 @@ dockers:
     dockerfile: Dockerfile.debian-stretch
     image_templates:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-stretch"
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian"
+  - binaries:
+    - aws-iam-authenticator
+    dockerfile: Dockerfile.debian-buster
+    image_templates:
+    - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-buster"
+    - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian"
   - binaries:
      - aws-iam-authenticator
     dockerfile: Dockerfile.amazonlinux-2
