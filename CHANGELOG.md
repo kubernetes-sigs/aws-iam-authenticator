@@ -1,4 +1,6 @@
-Release v0.5.1-alpha.1
+Release v0.5.1
+* Update examples/README ([#317](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/317), @otterley)
+* Changelog gen ([#318](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/318), @nckturner)
 * Fix CRD mapper blocking all others because caches never sync  and revamp backend-mode flag ([#303](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/303), @wongma7)
 * Update aws-sdk-go to version v1.30.0 ([#306](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/306), @nckturner)
 * Bump k8s.io/ dependencies to 1.16.8 ([#305](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/305), @wongma7)
@@ -9,19 +11,3 @@ Release v0.5.1-alpha.1
 * added selector to spec and changed from extenstions to apps/v1 ([#291](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/291), @andarob)
 * Add AWS AccessKeyID as an extra field in UserInfo ([#286](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/286), @pepov)
 * Allow server port customization ([#278](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/278), @diversario)
-
-
-Release v0.5.0
-* Update aws-sdk version to 1.19.11 ([#216](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/216), @nckturner)
-* Add credentials cache for expiring credentials ([#193](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/193), @llamahunter)
-* Support Global Different Region STS Endpoints ([#173](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/173), @sunfuze)
-* Add expiration to token creation. ([#160](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/160), @nckturner)
-* Log STS response on successful authentication. ([#161](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/161), @nckturner)
-* Allow session names to be forwarded with `--forward-session-name`. ([#134](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/134), @jrnt30)
-* Add output format option for verify command. ([#126](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/126), @joshkurz)
-* Add flags to configure the address and port to allow running the server locally. ([#124](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/124), @christopherhein)
-* Add a flag to only output the token. ([#122](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/122), @christopherhein)
-* Add --log-format server flag to configure output format. ([#73](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/73), @phillipj)
-* Build release for windows. ([#113](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/113), @acaire)
-* Add support for ARNs with paths. ([#103](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/103), @mattlandis)
-* GetWithSTS and GetWithRoleForSession added to Generator interface to allow tools integrating with Authenticator to pass an existing STS client or existing session.  ([#101](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/101), @errordeveloper)
