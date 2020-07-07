@@ -252,6 +252,36 @@ func TestAuthenticateUnableToDecodeBodyCRD(t *testing.T) {
 	validateMetrics(t, validateOpts{malformed: 1})
 }
 
+func testIsLoggableIdentity(t *testing.T) {
+	h := &handler{scrubbedAccounts: []string{"111122223333", "012345678901"}}
+
+	cases := []struct {
+		identity *token.Identity
+		want     bool
+	}{
+		{
+			&token.Identity{AccountID: "222233334444"},
+			true,
+		},
+		{
+			&token.Identity{AccountID: "111122223333"},
+			false,
+		},
+	}
+
+	for _, c := range cases {
+		if got := h.isLoggableIdentity(c.identity); got != c.want {
+			t.Errorf(
+				"Unexpected result: isLoggableIdentity(%v): got: %t, wanted %t",
+				c.identity,
+				got,
+				c.want,
+			)
+		}
+	}
+
+}
+
 type testVerifier struct {
 	identity *token.Identity
 	err      error
