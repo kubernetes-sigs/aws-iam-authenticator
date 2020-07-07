@@ -63,11 +63,12 @@ var (
 // server state (internal)
 type handler struct {
 	http.ServeMux
-	verifier    token.Verifier
-	metrics     metrics
-	ec2Provider ec2provider.EC2Provider
-	clusterID   string
-	mappers     []mapper.Mapper
+	verifier         token.Verifier
+	metrics          metrics
+	ec2Provider      ec2provider.EC2Provider
+	clusterID        string
+	mappers          []mapper.Mapper
+	scrubbedAccounts []string
 }
 
 // metrics are handles to the collectors for prometheous for the various metrics we are tracking.
@@ -173,11 +174,12 @@ func (c *Server) getHandler(mappers []mapper.Mapper, ec2DescribeQps int, ec2Desc
 	}
 
 	h := &handler{
-		verifier:    token.NewVerifier(c.ClusterID),
-		metrics:     createMetrics(),
-		ec2Provider: ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, ec2DescribeQps, ec2DescribeBurst),
-		clusterID:   c.ClusterID,
-		mappers:     mappers,
+		verifier:         token.NewVerifier(c.ClusterID),
+		metrics:          createMetrics(),
+		ec2Provider:      ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, ec2DescribeQps, ec2DescribeBurst),
+		clusterID:        c.ClusterID,
+		mappers:          mappers,
+		scrubbedAccounts: c.Config.ScrubbedAWSAccounts,
 	}
 
 	h.HandleFunc("/authenticate", h.authenticateEndpoint)
@@ -240,6 +242,15 @@ func duration(start time.Time) float64 {
 	return time.Since(start).Seconds()
 }
 
+func (h *handler) isLoggableIdentity(identity *token.Identity) bool {
+	for _, account := range h.scrubbedAccounts {
+		if identity.AccountID == account {
+			return false
+		}
+	}
+	return true
+}
+
 func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 	log := logrus.WithFields(logrus.Fields{
@@ -289,16 +300,18 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	log.WithFields(logrus.Fields{
-		"accesskeyid": identity.AccessKeyID,
-		"arn":         identity.ARN,
-		"accountid":   identity.AccountID,
-		"userid":      identity.UserID,
-		"session":     identity.SessionName,
-	}).Info("STS response")
+	if h.isLoggableIdentity(identity) {
+		log.WithFields(logrus.Fields{
+			"accesskeyid": identity.AccessKeyID,
+			"arn":         identity.ARN,
+			"accountid":   identity.AccountID,
+			"userid":      identity.UserID,
+			"session":     identity.SessionName,
+		}).Info("STS response")
 
-	// look up the ARN in each of our mappings to fill in the username and groups
-	log = log.WithField("arn", identity.CanonicalARN)
+		// look up the ARN in each of our mappings to fill in the username and groups
+		log = log.WithField("arn", identity.CanonicalARN)
+	}
 
 	username, groups, err := h.doMapping(identity)
 	if err != nil {
@@ -309,8 +322,11 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	// use a prefixed UID that includes the AWS account ID and AWS user ID ("AROAAAAAAAAAAAAAAAAAA")
-	uid := fmt.Sprintf("aws-iam-authenticator:%s:%s", identity.AccountID, identity.UserID)
+	uid := fmt.Sprintf("aws-iam-authenticator:administrative:%s", username)
+	if h.isLoggableIdentity(identity) {
+		// use a prefixed UID that includes the AWS account ID and AWS user ID ("AROAAAAAAAAAAAAAAAAAA")
+		uid = fmt.Sprintf("aws-iam-authenticator:%s:%s", identity.AccountID, identity.UserID)
+	}
 
 	// the token is valid and the role is mapped, return success!
 	log.WithFields(logrus.Fields{
@@ -320,6 +336,12 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	}).Info("access granted")
 	h.metrics.latency.WithLabelValues(metricSuccess).Observe(duration(start))
 	w.WriteHeader(http.StatusOK)
+
+	userExtra := map[string]authenticationv1beta1.ExtraValue{}
+	if h.isLoggableIdentity(identity) {
+		userExtra["accessKeyId"] = authenticationv1beta1.ExtraValue{identity.AccessKeyID}
+	}
+
 	json.NewEncoder(w).Encode(authenticationv1beta1.TokenReview{
 		Status: authenticationv1beta1.TokenReviewStatus{
 			Authenticated: true,
@@ -327,9 +349,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 				Username: username,
 				UID:      uid,
 				Groups:   groups,
-				Extra: map[string]authenticationv1beta1.ExtraValue{
-					"accessKeyId": {identity.AccessKeyID},
-				},
+				Extra:    userExtra,
 			},
 		},
 	})

@@ -288,13 +288,13 @@ as a user could potentially change this on the client side.
 
 ## API Authorization from Outside a Cluster
 
-It is possible to make requests to the Kubernetes API from a client that is outside the cluster, be that using the 
-bare Kubernetes REST API or from one of the language specific Kubernetes clients 
+It is possible to make requests to the Kubernetes API from a client that is outside the cluster, be that using the
+bare Kubernetes REST API or from one of the language specific Kubernetes clients
 (e.g., [Python](https://github.com/kubernetes-client/python)). In order to do so, you must create a bearer token that
-is included with the request to the API. This bearer token requires you append the string `k8s-aws-v1.` with a 
-base64 encoded string of a signed HTTP request to the STS GetCallerIdentity Query API. This is then sent it in the 
-`Authorization`  header of the request.  Something to note though is that the IAM Authenticator explicitly omits 
-base64 padding to avoid any `=` characters thus guaranteeing a string safe to use in URLs. Below is an example in 
+is included with the request to the API. This bearer token requires you append the string `k8s-aws-v1.` with a
+base64 encoded string of a signed HTTP request to the STS GetCallerIdentity Query API. This is then sent it in the
+`Authorization`  header of the request.  Something to note though is that the IAM Authenticator explicitly omits
+base64 padding to avoid any `=` characters thus guaranteeing a string safe to use in URLs. Below is an example in
 Python on how this token would be constructed:
 
 ```python
@@ -340,7 +340,7 @@ def get_bearer_token(cluster_id, region):
 
     # remove any base64 encoding padding:
     return 'k8s-aws-v1.' + re.sub(r'=*', '', base64_url)
-    
+
 # If making a HTTP request you would create the authorization headers as follows:
 
 headers = {'Authorization': 'Bearer ' + get_bearer_token('my_cluster', 'us-east-1')}
@@ -393,6 +393,11 @@ server:
 
   # role to assume before querying EC2 API in order to discover metadata like EC2 private DNS Name
   ec2DescribeInstancesRoleARN: arn:aws:iam::000000000000:role/DescribeInstancesRole
+
+  # AWS Account IDs to scrub from server logs. (Defaults to empty list)
+  scrubbedAccounts:
+  - "111122223333"
+  - "222233334444"
 
   # each mapRoles entry maps an IAM role to a username and set of groups
   # Each username and group can optionally contain template parameters:
