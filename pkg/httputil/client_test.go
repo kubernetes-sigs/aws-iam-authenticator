@@ -114,7 +114,7 @@ func TestNewRateLimitedClient(t *testing.T) {
 		if tt.err == "" {
 			observedDuration := time.Since(start).Round(time.Second)
 			expectedDuration := time.Duration(0)
-			if tt.qps + tt.burst < tt.requests {
+			if tt.qps+tt.burst < tt.requests {
 				expectedDuration = (time.Duration(tt.requests/(tt.qps)) * time.Second)
 			}
 			if expectedDuration > 0 && observedDuration > expectedDuration {

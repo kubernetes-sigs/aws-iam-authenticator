@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -36,6 +35,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
@@ -87,7 +87,6 @@ const (
 	// Format of the X-Amz-Date header used for expiration
 	// https://golang.org/pkg/time/#pkg-constants
 	dateHeaderFormat = "20060102T150405Z"
-	hostRegexp       = `^sts(\.[a-z1-9\-]+)?\.amazonaws\.com(\.cn)?$`
 )
 
 // Token is generated and used by Kubernetes client-go to authenticate with a Kubernetes cluster.
@@ -352,24 +351,64 @@ type Verifier interface {
 }
 
 type tokenVerifier struct {
-	client    *http.Client
-	clusterID string
+	client            *http.Client
+	clusterID         string
+	validSTShostnames map[string]bool
+}
+
+func stsHostsForPartition(partitionID string) map[string]bool {
+	validSTShostnames := map[string]bool{}
+
+	var partition *endpoints.Partition
+	for _, p := range endpoints.DefaultPartitions() {
+		if partitionID == p.ID() {
+			partition = &p
+			break
+		}
+	}
+	if partition == nil {
+		logrus.Errorf("Partition %s not valid", partitionID)
+		return validSTShostnames
+	}
+	stsSvc, ok := partition.Services()["sts"]
+	if !ok {
+		logrus.Errorf("STS service not found in partition %s", partitionID)
+		return validSTShostnames
+	}
+	for epName, ep := range stsSvc.Endpoints() {
+		rep, err := ep.ResolveEndpoint(endpoints.STSRegionalEndpointOption)
+		if err != nil {
+			logrus.WithError(err).Errorf("Error resolving endpoint for %s in partition %s", epName, partitionID)
+			continue
+		}
+		parsedURL, err := url.Parse(rep.URL)
+		if err != nil {
+			logrus.WithError(err).Errorf("Error parsing STS URL %s", rep.URL)
+			continue
+		}
+		validSTShostnames[parsedURL.Hostname()] = true
+	}
+	return validSTShostnames
 }
 
 // NewVerifier creates a Verifier that is bound to the clusterID and uses the default http client.
-func NewVerifier(clusterID string) Verifier {
+func NewVerifier(clusterID string, partitionID string) Verifier {
 	return tokenVerifier{
-		client:    http.DefaultClient,
-		clusterID: clusterID,
+		client: &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		},
+		clusterID:         clusterID,
+		validSTShostnames: stsHostsForPartition(partitionID),
 	}
 }
 
 // verify a sts host, doc: http://docs.amazonaws.cn/en_us/general/latest/gr/rande.html#sts_region
 func (v tokenVerifier) verifyHost(host string) error {
-	if match, _ := regexp.MatchString(hostRegexp, host); !match {
+	if _, ok := v.validSTShostnames[host]; !ok {
 		return FormatError{fmt.Sprintf("unexpected hostname %q in pre-signed URL", host)}
 	}
-
 	return nil
 }
 
@@ -409,7 +448,11 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	}
 
 	queryParamsLower := make(url.Values)
-	queryParams := parsedURL.Query()
+	queryParams, err := url.ParseQuery(parsedURL.RawQuery)
+	if err != nil {
+		return nil, FormatError{"malformed query parameter"}
+	}
+
 	for key, values := range queryParams {
 		if !parameterWhitelist[strings.ToLower(key)] {
 			return nil, FormatError{fmt.Sprintf("non-whitelisted query parameter %q", key)}

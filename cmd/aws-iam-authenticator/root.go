@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -84,6 +85,7 @@ func initConfig() {
 
 func getConfig() (config.Config, error) {
 	cfg := config.Config{
+		PartitionID:                       viper.GetString("server.partition"),
 		ClusterID:                         viper.GetString("clusterID"),
 		ServerEC2DescribeInstancesRoleARN: viper.GetString("server.ec2DescribeInstancesRoleARN"),
 		HostPort:                          viper.GetInt("server.port"),
@@ -111,6 +113,16 @@ func getConfig() (config.Config, error) {
 
 	if cfg.ClusterID == "" {
 		return cfg, errors.New("cluster ID cannot be empty")
+	}
+
+	partitionKeys := []string{}
+	partitionMap := map[string]endpoints.Partition{}
+	for _, p := range endpoints.DefaultPartitions() {
+		partitionMap[p.ID()] = p
+		partitionKeys = append(partitionKeys, p.ID())
+	}
+	if _, ok := partitionMap[cfg.PartitionID]; !ok {
+		return cfg, errors.New("Invalid partition")
 	}
 
 	if errs := mapper.ValidateBackendMode(cfg.BackendMode); len(errs) > 0 {

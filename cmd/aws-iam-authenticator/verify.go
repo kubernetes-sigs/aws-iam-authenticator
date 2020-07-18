@@ -23,6 +23,7 @@ import (
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -35,6 +36,7 @@ var verifyCmd = &cobra.Command{
 		tok := viper.GetString("token")
 		output := viper.GetString("output")
 		clusterID := viper.GetString("clusterID")
+		partition := viper.GetString("partition")
 
 		if tok == "" {
 			fmt.Fprintf(os.Stderr, "error: token not specified\n")
@@ -48,7 +50,7 @@ var verifyCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		id, err := token.NewVerifier(clusterID).Verify(tok)
+		id, err := token.NewVerifier(clusterID, partition).Verify(tok)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not verify token: %v\n", err)
 			os.Exit(1)
@@ -72,4 +74,15 @@ func init() {
 	verifyCmd.Flags().StringP("output", "o", "", "Output format. Only `json` is supported currently.")
 	viper.BindPFlag("token", verifyCmd.Flags().Lookup("token"))
 	viper.BindPFlag("output", verifyCmd.Flags().Lookup("output"))
+
+	partitionKeys := []string{}
+	for _, p := range endpoints.DefaultPartitions() {
+		partitionKeys = append(partitionKeys, p.ID())
+	}
+
+	verifyCmd.Flags().String("partition",
+		endpoints.AwsPartitionID,
+		fmt.Sprintf("The AWS partition. Must be one of: %v", partitionKeys))
+	viper.BindPFlag("partition", verifyCmd.Flags().Lookup("partition"))
+
 }
