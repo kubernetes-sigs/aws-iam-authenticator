@@ -425,6 +425,7 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 	sessionName := strings.Replace(identity.SessionName, "@", "-", -1)
 	template = strings.Replace(template, "{{SessionName}}", sessionName, -1)
 	template = strings.Replace(template, "{{SessionNameRaw}}", identity.SessionName, -1)
+	template = strings.Replace(template, "{{AccessKeyID}}", identity.AccessKeyID, -1)
 
 	return template, nil
 }

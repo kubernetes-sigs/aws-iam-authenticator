@@ -797,6 +797,13 @@ func TestRenderTemplate(t *testing.T) {
 			},
 		},
 		{
+			template: "a-{{AccessKeyID}}-b",
+			want:     "a-321-b",
+			identity: token.Identity{
+				AccessKeyID: "321",
+			},
+		},
+		{
 			template: "a-{{SessionName}}-b",
 			want:     "a-jdoe-b",
 			identity: token.Identity{
