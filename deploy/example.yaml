@@ -47,6 +47,21 @@ rules:
   - create
   - update
   - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - aws-auth
+  verbs:
+  - get
 
 ---
 apiVersion: v1
@@ -56,10 +71,11 @@ metadata:
   namespace: kube-system
 
 ---
-kind: ClusterRoleBinding
+kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: aws-iam-authenticator
+  namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -68,6 +84,29 @@ subjects:
 - kind: ServiceAccount
   name: aws-iam-authenticator
   namespace: kube-system
+
+---
+# EKS-Style ConfigMap: roles and users can be mapped in the same way as supported on EKS.
+# If mappings are defined this way they do not need to be redefined on the other ConfigMap.
+# https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html
+# uncomment if using EKS-Style ConfigMap
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: aws-auth
+#   namespace: kube-system
+# data:
+#   mapRoles: |
+#     - rolearn: <ARN of instance role (not instance profile)>
+#       username: system:node:{{EC2PrivateDNSName}}
+#       groups:
+#         - system:bootstrappers
+#         - system:nodes
+#   mapUsers: |
+#     - rolearn: arn:aws:iam::000000000000:user/Alice
+#       username: alice
+#       groups:
+#         - system:masters
 
 ---
 apiVersion: v1
@@ -190,6 +229,8 @@ spec:
         image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.4.0
         args:
         - server
+        # uncomment if using EKS-Style ConfigMap
+        # - --backend-mode=EKSConfigMap
         - --config=/etc/aws-iam-authenticator/config.yaml
         - --state-dir=/var/aws-iam-authenticator
         - --generate-kubeconfig=/etc/kubernetes/aws-iam-authenticator/kubeconfig.yaml
