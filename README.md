@@ -198,7 +198,7 @@ You can also omit `-r ROLE_ARN` to sign the token with your existing credentials
 This is useful if you want to authenticate as an IAM user directly or if you want to authenticate using an EC2 instance role or a federated role.
 
 ## Kops Usage
-Clusters managed by [Kops](https://github.com/kubernetes/kops) can be configured to use Authenticator. For usage instructions see the [Kops documentation](https://github.com/kubernetes/kops/blob/master/docs/authentication.md#aws-iam-authenticator).
+Clusters managed by [Kops](https://github.com/kubernetes/kops) can be configured to use Authenticator. For usage instructions see the [Kops documentation](https://kops.sigs.k8s.io/authentication/#aws-iam-authenticator).
 
 ## How does it work?
 It works using the AWS [`sts:GetCallerIdentity`](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html) API endpoint.
