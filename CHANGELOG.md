@@ -1,3 +1,11 @@
+Release v0.5.2
+* Added partition flag ([#341](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/341), @micahhausler)
+* Update link to Kops docs site ([#338](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/338), @rifelpet)
+* Security Improvements on the example yaml ([#335](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/335), @pjbgf)
+* Fix RBAC on example file: service account requires get to ConfigMap ([#334](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/334), @pjbgf)
+* Add AccessKeyID as variable for username ([#337](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/337), @pjbgf)
+* Added server side AWS account ID log redaction ([#327](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/327), @micahhausler)
+
 Release v0.5.1
 * Update examples/README ([#317](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/317), @otterley)
 * Changelog gen ([#318](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/318), @nckturner)
@@ -11,3 +19,26 @@ Release v0.5.1
 * added selector to spec and changed from extenstions to apps/v1 ([#291](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/291), @andarob)
 * Add AWS AccessKeyID as an extra field in UserInfo ([#286](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/286), @pepov)
 * Allow server port customization ([#278](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/278), @diversario)
+
+Release v0.5.0
+* Remove DNS-1123 validation of usernames and groups ([#260](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/260), @richardmarshall)
+* switch to use regional sts endpoint & imdsV2 ([#283](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/283), @M00nF1sh)
+* Add AWS Access Key ID to log ([#282](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/282), @otterley)
+* Require to pass in interface instead of the concrete type ([#279](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/279), @Skarlso)
+* Refactor to allow configurable backends (configmap, eks configmap, crd) ([#269](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/269), @wongma7)
+* Update go version ([#255](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/255), @christopherhein)
+* Adding session name parameter to TokenGenerator ([#272](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/272), @SaranBalaji90)
+* Rename prometheus metrics to match new project name ([#249](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/249), @rifelpet)
+* Remove inactive approvers, add wongma7 ([#266](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/266), @nckturner)
+* Update aws-sdk-go to v1.23.11 ([#257](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/257), @bdwyertech)
+* Added go module download check ([#259](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/259), @micahhausler)
+* Updating goreleaser yaml to fix deprecated options ([#252](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/252), @hyperbolic2346)
+* Remove deprecated language from README ([#244](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/244), @nckturner)
+* Lowercase ARN inside doMapping and log about it ([#239](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/239), @wongma7)
+* IAMIdentityMapping CRD Implementation ([#116](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/116), @christopherhein)
+* Adding micahhausler as approver ([#237](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/237), @christopherhein)
+* add support for passing externalID to assume role ([#228](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/228), @jeffmhastings)
+* Update README.md ([#231](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/231), @MIJOTHY)
+* Using sigs.k8s.io domain instead of github.com ([#223](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/223), @christopherhein)
+* Refactored EC2 API calls to be testable ([#226](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/226), @micahhausler)
+* Include aws request ID when logging errors ([#178](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/178), @doublerainbo)
