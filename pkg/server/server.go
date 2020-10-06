@@ -174,7 +174,7 @@ func (c *Server) getHandler(mappers []mapper.Mapper, ec2DescribeQps int, ec2Desc
 	}
 
 	h := &handler{
-		verifier:         token.NewVerifier(c.ClusterID),
+		verifier:         token.NewVerifier(c.ClusterID, c.PartitionID),
 		metrics:          createMetrics(),
 		ec2Provider:      ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, ec2DescribeQps, ec2DescribeBurst),
 		clusterID:        c.ClusterID,

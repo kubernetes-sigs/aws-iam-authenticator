@@ -9,23 +9,25 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 )
 
-func validationErrorTest(t *testing.T, token string, expectedErr string) {
+func validationErrorTest(t *testing.T, partition string, token string, expectedErr string) {
 	t.Helper()
-	_, err := tokenVerifier{}.Verify(token)
+
+	_, err := NewVerifier("", partition).(tokenVerifier).Verify(token)
 	errorContains(t, err, expectedErr)
 }
 
-func validationSuccessTest(t *testing.T, token string) {
+func validationSuccessTest(t *testing.T, partition, token string) {
 	t.Helper()
 	arn := "arn:aws:iam::123456789012:user/Alice"
 	account := "123456789012"
 	userID := "Alice"
-	_, err := newVerifier(200, jsonResponse(arn, account, userID), nil).Verify(token)
+	_, err := newVerifier(partition, 200, jsonResponse(arn, account, userID), nil).Verify(token)
 	if err != nil {
 		t.Errorf("received unexpected error: %s", err)
 	}
@@ -56,7 +58,7 @@ func toToken(url string) string {
 	return v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(url))
 }
 
-func newVerifier(statusCode int, body string, err error) Verifier {
+func newVerifier(partition string, statusCode int, body string, err error) Verifier {
 	var rc io.ReadCloser
 	if body != "" {
 		rc = ioutil.NopCloser(bytes.NewReader([]byte(body)))
@@ -71,6 +73,7 @@ func newVerifier(statusCode int, body string, err error) Verifier {
 				},
 			},
 		},
+		validSTShostnames: stsHostsForPartition(partition),
 	}
 }
 
@@ -104,31 +107,46 @@ func jsonResponse(arn, account, userid string) string {
 }
 
 func TestSTSEndpoints(t *testing.T) {
-	verifier := tokenVerifier{}
-	chinaR := "sts.amazonaws.com.cn"
-	globalR := "sts.amazonaws.com"
-	usEast1R := "sts.us-east-1.amazonaws.com"
-	usEast2R := "sts.us-east-2.amazonaws.com"
-	usWest1R := "sts.us-west-1.amazonaws.com"
-	usWest2R := "sts.us-west-2.amazonaws.com"
-	apSouth1R := "sts.ap-south-1.amazonaws.com"
-	apNorthEast1R := "sts.ap-northeast-1.amazonaws.com"
-	apNorthEast2R := "sts.ap-northeast-2.amazonaws.com"
-	apSouthEast1R := "sts.ap-southeast-1.amazonaws.com"
-	apSouthEast2R := "sts.ap-southeast-2.amazonaws.com"
-	caCentral1R := "sts.ca-central-1.amazonaws.com"
-	euCenteral1R := "sts.eu-central-1.amazonaws.com"
-	euWest1R := "sts.eu-west-1.amazonaws.com"
-	euWest2R := "sts.eu-west-2.amazonaws.com"
-	euWest3R := "sts.eu-west-3.amazonaws.com"
-	euNorth1R := "sts.eu-north-1.amazonaws.com"
-	saEast1R := "sts.sa-east-1.amazonaws.com"
+	cases := []struct {
+		partition string
+		domain    string
+		valid     bool
+	}{
+		{"aws-cn", "sts.cn-northwest-1.amazonaws.com.cn", true},
+		{"aws-cn", "sts.cn-north-1.amazonaws.com.cn", true},
+		{"aws-cn", "sts.us-iso-east-1.c2s.ic.gov", false},
+		{"aws", "sts.amazonaws.com", true},
+		{"aws", "sts-fips.us-west-2.amazonaws.com", true},
+		{"aws", "sts-fips.us-east-1.amazonaws.com", true},
+		{"aws", "sts.us-east-1.amazonaws.com", true},
+		{"aws", "sts.us-east-2.amazonaws.com", true},
+		{"aws", "sts.us-west-1.amazonaws.com", true},
+		{"aws", "sts.us-west-2.amazonaws.com", true},
+		{"aws", "sts.ap-south-1.amazonaws.com", true},
+		{"aws", "sts.ap-northeast-1.amazonaws.com", true},
+		{"aws", "sts.ap-northeast-2.amazonaws.com", true},
+		{"aws", "sts.ap-southeast-1.amazonaws.com", true},
+		{"aws", "sts.ap-southeast-2.amazonaws.com", true},
+		{"aws", "sts.ca-central-1.amazonaws.com", true},
+		{"aws", "sts.eu-central-1.amazonaws.com", true},
+		{"aws", "sts.eu-west-1.amazonaws.com", true},
+		{"aws", "sts.eu-west-2.amazonaws.com", true},
+		{"aws", "sts.eu-west-3.amazonaws.com", true},
+		{"aws", "sts.eu-north-1.amazonaws.com", true},
+		{"aws", "sts.amazonaws.com.cn", false},
+		{"aws", "sts.not-a-region.amazonaws.com", false},
+		{"aws-iso", "sts.us-iso-east-1.c2s.ic.gov", true},
+		{"aws-iso", "sts.cn-north-1.amazonaws.com.cn", false},
+		{"aws-iso-b", "sts.cn-north-1.amazonaws.com.cn", false},
+		{"aws-us-gov", "sts.us-gov-east-1.amazonaws.com", true},
+		{"aws-us-gov", "sts.amazonaws.com", false},
+		{"aws-not-a-partition", "sts.amazonaws.com", false},
+	}
 
-	hosts := []string{chinaR, globalR, usEast1R, usEast2R, usWest1R, usWest2R, apSouth1R, apNorthEast1R, apNorthEast2R, apSouthEast1R, apSouthEast2R, caCentral1R, euCenteral1R, euWest1R, euWest2R, euWest3R, euNorth1R, saEast1R}
-
-	for _, host := range hosts {
-		if err := verifier.verifyHost(host); err != nil {
-			t.Errorf("%s is not valid endpoints host", host)
+	for _, c := range cases {
+		verifier := NewVerifier("", c.partition).(tokenVerifier)
+		if err := verifier.verifyHost(c.domain); err != nil && c.valid {
+			t.Errorf("%s is not valid endpoint for partition %s", c.domain, c.partition)
 		}
 	}
 }
@@ -136,38 +154,67 @@ func TestSTSEndpoints(t *testing.T) {
 func TestVerifyTokenPreSTSValidations(t *testing.T) {
 	b := make([]byte, maxTokenLenBytes+1, maxTokenLenBytes+1)
 	s := string(b)
-	validationErrorTest(t, s, "token is too large")
-	validationErrorTest(t, "k8s-aws-v2.asdfasdfa", "token is missing expected \"k8s-aws-v1.\" prefix")
-	validationErrorTest(t, "k8s-aws-v1.decodingerror", "illegal base64 data")
-	validationErrorTest(t, toToken(":ab:cd.af:/asda"), "missing protocol scheme")
-	validationErrorTest(t, toToken("http://"), "unexpected scheme")
-	validationErrorTest(t, toToken("https://google.com"), fmt.Sprintf("unexpected hostname %q in pre-signed URL", "google.com"))
-	validationErrorTest(t, toToken("https://sts.cn-north-1.amazonaws.com.cn/abc"), "unexpected path in pre-signed URL")
-	validationErrorTest(t, toToken("https://sts.amazonaws.com/abc"), "unexpected path in pre-signed URL")
-	validationErrorTest(t, toToken("https://sts.amazonaws.com/?NoInWhiteList=abc"), "non-whitelisted query parameter")
-	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=get&action=post"), "query parameter with multiple values not supported")
-	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=NotGetCallerIdenity"), "unexpected action parameter in pre-signed URL")
-	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=abc%3bx-k8s-aws-i%3bdef"), "client did not sign the x-k8s-aws-id header in the pre-signed URL")
-	validationErrorTest(t, toToken(fmt.Sprintf("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=9999999", timeStr)), "invalid X-Amz-Expires parameter in pre-signed URL")
-	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=xxxxxxx&x-amz-expires=60"), "error parsing X-Amz-Date parameter")
-	validationErrorTest(t, toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=19900422T010203Z&x-amz-expires=60"), "X-Amz-Date parameter is expired")
-	validationSuccessTest(t, toToken(fmt.Sprintf("https://sts.us-east-2.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
-	validationSuccessTest(t, toToken(fmt.Sprintf("https://sts.ap-northeast-2.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
-	validationSuccessTest(t, toToken(fmt.Sprintf("https://sts.ca-central-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
-	validationSuccessTest(t, toToken(fmt.Sprintf("https://sts.eu-west-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
-	validationSuccessTest(t, toToken(fmt.Sprintf("https://sts.sa-east-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
+	validationErrorTest(t, "aws", s, "token is too large")
+	validationErrorTest(t, "aws", "k8s-aws-v2.asdfasdfa", "token is missing expected \"k8s-aws-v1.\" prefix")
+	validationErrorTest(t, "aws", "k8s-aws-v1.decodingerror", "illegal base64 data")
+
+	validationErrorTest(t, "aws", toToken(":ab:cd.af:/asda"), "missing protocol scheme")
+	validationErrorTest(t, "aws", toToken("http://"), "unexpected scheme")
+	validationErrorTest(t, "aws", toToken("https://google.com"), fmt.Sprintf("unexpected hostname %q in pre-signed URL", "google.com"))
+	validationErrorTest(t, "aws-cn", toToken("https://sts.cn-north-1.amazonaws.com.cn/abc"), "unexpected path in pre-signed URL")
+	validationErrorTest(t, "aws", toToken("https://sts.amazonaws.com/abc"), "unexpected path in pre-signed URL")
+	validationErrorTest(t, "aws", toToken("https://sts.amazonaws.com/?NoInWhiteList=abc"), "non-whitelisted query parameter")
+	validationErrorTest(t, "aws", toToken("https://sts.amazonaws.com/?action=get&action=post"), "query parameter with multiple values not supported")
+	validationErrorTest(t, "aws", toToken("https://sts.amazonaws.com/?action=NotGetCallerIdenity"), "unexpected action parameter in pre-signed URL")
+	validationErrorTest(t, "aws", toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=abc%3bx-k8s-aws-i%3bdef"), "client did not sign the x-k8s-aws-id header in the pre-signed URL")
+	validationErrorTest(t, "aws", toToken(fmt.Sprintf("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=9999999", timeStr)), "invalid X-Amz-Expires parameter in pre-signed URL")
+	validationErrorTest(t, "aws", toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=xxxxxxx&x-amz-expires=60"), "error parsing X-Amz-Date parameter")
+	validationErrorTest(t, "aws", toToken("https://sts.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=19900422T010203Z&x-amz-expires=60"), "X-Amz-Date parameter is expired")
+	validationErrorTest(t, "aws", toToken(fmt.Sprintf("https://sts.sa-east-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60%%gh", timeStr)), "input token was not properly formatted: malformed query parameter")
+	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.us-east-2.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
+	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.ap-northeast-2.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
+	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.ca-central-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
+	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.eu-west-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
+	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.sa-east-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
 }
 
 func TestVerifyHTTPError(t *testing.T) {
-	_, err := newVerifier(0, "", errors.New("an error")).Verify(validToken)
+	_, err := newVerifier("aws", 0, "", errors.New("an error")).Verify(validToken)
 	errorContains(t, err, "error during GET: an error")
 	assertSTSError(t, err)
 }
 
 func TestVerifyHTTP403(t *testing.T) {
-	_, err := newVerifier(403, " ", nil).Verify(validToken)
+	_, err := newVerifier("aws", 403, " ", nil).Verify(validToken)
 	errorContains(t, err, "error from AWS (expected 200, got")
 	assertSTSError(t, err)
+}
+
+func TestVerifyNoRedirectsFollowed(t *testing.T) {
+	ts2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `{"UserId":"AROAIIRR6I5NDJBWMIRQQ:admin-session","Account":"111122223333","Arn":"arn:aws:sts::111122223333:assumed-role/Admin/admin-session"}`)
+	}))
+	defer ts2.Close()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, ts2.URL, http.StatusFound)
+	}))
+	defer ts.Close()
+
+	tokVerifier := NewVerifier("", "aws").(tokenVerifier)
+
+	resp, err := tokVerifier.client.Get(ts.URL)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.Header.Get("Location") != ts2.URL && resp.StatusCode != http.StatusFound {
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Printf("%#v\n", resp)
+		fmt.Println(string(body))
+		t.Error("Unexpectedly followed redirect")
+	}
 }
 
 func TestVerifyBodyReadError(t *testing.T) {
@@ -181,6 +228,7 @@ func TestVerifyBodyReadError(t *testing.T) {
 				},
 			},
 		},
+		validSTShostnames: stsHostsForPartition("aws"),
 	}
 	_, err := verifier.Verify(validToken)
 	errorContains(t, err, "error reading HTTP result")
@@ -188,19 +236,19 @@ func TestVerifyBodyReadError(t *testing.T) {
 }
 
 func TestVerifyUnmarshalJSONError(t *testing.T) {
-	_, err := newVerifier(200, "xxxx", nil).Verify(validToken)
+	_, err := newVerifier("aws", 200, "xxxx", nil).Verify(validToken)
 	errorContains(t, err, "invalid character")
 	assertSTSError(t, err)
 }
 
 func TestVerifyInvalidCanonicalARNError(t *testing.T) {
-	_, err := newVerifier(200, jsonResponse("arn", "1000", "userid"), nil).Verify(validToken)
+	_, err := newVerifier("aws", 200, jsonResponse("arn", "1000", "userid"), nil).Verify(validToken)
 	errorContains(t, err, "arn 'arn' is invalid:")
 	assertSTSError(t, err)
 }
 
 func TestVerifyInvalidUserIDError(t *testing.T) {
-	_, err := newVerifier(200, jsonResponse("arn:aws:iam::123456789012:user/Alice", "123456789012", "not:vailid:userid"), nil).Verify(validToken)
+	_, err := newVerifier("aws", 200, jsonResponse("arn:aws:iam::123456789012:user/Alice", "123456789012", "not:vailid:userid"), nil).Verify(validToken)
 	errorContains(t, err, "malformed UserID")
 	assertSTSError(t, err)
 }
@@ -210,7 +258,7 @@ func TestVerifyNoSession(t *testing.T) {
 	account := "123456789012"
 	userID := "Alice"
 	accessKeyID := "ASIABCDEFGHIJKLMNOPQ"
-	identity, err := newVerifier(200, jsonResponse(arn, account, userID), nil).Verify(validToken)
+	identity, err := newVerifier("aws", 200, jsonResponse(arn, account, userID), nil).Verify(validToken)
 	if err != nil {
 		t.Errorf("expected error to be nil was %q", err)
 	}
@@ -233,7 +281,7 @@ func TestVerifySessionName(t *testing.T) {
 	account := "123456789012"
 	userID := "Alice"
 	session := "session-name"
-	identity, err := newVerifier(200, jsonResponse(arn, account, userID+":"+session), nil).Verify(validToken)
+	identity, err := newVerifier("aws", 200, jsonResponse(arn, account, userID+":"+session), nil).Verify(validToken)
 	if err != nil {
 		t.Errorf("expected error to be nil was %q", err)
 	}
@@ -251,7 +299,7 @@ func TestVerifyCanonicalARN(t *testing.T) {
 	account := "123456789012"
 	userID := "Alice"
 	session := "session-name"
-	identity, err := newVerifier(200, jsonResponse(arn, account, userID+":"+session), nil).Verify(validToken)
+	identity, err := newVerifier("aws", 200, jsonResponse(arn, account, userID+":"+session), nil).Verify(validToken)
 	if err != nil {
 		t.Errorf("expected error to be nil was %q", err)
 	}

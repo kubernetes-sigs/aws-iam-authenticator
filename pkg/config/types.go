@@ -70,6 +70,11 @@ type UserMapping struct {
 
 // Config specifies the configuration for a aws-iam-authenticator server
 type Config struct {
+	// PartitionID is the AWS partition tokens are valid in. See
+	// github.com/aws/aws-sdk-go/aws/endpoints
+	// endpoints.DefaultPartitions()
+	PartitionID string
+
 	// ClusterID is a unique-per-cluster identifier for your
 	// aws-iam-authenticator installation.
 	ClusterID string
