@@ -58,6 +58,7 @@ if __name__ == '__main__':
         print(changelog)
         sys.exit(0)
     else:
-        with open(args.changelog_file, 'w') as f:
-            f.write('\n\n')
+        with open(args.changelog_file, 'r+') as f:
+            existing = f.read()
             f.write(changelog)
+            f.write(existing)
