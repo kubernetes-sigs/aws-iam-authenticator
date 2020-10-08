@@ -8,24 +8,24 @@ Using semantic versioning, pick a release number that makes sense by bumping the
 
 Bumping a minor version after releasing a new feature:
 ```
-v0.4.5 -> v0.5.0-alpha.0
+v1.4.5 -> v1.5.0-alpha.0
 ```
 
-After testing and allowing some time for feedback on the alpha, releasing v0.5.0:
+After testing and allowing some time for feedback on the alpha, releasing v1.5.0:
 ```
-v0.4.5 -> v0.5.0
+v1.4.5 -> v1.5.0
 ```
 
 New patch release:
 ```
-v0.5.3 -> v0.5.4
+v1.5.3 -> v1.5.4
 ```
 
-New major version release:
+New major version release with two alpha releases:
 ```
-v0.6.2 -> v1.0.0-alpha.0
-       -> v1.0.0-alpha.1
-       -> v1.0.0
+v1.6.2 -> v2.0.0-alpha.0
+       -> v2.0.0-alpha.1
+       -> v2.0.0
 ```
 
 You also might need to create a release branch, if it doesn't already exist, if this release requires backporting changes to an older major or minor version.  For example, in the case that we are backporting a fix to the v0.5 release branch, and we have a v0.6 release branch (which we don't at the time of writing), then we would do the following: 
@@ -76,4 +76,42 @@ TODO: configure goreleaser to use `./hack/changelog.py` to format the release te
 
 ## Check the release on GitHub
 
-Look at the release that was just published and validate that the release has the appropriate binaries (compare to a previous release).  Check the ECR registry to make sure that the images were published.  Finally, edit the release text to match previous releases, by copying the changelog text and adding the container image links.
+Look at the release that was just published and validate that the release has the appropriate assets.  The assets should include the following:
+
+```
+authenticator_0.5.2_checksums.txt
+aws-iam-authenticator-0.5.2.tar.gz
+aws-iam-authenticator-0.5.2.zip
+aws-iam-authenticator_0.5.2_darwin_amd64
+aws-iam-authenticator_0.5.2_linux_amd64
+aws-iam-authenticator_0.5.2_windows_amd64.exe
+Source code (zip)
+Source code (tar.gz)
+```
+
+Check the ECR registry to make sure that the images were published.  Finally, edit the release text to match previous releases, by copying the changelog text and adding the container image links. The format of the release text should be similar to the following:
+
+````
+## Changlelog
+
+* Added partition flag ([#341](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/341), @micahhausler)
+* Update link to Kops docs site ([#338](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/338), @rifelpet)
+* Security Improvements on the example yaml ([#335](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/335), @pjbgf)
+* Fix RBAC on example file: service account requires get to ConfigMap ([#334](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/334), @pjbgf)
+* Add AccessKeyID as variable for username ([#337](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/337), @pjbgf)
+* Added server side AWS account ID log redaction ([#327](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/327), @micahhausler)
+
+## Docker Images
+
+Note: You must log in with the registry ID and your role must have the necessary ECR privileges:
+```
+$(aws ecr get-login --no-include-email --region us-west-2 --registry-ids 602401143452)
+```
+
+* `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.5.2-debian-jessie`
+* `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.5.2-alpine-3.7`
+* `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.5.2-debian-stretch`
+* `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.5.2-amazonlinux-2`
+* `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.5.2-alpine-3.6`
+* `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.5.2-scratch`
+````
