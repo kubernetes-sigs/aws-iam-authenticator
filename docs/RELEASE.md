@@ -74,6 +74,6 @@ goreleaser release --rm-dist
 
 TODO: configure goreleaser to use `./hack/changelog.py` to format the release text.
 
-## Check the release on github
+## Check the release on GitHub
 
 Look at the release that was just published and validate that the release has the appropriate binaries (compare to a previous release).  Check the ECR registry to make sure that the images were published.  Finally, edit the release text to match previous releases, by copying the changelog text and adding the container image links.
