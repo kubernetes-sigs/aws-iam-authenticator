@@ -1,6 +1,6 @@
 # AWS IAM Authenticator Release Process
 
-NOTE: your github user must have the required permissions and you must have generated a github token for that user.
+NOTE: Your GitHub account must have the required permissions and you must have generated a GitHub token.
 
 ## Choosing the release version and branch
 
