@@ -1,12 +1,14 @@
 approvers:
 - nckturner
-- christopherhein
 - micahhausler
 - wongma7
+
 reviewers:
 - mattmoyer
 - nckturner
 - mattlandis
-- christopherhein
 - micahhausler
 - justinsb
+
+emeritus_approvers:
+- christopherhein
