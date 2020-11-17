@@ -87,7 +87,7 @@ type Config struct {
 	// HostPort is the TCP Port on which to listen for authentication checks.
 	HostPort int
 
-	// Hostname is the hostname that the server bind to.
+	// Hostname is the address clients should use for this server.
 	Hostname string
 
 	// GenerateKubeconfigPath is the output path where a generated webhook

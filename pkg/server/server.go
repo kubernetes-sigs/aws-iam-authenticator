@@ -111,9 +111,6 @@ func New(cfg config.Config, mappers []mapper.Mapper) *Server {
 		logrus.WithField("accountID", account).Infof("mapping IAM Account")
 	}
 
-	listenAddr := fmt.Sprintf("%s:%d", c.Address, c.HostPort)
-	listenURL := fmt.Sprintf("https://%s/authenticate", listenAddr)
-
 	cert, err := c.GetOrCreateCertificate()
 	if err != nil {
 		logrus.WithError(err).Fatalf("could not load/generate a certificate")
@@ -126,7 +123,7 @@ func New(cfg config.Config, mappers []mapper.Mapper) *Server {
 	}
 
 	// start a TLS listener with our custom certs
-	listener, err := tls.Listen("tcp", listenAddr, &tls.Config{
+	listener, err := tls.Listen("tcp", c.ListenAddr(), &tls.Config{
 		MinVersion:   tls.VersionTLS12,
 		Certificates: []tls.Certificate{*cert},
 	})
@@ -138,7 +135,7 @@ func New(cfg config.Config, mappers []mapper.Mapper) *Server {
 	errLog := logrus.WithField("http", "error").Writer()
 	defer errLog.Close()
 
-	logrus.Infof("listening on %s", listenURL)
+	logrus.Infof("listening on %s", listener.Addr())
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
 	c.httpServer = http.Server{
 		ErrorLog: log.New(errLog, "", 0),

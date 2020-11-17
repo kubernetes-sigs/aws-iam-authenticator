@@ -139,8 +139,19 @@ func (c *Config) selfSignCertificate() ([]byte, []byte, error) {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
-		DNSNames:              []string{c.Hostname},
-		IPAddresses:           []net.IP{net.ParseIP(c.Address)},
+	}
+	addrIP := net.ParseIP(c.Address)
+	if !addrIP.IsUnspecified() {
+		template.IPAddresses = append(template.IPAddresses, addrIP)
+	}
+	if ip := net.ParseIP(c.Hostname); ip != nil {
+		// is an IP literal
+		if !addrIP.Equal(ip) {
+			template.IPAddresses = append(template.IPAddresses, ip)
+		}
+	} else {
+		// is a hostname (not an IP literal)
+		template.DNSNames = append(template.DNSNames, c.Hostname)
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
