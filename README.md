@@ -456,6 +456,13 @@ server:
     groups:
     - system:masters
 
+  # If unalterable identification of an IAM User is desirable, you can map against
+  # AccessKeyID.
+  - roleARN: arn:aws:iam::000000000000:role/KubernetesOtherAdmin
+    username: "admin:{{AccessKeyID}}"
+    groups:
+    - system:masters
+
   # each mapUsers entry maps an IAM role to a static username and set of groups
   mapUsers:
   # map user IAM user Alice in 000000000000 to user "alice" in group "system:masters"
