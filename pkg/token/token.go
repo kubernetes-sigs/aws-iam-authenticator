@@ -32,12 +32,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
+	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 )
 
@@ -237,6 +239,11 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 		if err != nil {
 			return Token{}, fmt.Errorf("could not create session: %v", err)
 		}
+		sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
+			Name: "authenticatorUserAgent",
+			Fn: request.MakeAddToUserAgentHandler(
+				"aws-iam-authenticator", pkg.Version),
+		})
 		if options.Region != "" {
 			sess = sess.Copy(aws.NewConfig().WithRegion(options.Region).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint))
 		}

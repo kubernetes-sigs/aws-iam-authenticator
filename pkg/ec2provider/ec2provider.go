@@ -11,11 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/sirupsen/logrus"
+	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/httputil"
 )
 
@@ -81,6 +83,11 @@ func New(roleARN string, qps int, burst int) EC2Provider {
 
 func newSession(roleARN string, qps int, burst int) *session.Session {
 	sess := session.Must(session.NewSession())
+	sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
+		Name: "authenticatorUserAgent",
+		Fn: request.MakeAddToUserAgentHandler(
+			"aws-iam-authenticator", pkg.Version),
+	})
 	if aws.StringValue(sess.Config.Region) == "" {
 		ec2metadata := ec2metadata.New(sess)
 		regionFound, err := ec2metadata.Region()
