@@ -18,19 +18,32 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"net/url"
 	"path/filepath"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 )
 
-// ListenURL returns the URL to listen on.
-func (c *Config) ListenURL() string {
-	return fmt.Sprintf("https://%s/authenticate", c.ListenAddr())
+// ServerURL returns the URL to connect to this server.
+func (c *Config) ServerURL() string {
+	u := url.URL{
+		Scheme: "https",
+		Host:   c.ServerAddr(),
+		Path:   "/authenticate",
+	}
+	return u.String()
+}
+
+// ServerAddr returns the host and port clients should use for server endpoint.
+func (c *Config) ServerAddr() string {
+	return net.JoinHostPort(c.Hostname, strconv.Itoa(c.HostPort))
 }
 
 // ListenAddr returns the IP address and port mapping to bind with
 func (c *Config) ListenAddr() string {
-	return fmt.Sprintf("%s:%d", c.Hostname, c.HostPort)
+	return net.JoinHostPort(c.Address, strconv.Itoa(c.HostPort))
 }
 
 // GenerateFiles will generate the certificate+provate key
@@ -57,7 +70,7 @@ func (c *Config) CreateKubeconfig() error {
 	// write a kubeconfig suitable for the API server to call us
 	logrus.WithField("kubeconfigPath", c.GenerateKubeconfigPath).Info("writing webhook kubeconfig file")
 	err = kubeconfigParams{
-		ServerURL:                  c.ListenURL(),
+		ServerURL:                  c.ServerURL(),
 		CertificateAuthorityBase64: certToPEMBase64(cert.Certificate[0]),
 	}.writeTo(c.GenerateKubeconfigPath)
 	if err != nil {
