@@ -5,12 +5,11 @@ import (
 
 	"github.com/spf13/cobra"
 	goVersion "go.hein.dev/go-version"
+	"sigs.k8s.io/aws-iam-authenticator/pkg"
 )
 
 var (
 	shortened  = false
-	version    = "unversioned"
-	commit     = ""
 	date       = ""
 	output     = ""
 	versionCmd = &cobra.Command{
@@ -18,7 +17,7 @@ var (
 		Short: "Version will output the current build information",
 		Long:  ``,
 		Run: func(_ *cobra.Command, _ []string) {
-			resp := goVersion.FuncWithOutput(shortened, version, commit, date, output)
+			resp := goVersion.FuncWithOutput(shortened, pkg.Version, pkg.CommitID, date, output)
 			fmt.Print(resp)
 			return
 		},
