@@ -58,12 +58,10 @@ func Canonicalize(arn string) (string, error) {
 }
 
 func checkPartition(partition string) error {
-	switch partition {
-	case endpoints.AwsPartitionID:
-	case endpoints.AwsCnPartitionID:
-	case endpoints.AwsUsGovPartitionID:
-	default:
-		return fmt.Errorf("partion %s is not recognized", partition)
+	for _, p := range endpoints.DefaultPartitions() {
+		if partition == p.ID() {
+			return nil
+		}
 	}
-	return nil
+	return fmt.Errorf("partition %s is not recognized", partition)
 }
