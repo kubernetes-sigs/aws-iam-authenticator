@@ -1,3 +1,13 @@
+Release v0.5.3
+* Bump Go to 1.15 in Travis ([#361](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/361), @gliptak)
+* Update aws sdk go v1.37.1 ([#360](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/360), @gaffneyd4)
+* (arn): validate partition against all partitions returned by the aws sdk ([#348](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/348), @cmdallas)
+* Document AccessKeyId from UserInfo ([#332](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/332), @ryanmt)
+* Support IPv6 listen address ([#352](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/352), @anguslees)
+* Added user agent to AWS SDK ([#359](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/359), @micahhausler)
+* Remove Chris Hein from OWNERS ([#351](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/351), @christopherhein)
+* Add instructions for the release process ([#346](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/346), @nckturner)
+
 Release v0.5.2
 * Added partition flag ([#341](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/341), @micahhausler)
 * Update link to Kops docs site ([#338](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/338), @rifelpet)
