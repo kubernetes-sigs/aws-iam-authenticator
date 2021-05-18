@@ -336,6 +336,9 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 
 	userExtra := map[string]authenticationv1beta1.ExtraValue{}
 	if h.isLoggableIdentity(identity) {
+		userExtra["arn"] = authenticationv1beta1.ExtraValue{identity.ARN}
+		userExtra["canonicalArn"] = authenticationv1beta1.ExtraValue{identity.CanonicalARN}
+		userExtra["sessionName"] = authenticationv1beta1.ExtraValue{identity.SessionName}
 		userExtra["accessKeyId"] = authenticationv1beta1.ExtraValue{identity.AccessKeyID}
 	}
 
