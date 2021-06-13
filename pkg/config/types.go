@@ -44,28 +44,28 @@ type IdentityMapping struct {
 // You can use plain values without parameters to have a more static mapping.
 type RoleMapping struct {
 	// RoleARN is the AWS Resource Name of the role. (e.g., "arn:aws:iam::000000000000:role/Foo").
-	RoleARN string
+	RoleARN string `json:"rolearn"`
 
 	// Username is the username pattern that this instances assuming this
 	// role will have in Kubernetes.
-	Username string
+	Username string `json:"username"`
 
 	// Groups is a list of Kubernetes groups this role will authenticate
 	// as (e.g., `system:masters`). Each group name can include placeholders.
-	Groups []string
+	Groups []string `json:"groups"`
 }
 
 // UserMapping is a static mapping of a single AWS User ARN to a
 // Kubernetes username and a list of Kubernetes groups
 type UserMapping struct {
 	// UserARN is the AWS Resource Name of the user. (e.g., "arn:aws:iam::000000000000:user/Test").
-	UserARN string
+	UserARN string `json:"userarn"`
 
 	// Username is the Kubernetes username this role will authenticate as (e.g., `mycorp:foo`)
-	Username string
+	Username string `json:"username"`
 
 	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:masters`)
-	Groups []string
+	Groups []string `json:"groups"`
 }
 
 // Config specifies the configuration for a aws-iam-authenticator server

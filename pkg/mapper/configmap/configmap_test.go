@@ -9,7 +9,7 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
@@ -233,4 +233,55 @@ func TestLoadConfigMap(t *testing.T) {
 		t.Errorf("Expected updated mapping not to contain user 'arn:iam:matlan', got err: %v", err)
 	}
 
+}
+
+func TestParseMap(t *testing.T) {
+	m1 := map[string]string{
+		"mapRoles": `- rolearn: arn:aws:iam::123456789101:role/test-NodeInstanceRole-1VWRHZ3GKZ1T4
+  username: system:node:{{EC2PrivateDNSName}}
+  groups:
+  - system:bootstrappers
+  - system:nodes
+`,
+		"mapUsers": `- userarn: arn:aws:iam::123456789101:user/Hello
+  username: Hello
+  groups:
+  - system:masters
+- userarn: arn:aws:iam::123456789101:user/World
+  username: World
+  groups:
+  - system:masters
+`,
+	}
+	userMappings := []config.UserMapping{
+		{UserARN: "arn:aws:iam::123456789101:user/Hello", Username: "Hello", Groups: []string{"system:masters"}},
+		{UserARN: "arn:aws:iam::123456789101:user/World", Username: "World", Groups: []string{"system:masters"}},
+	}
+	roleMappings := []config.RoleMapping{
+		{RoleARN: "arn:aws:iam::123456789101:role/test-NodeInstanceRole-1VWRHZ3GKZ1T4", Username: "system:node:{{EC2PrivateDNSName}}", Groups: []string{"system:bootstrappers", "system:nodes"}},
+	}
+	accounts := []string{}
+
+	u, r, a, err := ParseMap(m1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(u, userMappings) {
+		t.Fatalf("unexpected userMappings %+v", u)
+	}
+	if !reflect.DeepEqual(r, roleMappings) {
+		t.Fatalf("unexpected roleMappings %+v", r)
+	}
+	if !reflect.DeepEqual(a, accounts) {
+		t.Fatalf("unexpected accounts %+v", a)
+	}
+
+	m2, err := EncodeMap(u, r, a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(m1, m2) {
+		t.Fatalf("unexpected %v != %v", m1, m2)
+	}
 }
