@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/aws/aws-sdk-go v1.37.1
 	github.com/gofrs/flock v0.7.0
+	github.com/manifoldco/promptui v0.8.0
 	github.com/prometheus/client_golang v1.1.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
@@ -18,4 +19,5 @@ require (
 	k8s.io/code-generator v0.16.8
 	k8s.io/component-base v0.16.8
 	k8s.io/sample-controller v0.16.8
+	sigs.k8s.io/yaml v1.1.0
 )
