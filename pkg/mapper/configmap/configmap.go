@@ -18,7 +18,13 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+)
 
+const (
+	metricSuccess       = "success"
+	metricFailure       = "fail"
+	metricSuccessUnit   = 1.0
+	metricFailureUnit   = 0.0
 )
 
 type MapStore struct {
@@ -47,7 +53,7 @@ func New(masterURL, kubeConfig string) (*MapStore, error) {
 
 // Starts a go routine which will watch the configmap and update the in memory data
 // when the values change.
-func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
+func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}, metricsObj metrics) {
 	go func() {
 		for {
 			select {
@@ -60,8 +66,10 @@ func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
 				})
 				if err != nil {
 					logrus.Errorf("Unable to re-establish watch: %v", err)
+					metricsObj.watch.WithLabelValues(metricFailure).Set(metricFailureUnit)
 					panic(err)
 				}
+				metricsObj.watch.WithLabelValues(metricSuccess).Set(metricSuccessUnit)
 				for r := range watcher.ResultChan() {
 					switch r.Type {
 					case watch.Error:

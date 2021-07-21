@@ -1,6 +1,7 @@
 package configmap
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
@@ -9,6 +10,27 @@ import (
 
 type ConfigMapMapper struct {
 	*MapStore
+}
+
+const (
+	metricNS           = "aws_iam_authenticator"
+)
+
+// metrics are handles to the collectors for prometheus for the various metrics we are tracking.
+type metrics struct {
+	watch *prometheus.GaugeVec
+}
+
+func createMetrics() metrics {
+	m := metrics{
+		watch: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: metricNS,
+			Name:      "authenticator_watch_success",
+			Help:      "Authenticator Watch Success",
+		}, []string{"result"}),
+	}
+	prometheus.MustRegister(m.watch)
+	return m
 }
 
 var _ mapper.Mapper = &ConfigMapMapper{}
@@ -26,7 +48,8 @@ func (m *ConfigMapMapper) Name() string {
 }
 
 func (m *ConfigMapMapper) Start(stopCh <-chan struct{}) error {
-	m.startLoadConfigMap(stopCh)
+	metricsObj := createMetrics()
+	m.startLoadConfigMap(stopCh, metricsObj)
 	return nil
 }
 
