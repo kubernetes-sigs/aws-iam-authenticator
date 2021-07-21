@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -19,6 +18,7 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+
 )
 
 type MapStore struct {
@@ -59,9 +59,8 @@ func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
 					FieldSelector: fields.OneTermEqualSelector("metadata.name", "aws-auth").String(),
 				})
 				if err != nil {
-					logrus.Warn("Unable to re-establish watch.  Sleeping for 5 seconds")
-					time.Sleep(5 * time.Second)
-					continue
+					logrus.Errorf("Unable to re-establish watch: %v", err)
+					panic(err)
 				}
 				for r := range watcher.ResultChan() {
 					switch r.Type {
