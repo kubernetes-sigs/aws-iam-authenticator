@@ -92,7 +92,7 @@ Source code (tar.gz)
 Check the ECR registry to make sure that the images were published.  Finally, edit the release text to match previous releases, by copying the changelog text and adding the container image links. The format of the release text should be similar to the following:
 
 ````
-## Changlelog
+## Changelog
 
 * Added partition flag ([#341](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/341), @micahhausler)
 * Update link to Kops docs site ([#338](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/338), @rifelpet)
