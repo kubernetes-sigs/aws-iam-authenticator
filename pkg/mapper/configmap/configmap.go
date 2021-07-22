@@ -16,7 +16,7 @@ import (
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 )
@@ -80,7 +80,7 @@ func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
 								break
 							}
 							logrus.Info("Received aws-auth watch event")
-							userMappings, roleMappings, awsAccounts, err := ms.parseMap(cm.Data)
+							userMappings, roleMappings, awsAccounts, err := ParseMap(cm.Data)
 							if err != nil {
 								logrus.Errorf("There was an error parsing the config maps.  Only saving data that was good, %+v", err)
 							}
@@ -106,10 +106,9 @@ func (err ErrParsingMap) Error() string {
 	return fmt.Sprintf("error parsing config map: %v", err.errors)
 }
 
-// Acquire lock before calling
-func (ms *MapStore) parseMap(m map[string]string) ([]config.UserMapping, []config.RoleMapping, []string, error) {
+func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappings []config.RoleMapping, awsAccounts []string, err error) {
 	errs := make([]error, 0)
-	userMappings := make([]config.UserMapping, 0)
+	userMappings = make([]config.UserMapping, 0)
 	if userData, ok := m["mapUsers"]; ok {
 		userJson, err := utilyaml.ToJSON([]byte(userData))
 		if err != nil {
@@ -122,7 +121,7 @@ func (ms *MapStore) parseMap(m map[string]string) ([]config.UserMapping, []confi
 		}
 	}
 
-	roleMappings := make([]config.RoleMapping, 0)
+	roleMappings = make([]config.RoleMapping, 0)
 	if roleData, ok := m["mapRoles"]; ok {
 		roleJson, err := utilyaml.ToJSON([]byte(roleData))
 		if err != nil {
@@ -135,7 +134,7 @@ func (ms *MapStore) parseMap(m map[string]string) ([]config.UserMapping, []confi
 		}
 	}
 
-	awsAccounts := make([]string, 0)
+	awsAccounts = make([]string, 0)
 	if accountsData, ok := m["mapAccounts"]; ok {
 		err := yaml.Unmarshal([]byte(accountsData), &awsAccounts)
 		if err != nil {
@@ -143,12 +142,41 @@ func (ms *MapStore) parseMap(m map[string]string) ([]config.UserMapping, []confi
 		}
 	}
 
-	var err error
 	if len(errs) > 0 {
 		logrus.Warnf("Errors parsing configmap: %+v", errs)
 		err = ErrParsingMap{errors: errs}
 	}
 	return userMappings, roleMappings, awsAccounts, err
+}
+
+func EncodeMap(userMappings []config.UserMapping, roleMappings []config.RoleMapping, awsAccounts []string) (m map[string]string, err error) {
+	m = make(map[string]string)
+
+	if len(userMappings) > 0 {
+		body, err := yaml.Marshal(userMappings)
+		if err != nil {
+			return nil, err
+		}
+		m["mapUsers"] = string(body)
+	}
+
+	if len(roleMappings) > 0 {
+		body, err := yaml.Marshal(roleMappings)
+		if err != nil {
+			return nil, err
+		}
+		m["mapRoles"] = string(body)
+	}
+
+	if len(awsAccounts) > 0 {
+		body, err := yaml.Marshal(awsAccounts)
+		if err != nil {
+			return nil, err
+		}
+		m["mapAccounts"] = string(body)
+	}
+
+	return m, nil
 }
 
 func (ms *MapStore) saveMap(userMappings []config.UserMapping, roleMappings []config.RoleMapping, awsAccounts []string) {
