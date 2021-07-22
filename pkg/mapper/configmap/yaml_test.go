@@ -1,7 +1,6 @@
 package configmap
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
 	"io/ioutil"
 	"path"
 	"reflect"
@@ -9,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"

@@ -1,9 +1,9 @@
 package configmap
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
 	"strings"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 )
@@ -13,7 +13,7 @@ type ConfigMapMapper struct {
 }
 
 const (
-	metricNS           = "aws_iam_authenticator"
+	metricNS = "aws_iam_authenticator"
 )
 
 // metrics are handles to the collectors for prometheus for the various metrics we are tracking.

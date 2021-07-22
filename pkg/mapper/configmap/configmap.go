@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -21,10 +22,10 @@ import (
 )
 
 const (
-	metricSuccess       = "success"
-	metricFailure       = "fail"
-	metricSuccessUnit   = 1.0
-	metricFailureUnit   = 0.0
+	metricSuccess     = "success"
+	metricFailure     = "fail"
+	metricSuccessUnit = 1.0
+	metricFailureUnit = 0.0
 )
 
 type MapStore struct {
@@ -65,9 +66,10 @@ func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}, metricsObj metric
 					FieldSelector: fields.OneTermEqualSelector("metadata.name", "aws-auth").String(),
 				})
 				if err != nil {
-					logrus.Errorf("Unable to re-establish watch: %v", err)
+					logrus.Errorf("Unable to re-establish watch: %v, sleeping for 5 seconds.", err)
 					metricsObj.watch.WithLabelValues(metricFailure).Set(metricFailureUnit)
-					panic(err)
+					time.Sleep(5 * time.Second)
+					continue
 				}
 				metricsObj.watch.WithLabelValues(metricSuccess).Set(metricSuccessUnit)
 				for r := range watcher.ResultChan() {
