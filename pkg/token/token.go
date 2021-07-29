@@ -70,7 +70,7 @@ type Identity struct {
 	SessionName string
 
 	// The AWS Access Key ID used to authenticate the request.  This can be used
-	// in conjuction with CloudTrail to determine the identity of the individual
+	// in conjunction with CloudTrail to determine the identity of the individual
 	// if the individual assumed an IAM role before making the request.
 	AccessKeyID string
 }
