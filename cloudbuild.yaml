@@ -1,0 +1,17 @@
+images:
+  - 'gcr.io/$PROJECT_ID/aws-iam-authenticator:$_GIT_TAG'
+  - 'gcr.io/$PROJECT_ID/aws-iam-authenticator:latest'
+options:
+  substitution_option: ALLOW_LOOSE
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+    - build
+    - --tag=gcr.io/$PROJECT_ID/aws-iam-authenticator:$_GIT_TAG
+    - --tag=gcr.io/$PROJECT_ID/aws-iam-authenticator:latest
+    - --build-arg=IMAGE=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-08-26-1630012071
+    - .
+substitutions:
+  _GIT_TAG: '12345'
+  _PULL_BASE_REF: 'master'
+timeout: 1200s
