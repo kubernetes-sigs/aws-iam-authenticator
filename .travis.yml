@@ -1,7 +1,7 @@
 language: go
 go_import_path: sigs.k8s.io/aws-iam-authenticator
 go:
-  - 1.15.x
+  - 1.16.x
 
 sudo: required
 
