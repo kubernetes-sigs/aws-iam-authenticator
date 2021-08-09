@@ -11,6 +11,7 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
     env:
       - CGO_ENABLED=0
     ldflags:
@@ -19,34 +20,40 @@ builds:
 dockers:
   - ids:
      - aws-iam-authenticator
+    goarch: amd64
     dockerfile: Dockerfile.scratch
     image_templates:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-scratch"
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}"
   - ids:
      - aws-iam-authenticator
+    goarch: amd64
     dockerfile: Dockerfile.alpine-3.6
     image_templates:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.6"
   - ids:
      - aws-iam-authenticator
+    goarch: amd64
     dockerfile: Dockerfile.alpine-3.7
     image_templates:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.7"
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine"
   - ids:
      - aws-iam-authenticator
+    goarch: amd64
     dockerfile: Dockerfile.debian-jessie
     image_templates:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-jessie"
   - ids:
      - aws-iam-authenticator
+    goarch: amd64
     dockerfile: Dockerfile.debian-stretch
     image_templates:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-stretch"
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian"
   - ids:
      - aws-iam-authenticator
+    goarch: amd64
     dockerfile: Dockerfile.amazonlinux-2
     image_templates:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-2"
