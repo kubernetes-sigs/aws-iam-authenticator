@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	goVersion "go.hein.dev/go-version"
+	goversion "go.hein.dev/go-version"
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 )
 
@@ -17,7 +17,7 @@ var (
 		Short: "Version will output the current build information",
 		Long:  ``,
 		Run: func(_ *cobra.Command, _ []string) {
-			resp := goVersion.FuncWithOutput(shortened, pkg.Version, pkg.CommitID, date, output)
+			resp := goversion.FuncWithOutput(shortened, pkg.Version, pkg.CommitID, pkg.BuildDate, output)
 			fmt.Print(resp)
 			return
 		},

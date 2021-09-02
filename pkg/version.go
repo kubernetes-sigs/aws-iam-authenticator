@@ -17,8 +17,11 @@ limitations under the License.
 package pkg
 
 var (
-	// Semantic version of the build. Set at build time
+	// Set at build time
+	// Semantic version of the build.
 	Version = "unversioned"
-	// Commit id of the build. Set at build time
+	// Commit id of the build.
 	CommitID = ""
+	// Build Date of the build.
+	BuildDate = ""
 )
