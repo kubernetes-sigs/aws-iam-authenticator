@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,6 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
 var log = logrus.New()
@@ -94,6 +96,7 @@ func TestConfigMap(t *testing.T) {
 			"aws-auth-missing-bar.yaml", nil, nil, nil, true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.configMapYaml, func(t *testing.T) {
 			cm, err := configMapFromYaml(tt.configMapYaml)
@@ -104,7 +107,9 @@ func TestConfigMap(t *testing.T) {
 			}
 
 			cs := fake.NewSimpleClientset()
-			ms := MapStore{}
+			ms := MapStore{
+				metrics: metrics.CreateMetrics(prometheus.NewRegistry()),
+			}
 			ms.configMap = cs.CoreV1().ConfigMaps("kube-system")
 
 			stopCh := make(chan struct{})

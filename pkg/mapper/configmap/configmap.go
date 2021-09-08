@@ -19,7 +19,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
+
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
 type MapStore struct {
@@ -29,9 +31,10 @@ type MapStore struct {
 	// Used as set.
 	awsAccounts map[string]interface{}
 	configMap   v1.ConfigMapInterface
+	metrics     metrics.Metrics
 }
 
-func New(masterURL, kubeConfig string) (*MapStore, error) {
+func New(masterURL, kubeConfig string, authenticatorMetrics metrics.Metrics) (*MapStore, error) {
 	clientconfig, err := clientcmd.BuildConfigFromFlags(masterURL, kubeConfig)
 	if err != nil {
 		return nil, err
@@ -43,6 +46,7 @@ func New(masterURL, kubeConfig string) (*MapStore, error) {
 
 	ms := MapStore{}
 	ms.configMap = clientset.CoreV1().ConfigMaps("kube-system")
+	ms.metrics = authenticatorMetrics
 	return &ms, nil
 }
 
@@ -60,10 +64,12 @@ func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
 					FieldSelector: fields.OneTermEqualSelector("metadata.name", "aws-auth").String(),
 				})
 				if err != nil {
-					logrus.Warn("Unable to re-establish watch.  Sleeping for 5 seconds")
+					logrus.Errorf("Unable to re-establish watch: %v, sleeping for 5 seconds.", err)
+					ms.metrics.ConfigMapWatchFailures.Inc()
 					time.Sleep(5 * time.Second)
 					continue
 				}
+
 				for r := range watcher.ResultChan() {
 					switch r.Type {
 					case watch.Error:
