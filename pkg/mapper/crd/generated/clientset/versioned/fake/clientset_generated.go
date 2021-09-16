@@ -73,7 +73,10 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var _ clientset.Interface = &Clientset{}
+var (
+	_ clientset.Interface = &Clientset{}
+	_ testing.FakeClient  = &Clientset{}
+)
 
 // IamauthenticatorV1alpha1 retrieves the IamauthenticatorV1alpha1Client
 func (c *Clientset) IamauthenticatorV1alpha1() iamauthenticatorv1alpha1.IamauthenticatorV1alpha1Interface {

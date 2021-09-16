@@ -14,12 +14,14 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -211,7 +213,7 @@ func (c *Controller) syncHandler(key string) (err error) {
 		}
 
 		iamIdentityMappingCopy.Status.CanonicalARN = canonicalizedARN
-		_, err = c.iamclientset.IamauthenticatorV1alpha1().IAMIdentityMappings().UpdateStatus(iamIdentityMappingCopy)
+		_, err = c.iamclientset.IamauthenticatorV1alpha1().IAMIdentityMappings().UpdateStatus(context.TODO(), iamIdentityMappingCopy, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}

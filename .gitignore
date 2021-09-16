@@ -1,6 +1,11 @@
 /dist
 /_output
 
+# For testing
+test_artifacts
+
+# == kubernetes .gitignore ==
+
 # OSX leaves these everywhere on SMB shares
 ._*
 

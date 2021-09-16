@@ -18,6 +18,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -37,7 +39,7 @@ var iamidentitymappingsResource = schema.GroupVersionResource{Group: "iamauthent
 var iamidentitymappingsKind = schema.GroupVersionKind{Group: "iamauthenticator.k8s.aws", Version: "v1alpha1", Kind: "IAMIdentityMapping"}
 
 // Get takes name of the iAMIdentityMapping, and returns the corresponding iAMIdentityMapping object, and an error if there is any.
-func (c *FakeIAMIdentityMappings) Get(name string, options v1.GetOptions) (result *v1alpha1.IAMIdentityMapping, err error) {
+func (c *FakeIAMIdentityMappings) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.IAMIdentityMapping, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(iamidentitymappingsResource, name), &v1alpha1.IAMIdentityMapping{})
 	if obj == nil {
@@ -47,7 +49,7 @@ func (c *FakeIAMIdentityMappings) Get(name string, options v1.GetOptions) (resul
 }
 
 // List takes label and field selectors, and returns the list of IAMIdentityMappings that match those selectors.
-func (c *FakeIAMIdentityMappings) List(opts v1.ListOptions) (result *v1alpha1.IAMIdentityMappingList, err error) {
+func (c *FakeIAMIdentityMappings) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.IAMIdentityMappingList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(iamidentitymappingsResource, iamidentitymappingsKind, opts), &v1alpha1.IAMIdentityMappingList{})
 	if obj == nil {
@@ -68,13 +70,13 @@ func (c *FakeIAMIdentityMappings) List(opts v1.ListOptions) (result *v1alpha1.IA
 }
 
 // Watch returns a watch.Interface that watches the requested iAMIdentityMappings.
-func (c *FakeIAMIdentityMappings) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeIAMIdentityMappings) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(iamidentitymappingsResource, opts))
 }
 
 // Create takes the representation of a iAMIdentityMapping and creates it.  Returns the server's representation of the iAMIdentityMapping, and an error, if there is any.
-func (c *FakeIAMIdentityMappings) Create(iAMIdentityMapping *v1alpha1.IAMIdentityMapping) (result *v1alpha1.IAMIdentityMapping, err error) {
+func (c *FakeIAMIdentityMappings) Create(ctx context.Context, iAMIdentityMapping *v1alpha1.IAMIdentityMapping, opts v1.CreateOptions) (result *v1alpha1.IAMIdentityMapping, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(iamidentitymappingsResource, iAMIdentityMapping), &v1alpha1.IAMIdentityMapping{})
 	if obj == nil {
@@ -84,7 +86,7 @@ func (c *FakeIAMIdentityMappings) Create(iAMIdentityMapping *v1alpha1.IAMIdentit
 }
 
 // Update takes the representation of a iAMIdentityMapping and updates it. Returns the server's representation of the iAMIdentityMapping, and an error, if there is any.
-func (c *FakeIAMIdentityMappings) Update(iAMIdentityMapping *v1alpha1.IAMIdentityMapping) (result *v1alpha1.IAMIdentityMapping, err error) {
+func (c *FakeIAMIdentityMappings) Update(ctx context.Context, iAMIdentityMapping *v1alpha1.IAMIdentityMapping, opts v1.UpdateOptions) (result *v1alpha1.IAMIdentityMapping, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(iamidentitymappingsResource, iAMIdentityMapping), &v1alpha1.IAMIdentityMapping{})
 	if obj == nil {
@@ -95,7 +97,7 @@ func (c *FakeIAMIdentityMappings) Update(iAMIdentityMapping *v1alpha1.IAMIdentit
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeIAMIdentityMappings) UpdateStatus(iAMIdentityMapping *v1alpha1.IAMIdentityMapping) (*v1alpha1.IAMIdentityMapping, error) {
+func (c *FakeIAMIdentityMappings) UpdateStatus(ctx context.Context, iAMIdentityMapping *v1alpha1.IAMIdentityMapping, opts v1.UpdateOptions) (*v1alpha1.IAMIdentityMapping, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceAction(iamidentitymappingsResource, "status", iAMIdentityMapping), &v1alpha1.IAMIdentityMapping{})
 	if obj == nil {
@@ -105,22 +107,22 @@ func (c *FakeIAMIdentityMappings) UpdateStatus(iAMIdentityMapping *v1alpha1.IAMI
 }
 
 // Delete takes name of the iAMIdentityMapping and deletes it. Returns an error if one occurs.
-func (c *FakeIAMIdentityMappings) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeIAMIdentityMappings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(iamidentitymappingsResource, name), &v1alpha1.IAMIdentityMapping{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeIAMIdentityMappings) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(iamidentitymappingsResource, listOptions)
+func (c *FakeIAMIdentityMappings) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(iamidentitymappingsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.IAMIdentityMappingList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched iAMIdentityMapping.
-func (c *FakeIAMIdentityMappings) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.IAMIdentityMapping, err error) {
+func (c *FakeIAMIdentityMappings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.IAMIdentityMapping, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(iamidentitymappingsResource, name, pt, data, subresources...), &v1alpha1.IAMIdentityMapping{})
 	if obj == nil {

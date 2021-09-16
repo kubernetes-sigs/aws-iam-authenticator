@@ -1,6 +1,7 @@
 package configmap
 
 import (
+	"context"
 	"io/ioutil"
 	"path"
 	"reflect"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/fake"
@@ -110,7 +112,7 @@ func TestConfigMap(t *testing.T) {
 			defer close(stopCh)
 
 			time.Sleep(2 * time.Millisecond)
-			_, _ = cs.CoreV1().ConfigMaps("kube-system").Create(cm)
+			_, _ = cs.CoreV1().ConfigMaps("kube-system").Create(context.TODO(), cm, metav1.CreateOptions{})
 			time.Sleep(2 * time.Millisecond)
 
 			for _, em := range tt.expectedRoleMappings {

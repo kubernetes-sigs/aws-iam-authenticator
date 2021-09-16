@@ -1,5 +1,5 @@
 /*
-Copyright 2017 by the contributors.
+Copyright 2021 by the contributors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package certs
 
 import (
 	"crypto/rand"
@@ -27,24 +27,22 @@ import (
 	"math/big"
 	"net"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
-func (c *Config) certPath() string {
-	return filepath.Join(c.StateDir, certFilename)
+type CertificateOptions struct {
+	CertPath string
+	KeyPath  string
+	Hostname string
+	Address  string
+	Lifetime time.Duration
 }
 
-func (c *Config) keyPath() string {
-	return filepath.Join(c.StateDir, keyFilename)
-}
-
-// GetOrCreateCertificate will create a certificate if it cannot find one based on the config
-func (c *Config) GetOrCreateCertificate() (*tls.Certificate, error) {
+func GetOrCreateX509KeyPair(opts CertificateOptions) (*tls.Certificate, error) {
 	// first try to load the existing keypair
-	cert, err := c.LoadExistingCertificate()
+	cert, err := LoadX509KeyPair(opts.CertPath, opts.KeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -54,48 +52,46 @@ func (c *Config) GetOrCreateCertificate() (*tls.Certificate, error) {
 	}
 
 	// generate a self-signed certificate and write out the certificate and private key
-	certBytes, keyBytes, err := c.selfSignCertificate()
+	certBytes, keyBytes, err := selfSignedCertificate(opts.Address, opts.Hostname, opts.Lifetime)
 	if err != nil {
 		return nil, err
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"certPath": c.certPath(),
-		"keyPath":  c.keyPath(),
+		"certPath": opts.CertPath,
+		"keyPath":  opts.KeyPath,
 	}).Info("saving new key and certificate")
-	err = dumpPEM(c.certPath(), 0666, "CERTIFICATE", certBytes)
+	err = dumpPEM(opts.CertPath, 0666, "CERTIFICATE", certBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	err = dumpPEM(c.keyPath(), 0600, "RSA PRIVATE KEY", keyBytes)
+	err = dumpPEM(opts.KeyPath, 0600, "RSA PRIVATE KEY", keyBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	newCert, err := tls.LoadX509KeyPair(c.certPath(), c.keyPath())
+	newCert, err := tls.LoadX509KeyPair(opts.CertPath, opts.KeyPath)
 	return &newCert, err
 }
 
-// LoadExistingCertificate will load certificates from a local path
-func (c *Config) LoadExistingCertificate() (*tls.Certificate, error) {
-
+func LoadX509KeyPair(certPath, keyPath string) (*tls.Certificate, error) {
 	// if either file does not exist, we'll consider that not an error but
 	// return a nil
-	if _, err := os.Stat(c.certPath()); os.IsNotExist(err) {
+	if _, err := os.Stat(certPath); os.IsNotExist(err) {
 		return nil, nil
 	}
-	if _, err := os.Stat(c.keyPath()); os.IsNotExist(err) {
+	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
 		return nil, nil
 	}
 
-	cert, err := tls.LoadX509KeyPair(c.certPath(), c.keyPath())
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
 		return nil, err
 	}
 	logrus.WithFields(logrus.Fields{
-		"certPath": c.certPath(),
-		"keyPath":  c.keyPath(),
+		"certPath": certPath,
+		"keyPath":  keyPath,
 	}).Info("loaded existing keypair")
 	return &cert, nil
 }
@@ -109,8 +105,7 @@ func dumpPEM(filename string, mode os.FileMode, blockType string, bytes []byte) 
 	return pem.Encode(f, &pem.Block{Type: blockType, Bytes: bytes})
 }
 
-func (c *Config) selfSignCertificate() ([]byte, []byte, error) {
-
+func selfSignedCertificate(address, hostname string, lifetime time.Duration) ([]byte, []byte, error) {
 	// generate a new RSA-2048 keypair
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -119,7 +114,7 @@ func (c *Config) selfSignCertificate() ([]byte, []byte, error) {
 
 	// choose a beginning and end for the cert's lifetime (currently ~infinite)
 	notBefore := time.Now()
-	notAfter := notBefore.Add(certLifetime)
+	notAfter := notBefore.Add(lifetime)
 
 	// choose a random 128 bit serial number
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
@@ -140,18 +135,18 @@ func (c *Config) selfSignCertificate() ([]byte, []byte, error) {
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
-	addrIP := net.ParseIP(c.Address)
+	addrIP := net.ParseIP(address)
 	if !addrIP.IsUnspecified() {
 		template.IPAddresses = append(template.IPAddresses, addrIP)
 	}
-	if ip := net.ParseIP(c.Hostname); ip != nil {
+	if ip := net.ParseIP(hostname); ip != nil {
 		// is an IP literal
 		if !addrIP.Equal(ip) {
 			template.IPAddresses = append(template.IPAddresses, ip)
 		}
 	} else {
 		// is a hostname (not an IP literal)
-		template.DNSNames = append(template.DNSNames, c.Hostname)
+		template.DNSNames = append(template.DNSNames, hostname)
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
@@ -170,7 +165,7 @@ func (c *Config) selfSignCertificate() ([]byte, []byte, error) {
 
 // certToPEMBase64 returns the Base64 encoded PEM block for a given DER
 // certificate (i.e., it returns "Base64(PEM(asn1))").
-func certToPEMBase64(der []byte) string {
+func CertToPEMBase64(der []byte) string {
 	return base64.StdEncoding.EncodeToString(pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: der,
