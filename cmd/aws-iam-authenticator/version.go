@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 )
 
@@ -16,7 +19,22 @@ var (
 		Short: "Version will output the current build information",
 		Long:  ``,
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Print("1")
+			ver := struct {
+				Version string `json:"Version,omitempty"`
+				Commit  string `json:"Commit,omitempty"`
+				Date    string `json:"Date,omitempty"`
+			}{pkg.Version, pkg.CommitID, date}
+
+			switch {
+			case shortened:
+				fmt.Println(pkg.Version)
+			case output == "json":
+				json.NewEncoder(os.Stdout).Encode(ver)
+			case output == "yaml":
+				yaml.NewEncoder(os.Stdout).Encode(ver)
+			default:
+				fmt.Fprintln(os.Stderr, "unknown version option")
+			}
 			return
 		},
 	}
