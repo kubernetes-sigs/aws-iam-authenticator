@@ -52,13 +52,13 @@ func stringsEqual(a, b []string) bool {
 func TestSelfSignCert(t *testing.T) {
 	certLifetime := time.Hour * 24 * 365 * 100
 	tests := []struct {
-		opts     CertOptions
+		opts     CertificateOptions
 		err      error
 		dnsNames []string
 		ips      []net.IP
 	}{
 		{
-			opts: CertOptions{
+			opts: CertificateOptions{
 				Address:  "127.0.0.1",
 				Hostname: "127.0.0.1",
 				Lifetime: certLifetime,
@@ -67,7 +67,7 @@ func TestSelfSignCert(t *testing.T) {
 			ips:      []net.IP{net.IPv4(127, 0, 0, 1)},
 		},
 		{
-			opts: CertOptions{
+			opts: CertificateOptions{
 				Address:  "192.0.2.1",
 				Hostname: "example.com",
 				Lifetime: certLifetime,
@@ -76,7 +76,7 @@ func TestSelfSignCert(t *testing.T) {
 			ips:      []net.IP{net.IPv4(192, 0, 2, 1)},
 		},
 		{
-			opts: CertOptions{
+			opts: CertificateOptions{
 				Address:  "::",
 				Hostname: "2001:db8::1:0",
 				Lifetime: certLifetime,

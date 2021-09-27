@@ -86,8 +86,12 @@ endif
 
 .PHONY: test
 test:
-	go test -v -coverprofile=coverage.out -race $(PKG)/...
+	go test -v -coverprofile=coverage.out -race $(PKG)/pkg/...
 	go tool cover -html=coverage.out -o coverage.html
+
+.PHONY: integration
+integration:
+	./hack/test-integration.sh
 
 .PHONY: format
 format:
