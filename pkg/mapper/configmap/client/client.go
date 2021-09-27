@@ -2,6 +2,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -27,10 +28,10 @@ const mapName = "aws-auth"
 func New(cli client_v1.ConfigMapInterface) Client {
 	return &client{
 		getMap: func() (*core_v1.ConfigMap, error) {
-			return cli.Get(mapName, meta_v1.GetOptions{})
+			return cli.Get(context.TODO(), mapName, meta_v1.GetOptions{})
 		},
 		updateMap: func(m *core_v1.ConfigMap) (cm *core_v1.ConfigMap, err error) {
-			cm, err = cli.Update(m)
+			cm, err = cli.Update(context.TODO(), m, meta_v1.UpdateOptions{})
 			return cm, err
 		},
 	}

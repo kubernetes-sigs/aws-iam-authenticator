@@ -1,6 +1,7 @@
 package configmap
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -54,7 +55,7 @@ func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
 			case <-stopCh:
 				return
 			default:
-				watcher, err := ms.configMap.Watch(metav1.ListOptions{
+				watcher, err := ms.configMap.Watch(context.TODO(), metav1.ListOptions{
 					Watch:         true,
 					FieldSelector: fields.OneTermEqualSelector("metadata.name", "aws-auth").String(),
 				})

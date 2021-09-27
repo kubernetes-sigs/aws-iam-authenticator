@@ -1,4 +1,20 @@
-package config
+/*
+Copyright 2021 by the contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package certs
 
 import (
 	"bytes"
@@ -6,6 +22,7 @@ import (
 	"net"
 	"sort"
 	"testing"
+	"time"
 )
 
 func ipsEqual(a, b []net.IP) bool {
@@ -33,32 +50,36 @@ func stringsEqual(a, b []string) bool {
 }
 
 func TestSelfSignCert(t *testing.T) {
+	certLifetime := time.Hour * 24 * 365 * 100
 	tests := []struct {
-		config   Config
+		opts     CertOptions
 		err      error
 		dnsNames []string
 		ips      []net.IP
 	}{
 		{
-			config: Config{
+			opts: CertOptions{
 				Address:  "127.0.0.1",
 				Hostname: "127.0.0.1",
+				Lifetime: certLifetime,
 			},
 			dnsNames: []string{},
 			ips:      []net.IP{net.IPv4(127, 0, 0, 1)},
 		},
 		{
-			config: Config{
+			opts: CertOptions{
 				Address:  "192.0.2.1",
 				Hostname: "example.com",
+				Lifetime: certLifetime,
 			},
 			dnsNames: []string{"example.com"},
 			ips:      []net.IP{net.IPv4(192, 0, 2, 1)},
 		},
 		{
-			config: Config{
+			opts: CertOptions{
 				Address:  "::",
 				Hostname: "2001:db8::1:0",
+				Lifetime: certLifetime,
 			},
 			dnsNames: []string{},
 			ips:      []net.IP{net.ParseIP("2001:db8::1:0")},
@@ -66,7 +87,7 @@ func TestSelfSignCert(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		certBytes, keyBytes, err := test.config.selfSignCertificate()
+		certBytes, keyBytes, err := selfSignedCertificate(test.opts.Address, test.opts.Hostname, test.opts.Lifetime)
 		if err != nil {
 			if err != test.err {
 				t.Errorf("Expected error %v, got %v", test.err, err)

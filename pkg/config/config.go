@@ -17,13 +17,15 @@ limitations under the License.
 package config
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/url"
 	"path/filepath"
 	"strconv"
 
-	"github.com/sirupsen/logrus"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/config/certs"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/config/kubeconfig"
 )
 
 // ServerURL returns the URL to connect to this server.
@@ -46,37 +48,27 @@ func (c *Config) ListenAddr() string {
 	return net.JoinHostPort(c.Address, strconv.Itoa(c.HostPort))
 }
 
-// GenerateFiles will generate the certificate+provate key
+// GenerateFiles will generate the certificate and private key and then create the kubeconfig
 func (c *Config) GenerateFiles() error {
 	// load or generate a certificate+private key
-	_, err := c.GetOrCreateCertificate()
+	_, err := c.GetOrCreateX509KeyPair()
 	if err != nil {
 		return fmt.Errorf("could not load/generate a certificate")
 	}
-	err = c.CreateKubeconfig()
+	err = c.GenerateWebhookKubeconfig()
 	if err != nil {
-		return fmt.Errorf("could not generate a webhook kubeconfig")
+		return fmt.Errorf("could not generate a webhook kubeconfig at %s: %v", c.GenerateKubeconfigPath, err)
 	}
 	return nil
 }
 
-// CreateKubeconfig will create a kubeconfig for the webhook server
-func (c *Config) CreateKubeconfig() error {
-	cert, err := c.LoadExistingCertificate()
+func (c *Config) GenerateWebhookKubeconfig() error {
+	cert, err := certs.LoadX509KeyPair(c.CertPath(), c.KeyPath())
 	if err != nil {
 		return fmt.Errorf("failed to load an existing certificate: %v", err)
 	}
 
-	// write a kubeconfig suitable for the API server to call us
-	logrus.WithField("kubeconfigPath", c.GenerateKubeconfigPath).Info("writing webhook kubeconfig file")
-	err = kubeconfigParams{
-		ServerURL:                  c.ServerURL(),
-		CertificateAuthorityBase64: certToPEMBase64(cert.Certificate[0]),
-	}.writeTo(c.GenerateKubeconfigPath)
-	if err != nil {
-		logrus.WithField("kubeconfigPath", c.GenerateKubeconfigPath).WithError(err).Fatal("could not write kubeconfig")
-	}
-	return nil
+	return kubeconfig.CreateWebhookKubeconfig(cert, c.GenerateKubeconfigPath, c.ServerURL())
 }
 
 // CertPath returns the path to the pem file containing the certificate
@@ -87,4 +79,19 @@ func (c *Config) CertPath() string {
 // KeyPath returns the path to the pem file containing the private key
 func (c *Config) KeyPath() string {
 	return filepath.Join(c.StateDir, "key.pem")
+}
+
+func (c *Config) CertOpts() certs.CertificateOptions {
+	return certs.CertificateOptions{
+		CertPath: c.CertPath(),
+		KeyPath:  c.KeyPath(),
+		Hostname: c.Hostname,
+		Address:  c.Address,
+		Lifetime: certLifetime,
+	}
+}
+
+// GetOrCreateCertificate will create a certificate if it cannot find one based on the config
+func (c *Config) GetOrCreateX509KeyPair() (*tls.Certificate, error) {
+	return certs.GetOrCreateX509KeyPair(c.CertOpts())
 }

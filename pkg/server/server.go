@@ -86,10 +86,22 @@ const (
 	metricSuccess   = "success"
 )
 
-// New the authentication webhook server.
-func New(cfg config.Config, mappers []mapper.Mapper) *Server {
+// New authentication webhook server.
+func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 	c := &Server{
 		Config: cfg,
+	}
+
+	mappers, err := BuildMapperChain(cfg)
+	if err != nil {
+		logrus.Fatalf("failed to build mapper chain: %v", err)
+	}
+
+	for _, m := range mappers {
+		logrus.Infof("starting mapper %q", m.Name())
+		if err := m.Start(stopCh); err != nil {
+			logrus.Fatalf("start mapper %q failed", m.Name())
+		}
 	}
 
 	for _, mapping := range c.RoleMappings {
@@ -111,14 +123,14 @@ func New(cfg config.Config, mappers []mapper.Mapper) *Server {
 		logrus.WithField("accountID", account).Infof("mapping IAM Account")
 	}
 
-	cert, err := c.GetOrCreateCertificate()
+	cert, err := c.GetOrCreateX509KeyPair()
 	if err != nil {
 		logrus.WithError(err).Fatalf("could not load/generate a certificate")
 	}
 
 	if !c.KubeconfigPregenerated {
-		if err := c.CreateKubeconfig(); err != nil {
-			logrus.WithError(err).Fatalf("could not create kubeconfig")
+		if err := c.GenerateWebhookKubeconfig(); err != nil {
+			logrus.WithError(err).Fatalf("could not create webhook kubeconfig")
 		}
 	}
 
@@ -147,6 +159,7 @@ func New(cfg config.Config, mappers []mapper.Mapper) *Server {
 
 // Run will run the server closing the connection if there is a struct on the channel
 func (c *Server) Run(stopCh <-chan struct{}) {
+
 	defer c.listener.Close()
 
 	go func() {

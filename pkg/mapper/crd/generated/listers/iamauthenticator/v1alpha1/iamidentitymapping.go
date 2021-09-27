@@ -25,10 +25,13 @@ import (
 )
 
 // IAMIdentityMappingLister helps list IAMIdentityMappings.
+// All objects returned here must be treated as read-only.
 type IAMIdentityMappingLister interface {
 	// List lists all IAMIdentityMappings in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.IAMIdentityMapping, err error)
 	// Get retrieves the IAMIdentityMapping from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.IAMIdentityMapping, error)
 	IAMIdentityMappingListerExpansion
 }
