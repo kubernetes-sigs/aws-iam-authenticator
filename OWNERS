@@ -4,11 +4,12 @@ approvers:
 - wongma7
 
 reviewers:
-- mattmoyer
 - nckturner
-- mattlandis
 - micahhausler
 - justinsb
+- wongma7
 
 emeritus_approvers:
 - christopherhein
+- mattmoyer
+- mattlandis
