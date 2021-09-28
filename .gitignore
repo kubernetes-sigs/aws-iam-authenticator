@@ -2,7 +2,7 @@
 /_output
 
 # For testing
-test_artifacts
+test-artifacts
 
 # == kubernetes .gitignore ==
 

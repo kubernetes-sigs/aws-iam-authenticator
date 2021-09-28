@@ -25,11 +25,12 @@ function role_arn() {
 
 KUBERNETES_TAG="v1.22.1"
 REPO_ROOT="$(cd "$( dirname "${BASH_SOURCE[0]}" )"/.. &> /dev/null && pwd)"
-TEST_ARTIFACTS="${TEST_ARTIFACTS:-"${REPO_ROOT}/test_artifacts"}"
+TEST_ARTIFACTS="${TEST_ARTIFACTS:-"${REPO_ROOT}/test-artifacts"}"
 TEST_ROLE_ARN="${TEST_ROLE_ARN:-$(role_arn)}"
 
 command -v aws || { echo "Command 'aws' not found" && exit 1; }
 
+make clean
 make bin
 
 if [[ ! -d ${TEST_ARTIFACTS}/k8s.io/kubernetes ]]; then
@@ -40,4 +41,6 @@ pushd ${TEST_ARTIFACTS}/k8s.io/kubernetes
 make generated_files
 popd
 
-go test -v ./tests/integration/server -test-artifacts-dir="${TEST_ARTIFACTS}" -authenticator-binary-path="${REPO_ROOT}/_output/bin/aws-iam-authenticator" -role-arn="${TEST_ROLE_ARN}"
+pushd ${REPO_ROOT}/tests/integration
+go test -v ./server -test-artifacts-dir="${TEST_ARTIFACTS}" -authenticator-binary-path="${REPO_ROOT}/_output/bin/aws-iam-authenticator" -role-arn="${TEST_ROLE_ARN}"
+popd

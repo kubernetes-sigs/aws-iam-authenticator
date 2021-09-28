@@ -181,7 +181,7 @@ func Invalid(field *Path, value interface{}, detail string) *Error {
 // valid values).
 func NotSupported(field *Path, value interface{}, validValues []string) *Error {
 	detail := ""
-	if validValues != nil && len(validValues) > 0 {
+	if len(validValues) > 0 {
 		quotedValues := make([]string, len(validValues))
 		for i, v := range validValues {
 			quotedValues[i] = strconv.Quote(v)
@@ -204,7 +204,7 @@ func Forbidden(field *Path, detail string) *Error {
 // Invalid, but the returned error will not include the too-long
 // value.
 func TooLong(field *Path, value interface{}, maxLength int) *Error {
-	return &Error{ErrorTypeTooLong, field.String(), value, fmt.Sprintf("must have at most %d characters", maxLength)}
+	return &Error{ErrorTypeTooLong, field.String(), value, fmt.Sprintf("must have at most %d bytes", maxLength)}
 }
 
 // TooMany returns a *Error indicating "too many". This is used to
