@@ -77,6 +77,12 @@ build-all-bins:
 	$(foreach arch,$(BIN_ARCH_WINDOWS),$(call build-bin,windows,$(arch),.exe))
 	$(foreach arch,$(BIN_ARCH_DARWIN),$(call build-bin,darwin,$(arch),))
 
+.PHONY: image
+image:
+	docker build \
+		--build-arg image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-08-26-1630012071 \
+		--tag aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(shell date +%s) .
+
 .PHONY: goreleaser
 goreleaser:
 ifndef GORELEASER

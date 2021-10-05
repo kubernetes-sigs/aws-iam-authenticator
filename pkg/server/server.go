@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/file"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	awsarn "github.com/aws/aws-sdk-go/aws/arn"
@@ -64,27 +65,12 @@ var (
 type handler struct {
 	http.ServeMux
 	verifier         token.Verifier
-	metrics          metrics
+	metrics          metrics.Metrics
 	ec2Provider      ec2provider.EC2Provider
 	clusterID        string
 	mappers          []mapper.Mapper
 	scrubbedAccounts []string
 }
-
-// metrics are handles to the collectors for prometheous for the various metrics we are tracking.
-type metrics struct {
-	latency *prometheus.HistogramVec
-}
-
-// namespace for the AWS IAM Authenticator's metrics
-const (
-	metricNS        = "aws_iam_authenticator"
-	metricMalformed = "malformed_request"
-	metricInvalid   = "invalid_token"
-	metricSTSError  = "sts_error"
-	metricUnknown   = "uknown_user"
-	metricSuccess   = "success"
-)
 
 // New authentication webhook server.
 func New(cfg config.Config, stopCh <-chan struct{}) *Server {
@@ -92,7 +78,10 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 		Config: cfg,
 	}
 
-	mappers, err := BuildMapperChain(cfg)
+	authenticatorMetrics := metrics.CreateMetrics(prometheus.DefaultRegisterer)
+	c.metrics = authenticatorMetrics
+
+	mappers, err := BuildMapperChain(cfg, authenticatorMetrics)
 	if err != nil {
 		logrus.Fatalf("failed to build mapper chain: %v", err)
 	}
@@ -151,7 +140,7 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
 	c.httpServer = http.Server{
 		ErrorLog: log.New(errLog, "", 0),
-		Handler:  c.getHandler(mappers, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst),
+		Handler:  c.getHandler(authenticatorMetrics, mappers, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst),
 	}
 	c.listener = listener
 	return c
@@ -175,7 +164,7 @@ type healthzHandler struct{}
 func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
-func (c *Server) getHandler(mappers []mapper.Mapper, ec2DescribeQps int, ec2DescribeBurst int) *handler {
+func (c *Server) getHandler(authenticatorMetrics metrics.Metrics, mappers []mapper.Mapper, ec2DescribeQps int, ec2DescribeBurst int) *handler {
 	if c.ServerEC2DescribeInstancesRoleARN != "" {
 		_, err := awsarn.Parse(c.ServerEC2DescribeInstancesRoleARN)
 		if err != nil {
@@ -185,7 +174,7 @@ func (c *Server) getHandler(mappers []mapper.Mapper, ec2DescribeQps int, ec2Desc
 
 	h := &handler{
 		verifier:         token.NewVerifier(c.ClusterID, c.PartitionID),
-		metrics:          createMetrics(),
+		metrics:          authenticatorMetrics,
 		ec2Provider:      ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, ec2DescribeQps, ec2DescribeBurst),
 		clusterID:        c.ClusterID,
 		mappers:          mappers,
@@ -202,19 +191,7 @@ func (c *Server) getHandler(mappers []mapper.Mapper, ec2DescribeQps int, ec2Desc
 	return h
 }
 
-func createMetrics() metrics {
-	m := metrics{
-		latency: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Namespace: metricNS,
-			Name:      "authenticate_latency_seconds",
-			Help:      "The latency for authenticate call",
-		}, []string{"result"}),
-	}
-	prometheus.MustRegister(m.latency)
-	return m
-}
-
-func BuildMapperChain(cfg config.Config) ([]mapper.Mapper, error) {
+func BuildMapperChain(cfg config.Config, authenticatorMetrics metrics.Metrics) ([]mapper.Mapper, error) {
 	modes := cfg.BackendMode
 	mappers := []mapper.Mapper{}
 	for _, mode := range modes {
@@ -230,7 +207,7 @@ func BuildMapperChain(cfg config.Config) ([]mapper.Mapper, error) {
 		case mapper.ModeConfigMap:
 			fallthrough
 		case mapper.ModeEKSConfigMap:
-			configMapMapper, err := configmap.NewConfigMapMapper(cfg)
+			configMapMapper, err := configmap.NewConfigMapMapper(cfg, authenticatorMetrics)
 			if err != nil {
 				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
@@ -272,13 +249,13 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	if req.Method != http.MethodPost {
 		log.Error("unexpected request method")
 		http.Error(w, "expected POST", http.StatusMethodNotAllowed)
-		h.metrics.latency.WithLabelValues(metricMalformed).Observe(duration(start))
+		h.metrics.Latency.WithLabelValues(metrics.Malformed).Observe(duration(start))
 		return
 	}
 	if req.Body == nil {
 		log.Error("empty request body")
 		http.Error(w, "expected a request body", http.StatusBadRequest)
-		h.metrics.latency.WithLabelValues(metricMalformed).Observe(duration(start))
+		h.metrics.Latency.WithLabelValues(metrics.Malformed).Observe(duration(start))
 		return
 	}
 	defer req.Body.Close()
@@ -287,7 +264,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	if err := json.NewDecoder(req.Body).Decode(&tokenReview); err != nil {
 		log.WithError(err).Error("could not parse request body")
 		http.Error(w, "expected a request body to be a TokenReview", http.StatusBadRequest)
-		h.metrics.latency.WithLabelValues(metricMalformed).Observe(duration(start))
+		h.metrics.Latency.WithLabelValues(metrics.Malformed).Observe(duration(start))
 		return
 	}
 
@@ -300,9 +277,9 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	identity, err := h.verifier.Verify(tokenReview.Spec.Token)
 	if err != nil {
 		if _, ok := err.(token.STSError); ok {
-			h.metrics.latency.WithLabelValues(metricSTSError).Observe(duration(start))
+			h.metrics.Latency.WithLabelValues(metrics.STSError).Observe(duration(start))
 		} else {
-			h.metrics.latency.WithLabelValues(metricInvalid).Observe(duration(start))
+			h.metrics.Latency.WithLabelValues(metrics.Invalid).Observe(duration(start))
 		}
 		log.WithError(err).Warn("access denied")
 		w.WriteHeader(http.StatusForbidden)
@@ -325,7 +302,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 
 	username, groups, err := h.doMapping(identity)
 	if err != nil {
-		h.metrics.latency.WithLabelValues(metricUnknown).Observe(duration(start))
+		h.metrics.Latency.WithLabelValues(metrics.Unknown).Observe(duration(start))
 		log.WithError(err).Warn("access denied")
 		w.WriteHeader(http.StatusForbidden)
 		w.Write(tokenReviewDenyJSON)
@@ -344,7 +321,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 		"uid":      uid,
 		"groups":   groups,
 	}).Info("access granted")
-	h.metrics.latency.WithLabelValues(metricSuccess).Observe(duration(start))
+	h.metrics.Latency.WithLabelValues(metrics.Success).Observe(duration(start))
 	w.WriteHeader(http.StatusOK)
 
 	userExtra := map[string]authenticationv1beta1.ExtraValue{}

@@ -3,16 +3,18 @@ package configmap
 import (
 	"reflect"
 	"testing"
-
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	core_v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
+
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
 var testUser = config.UserMapping{Username: "matlan", Groups: []string{"system:master", "dev"}}
@@ -23,6 +25,7 @@ func makeStore() MapStore {
 		users:       make(map[string]config.UserMapping),
 		roles:       make(map[string]config.RoleMapping),
 		awsAccounts: make(map[string]interface{}),
+		metrics:     metrics.CreateMetrics(prometheus.NewRegistry()),
 	}
 	ms.users["matt"] = testUser
 	ms.roles["instance"] = testRole
@@ -38,6 +41,7 @@ func makeStoreWClient() (MapStore, *fake.FakeConfigMaps) {
 		users:     make(map[string]config.UserMapping),
 		roles:     make(map[string]config.RoleMapping),
 		configMap: v1.ConfigMapInterface(fakeConfigMaps),
+		metrics:   metrics.CreateMetrics(prometheus.NewRegistry()),
 	}
 	return ms, fakeConfigMaps
 }

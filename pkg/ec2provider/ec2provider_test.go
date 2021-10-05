@@ -44,8 +44,8 @@ func (c *mockEc2Client) DescribeInstances(in *ec2.DescribeInstancesInput) (*ec2.
 
 func newMockedEC2ProviderImpl() *ec2ProviderImpl {
 	dnsCache := ec2PrivateDNSCache{
-		cache:     make(map[string]string),
-		lock: sync.RWMutex{},
+		cache: make(map[string]string),
+		lock:  sync.RWMutex{},
 	}
 	ec2Requests := ec2Requests{
 		set:  make(map[string]bool),
@@ -54,7 +54,7 @@ func newMockedEC2ProviderImpl() *ec2ProviderImpl {
 	return &ec2ProviderImpl{
 		ec2:                &mockEc2Client{},
 		privateDNSCache:    dnsCache,
-		ec2Requests:       ec2Requests,
+		ec2Requests:        ec2Requests,
 		instanceIdsChannel: make(chan string, maxChannelSize),
 	}
 
