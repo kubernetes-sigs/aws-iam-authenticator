@@ -33,6 +33,9 @@ type AuthenticatorTestFrameworkSetup struct {
 	ModifyAuthenticatorServerConfig func(*config.Config)
 	AuthenticatorClientBinaryPath   string
 	TestArtifacts                   string
+	ClusterID                       string
+	BackendMode                     []string
+	RoleArn                         string
 }
 
 func StartAuthenticatorTestFramework(t *testing.T, stopCh <-chan struct{}, setup AuthenticatorTestFrameworkSetup) (client.Interface, client.Interface) {
@@ -88,10 +91,15 @@ func StartAuthenticatorTestFramework(t *testing.T, stopCh <-chan struct{}, setup
 		t.Fatal(err)
 	}
 
+	args := []string{"token", "-i", setup.ClusterID}
+	if setup.RoleArn != "" {
+		args = append(args, "--role", setup.RoleArn)
+	}
+
 	// Create aws-iam-authenticator client
 	kubeAPIServerClientConfig.ExecProvider = &clientcmdapi.ExecConfig{
 		Command:         setup.AuthenticatorClientBinaryPath,
-		Args:            []string{"token", "-i", "test-cluster"},
+		Args:            args,
 		APIVersion:      "client.authentication.k8s.io/v1beta1",
 		InteractiveMode: clientcmdapi.NeverExecInteractiveMode,
 	}
@@ -111,14 +119,14 @@ func testConfig(t *testing.T, setup AuthenticatorTestFrameworkSetup) (config.Con
 
 	cfg := config.Config{
 		PartitionID:            "aws",
-		ClusterID:              "test-cluster",
+		ClusterID:              setup.ClusterID,
 		Hostname:               "localhost",
 		HostPort:               hardcodedAuthenticatorServerPort,
 		KubeconfigPregenerated: true,
 		Address:                "127.0.0.1",
 		Kubeconfig:             filepath.Join(testDir, "apiserver.kubeconfig"),
 		GenerateKubeconfigPath: filepath.Join(testDir, "webhook.kubeconfig"),
-		BackendMode:            []string{"EKSConfigMap"},
+		BackendMode:            setup.BackendMode,
 		StateDir:               testDir,
 	}
 
