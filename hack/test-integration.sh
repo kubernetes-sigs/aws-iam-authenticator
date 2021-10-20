@@ -90,8 +90,11 @@ git clone --branch ${KUBERNETES_TAG} --depth 1 https://github.com/kubernetes/kub
 
 pushd ${TEST_ARTIFACTS}/k8s.io/kubernetes
 make generated_files
+./hack/install-etcd.sh
+export PATH="${TEST_ARTIFACTS}/k8s.io/kubernetes/third_party/etcd:${PATH}"
 popd
 
 pushd ${REPO_ROOT}/tests/integration
+export AWS_REGION=${AWS_REGION:-us-west-2}
 go test -v ./server -test-artifacts-dir="${TEST_ARTIFACTS}" -authenticator-binary-path="${REPO_ROOT}/_output/bin/aws-iam-authenticator" -role-arn="${TEST_ROLE_ARN}"
 popd
