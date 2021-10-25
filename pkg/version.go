@@ -17,6 +17,7 @@ limitations under the License.
 package pkg
 
 var (
+	AppName = "aws-iam-authenticator"
 	// Set at build time
 	// Semantic version of the build.
 	Version = "unversioned"

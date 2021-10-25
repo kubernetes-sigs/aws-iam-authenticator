@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 
+	awsarn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -113,6 +114,13 @@ func getConfig() (config.Config, error) {
 
 	if cfg.ClusterID == "" {
 		return cfg, errors.New("cluster ID cannot be empty")
+	}
+
+	if cfg.ServerEC2DescribeInstancesRoleARN != "" {
+		_, err := awsarn.Parse(cfg.ServerEC2DescribeInstancesRoleARN)
+		if err != nil {
+			return cfg, fmt.Errorf("describeinstancesrole %s is not a valid arn", cfg.ServerEC2DescribeInstancesRoleARN)
+		}
 	}
 
 	partitionKeys := []string{}

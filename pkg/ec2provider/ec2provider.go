@@ -6,19 +6,11 @@ import (
 	"sync"
 	"time"
 
+	"sigs.k8s.io/aws-iam-authenticator/pkg/cloud"
+
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/sirupsen/logrus"
-	"sigs.k8s.io/aws-iam-authenticator/pkg"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/httputil"
 )
 
 const (
@@ -54,13 +46,13 @@ type ec2Requests struct {
 }
 
 type ec2ProviderImpl struct {
-	ec2                ec2iface.EC2API
+	cloud              *cloud.Cloud
 	privateDNSCache    ec2PrivateDNSCache
 	ec2Requests        ec2Requests
 	instanceIdsChannel chan string
 }
 
-func New(roleARN string, qps int, burst int) EC2Provider {
+func New(cloud *cloud.Cloud) EC2Provider {
 	dnsCache := ec2PrivateDNSCache{
 		cache: make(map[string]string),
 		lock:  sync.RWMutex{},
@@ -70,53 +62,11 @@ func New(roleARN string, qps int, burst int) EC2Provider {
 		lock: sync.RWMutex{},
 	}
 	return &ec2ProviderImpl{
-		ec2:                ec2.New(newSession(roleARN, qps, burst)),
+		cloud:              cloud,
 		privateDNSCache:    dnsCache,
 		ec2Requests:        ec2Requests,
 		instanceIdsChannel: make(chan string, maxChannelSize),
 	}
-}
-
-// Initial credentials loaded from SDK's default credential chain, such as
-// the environment, shared credentials (~/.aws/credentials), or EC2 Instance
-// Role.
-
-func newSession(roleARN string, qps int, burst int) *session.Session {
-	sess := session.Must(session.NewSession())
-	sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
-		Name: "authenticatorUserAgent",
-		Fn: request.MakeAddToUserAgentHandler(
-			"aws-iam-authenticator", pkg.Version),
-	})
-	if aws.StringValue(sess.Config.Region) == "" {
-		ec2metadata := ec2metadata.New(sess)
-		regionFound, err := ec2metadata.Region()
-		if err != nil {
-			logrus.WithError(err).Fatal("Region not found in shared credentials, environment variable, or instance metadata.")
-		}
-		sess.Config.Region = aws.String(regionFound)
-	}
-
-	if roleARN != "" {
-		logrus.WithFields(logrus.Fields{
-			"roleARN": roleARN,
-		}).Infof("Using assumed role for EC2 API")
-
-		rateLimitedClient, err := httputil.NewRateLimitedClient(qps, burst)
-
-		if err != nil {
-			logrus.Errorf("Getting error = %s while creating rate limited client ", err)
-		}
-
-		ap := &stscreds.AssumeRoleProvider{
-			Client:   sts.New(sess, aws.NewConfig().WithHTTPClient(rateLimitedClient).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint)),
-			RoleARN:  roleARN,
-			Duration: time.Duration(60) * time.Minute,
-		}
-
-		sess.Config.Credentials = credentials.NewCredentials(ap)
-	}
-	return sess
 }
 
 func (p *ec2ProviderImpl) setPrivateDNSNameCache(id string, privateDNSName string) {
@@ -194,7 +144,7 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(id string) (string, error) {
 
 	logrus.Infof("Calling ec2:DescribeInstances for the InstanceId = %s ", id)
 	// Look up instance from EC2 API
-	output, err := p.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
+	output, err := p.cloud.EC2.DescribeInstances(&ec2.DescribeInstancesInput{
 		InstanceIds: aws.StringSlice([]string{id}),
 	})
 	if err != nil {
@@ -254,7 +204,7 @@ func (p *ec2ProviderImpl) StartEc2DescribeBatchProcessing() {
 func (p *ec2ProviderImpl) getPrivateDnsAndPublishToCache(instanceIdList []string) {
 	// Look up instance from EC2 API
 	logrus.Infof("Making Batch Query to DescribeInstances for %v instances ", len(instanceIdList))
-	output, err := p.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
+	output, err := p.cloud.EC2.DescribeInstances(&ec2.DescribeInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIdList),
 	})
 	if err != nil {

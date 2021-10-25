@@ -22,10 +22,13 @@ import (
 	"strings"
 
 	"k8s.io/sample-controller/pkg/signals"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/cloud"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/server"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -54,7 +57,21 @@ var serverCmd = &cobra.Command{
 			logrus.Fatalf("%s", err)
 		}
 
-		httpServer := server.New(cfg, stopCh)
+		metrics.InitMetrics(prometheus.DefaultRegisterer)
+
+		cloud, err := cloud.NewCloud(
+			cloud.AwsOpts{
+				RoleARN: cfg.ServerEC2DescribeInstancesRoleARN,
+				QPS:     cfg.EC2DescribeInstancesQps,
+				Burst:   cfg.EC2DescribeInstancesBurst,
+			},
+		)
+
+		if err != nil {
+			logrus.Fatalf("%s", err)
+		}
+
+		httpServer := server.New(cfg, cloud, stopCh)
 		httpServer.Run(stopCh)
 	},
 }

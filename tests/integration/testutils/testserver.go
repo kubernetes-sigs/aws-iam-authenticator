@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/prometheus/client_golang/prometheus"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	client "k8s.io/client-go/kubernetes"
@@ -18,8 +19,10 @@ import (
 	"k8s.io/kubernetes/pkg/controlplane"
 	"k8s.io/kubernetes/test/integration/framework"
 
+	"sigs.k8s.io/aws-iam-authenticator/pkg/cloud"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/server"
 )
 
@@ -39,6 +42,8 @@ type AuthenticatorTestFrameworkSetup struct {
 }
 
 func StartAuthenticatorTestFramework(t *testing.T, stopCh <-chan struct{}, setup AuthenticatorTestFrameworkSetup) (client.Interface, client.Interface) {
+	metrics.InitMetrics(prometheus.NewRegistry())
+
 	cfg, err := testConfig(t, setup)
 	if err != nil {
 		t.Fatal(err)
@@ -69,8 +74,19 @@ func StartAuthenticatorTestFramework(t *testing.T, stopCh <-chan struct{}, setup
 		t.Fatal(err)
 	}
 
+	cloud, err := cloud.NewCloud(
+		cloud.AwsOpts{
+			RoleARN: cfg.ServerEC2DescribeInstancesRoleARN,
+			QPS:     cfg.EC2DescribeInstancesQps,
+			Burst:   cfg.EC2DescribeInstancesBurst,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	go func() {
-		httpServer := server.New(cfg, stopCh)
+		httpServer := server.New(cfg, cloud, stopCh)
 		httpServer.Run(stopCh)
 	}()
 
@@ -118,16 +134,18 @@ func testConfig(t *testing.T, setup AuthenticatorTestFrameworkSetup) (config.Con
 	t.Logf("Test dir: %v.\n", testDir)
 
 	cfg := config.Config{
-		PartitionID:            "aws",
-		ClusterID:              setup.ClusterID,
-		Hostname:               "localhost",
-		HostPort:               hardcodedAuthenticatorServerPort,
-		KubeconfigPregenerated: true,
-		Address:                "127.0.0.1",
-		Kubeconfig:             filepath.Join(testDir, "apiserver.kubeconfig"),
-		GenerateKubeconfigPath: filepath.Join(testDir, "webhook.kubeconfig"),
-		BackendMode:            setup.BackendMode,
-		StateDir:               testDir,
+		PartitionID:               "aws",
+		ClusterID:                 setup.ClusterID,
+		Hostname:                  "localhost",
+		HostPort:                  hardcodedAuthenticatorServerPort,
+		KubeconfigPregenerated:    true,
+		Address:                   "127.0.0.1",
+		Kubeconfig:                filepath.Join(testDir, "apiserver.kubeconfig"),
+		GenerateKubeconfigPath:    filepath.Join(testDir, "webhook.kubeconfig"),
+		BackendMode:               setup.BackendMode,
+		StateDir:                  testDir,
+		EC2DescribeInstancesQps:   15,
+		EC2DescribeInstancesBurst: 60,
 	}
 
 	if setup.ModifyAuthenticatorServerConfig != nil {

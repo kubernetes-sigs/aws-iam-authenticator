@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/cloud"
 )
 
 const (
@@ -52,7 +53,9 @@ func newMockedEC2ProviderImpl() *ec2ProviderImpl {
 		lock: sync.RWMutex{},
 	}
 	return &ec2ProviderImpl{
-		ec2:                &mockEc2Client{},
+		cloud: &cloud.Cloud{
+			EC2: &mockEc2Client{},
+		},
 		privateDNSCache:    dnsCache,
 		ec2Requests:        ec2Requests,
 		instanceIdsChannel: make(chan string, maxChannelSize),
@@ -62,7 +65,7 @@ func newMockedEC2ProviderImpl() *ec2ProviderImpl {
 
 func TestGetPrivateDNSName(t *testing.T) {
 	ec2Provider := newMockedEC2ProviderImpl()
-	ec2Provider.ec2 = &mockEc2Client{Reservations: prepareSingleInstanceOutput()}
+	ec2Provider.cloud.EC2 = &mockEc2Client{Reservations: prepareSingleInstanceOutput()}
 	go ec2Provider.StartEc2DescribeBatchProcessing()
 	dns_name, err := ec2Provider.GetPrivateDNSName("ec2-1")
 	if err != nil {
@@ -94,7 +97,7 @@ func prepareSingleInstanceOutput() []*ec2.Reservation {
 func TestGetPrivateDNSNameWithBatching(t *testing.T) {
 	ec2Provider := newMockedEC2ProviderImpl()
 	reservations := prepare100InstanceOutput()
-	ec2Provider.ec2 = &mockEc2Client{Reservations: reservations}
+	ec2Provider.cloud.EC2 = &mockEc2Client{Reservations: reservations}
 	go ec2Provider.StartEc2DescribeBatchProcessing()
 	var wg sync.WaitGroup
 	for i := 1; i < 101; i++ {
