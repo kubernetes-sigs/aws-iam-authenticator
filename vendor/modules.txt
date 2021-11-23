@@ -187,9 +187,6 @@ github.com/spf13/pflag
 github.com/spf13/viper
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
-# go.hein.dev/go-version v0.1.0
-## explicit
-go.hein.dev/go-version
 # golang.org/x/mod v0.4.2
 golang.org/x/mod/module
 golang.org/x/mod/semver
@@ -327,8 +324,6 @@ k8s.io/api/scheduling/v1beta1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apiextensions-apiserver v0.22.1
-## explicit
 # k8s.io/apimachinery v0.22.1
 ## explicit
 k8s.io/apimachinery/pkg/api/errors
