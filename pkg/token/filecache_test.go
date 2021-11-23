@@ -59,7 +59,11 @@ type testFS struct {
 
 func (t *testFS) Stat(filename string) (os.FileInfo, error) {
 	t.filename = filename
-	return &t.fileinfo, t.err
+	if t.err == nil {
+		return &t.fileinfo, nil
+	} else {
+		return nil, t.err
+	}
 }
 
 func (t *testFS) ReadFile(filename string) ([]byte, error) {

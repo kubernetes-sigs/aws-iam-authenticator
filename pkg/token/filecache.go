@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/gofrs/flock"
 	"gopkg.in/yaml.v2"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -185,7 +186,7 @@ func NewFileCacheProvider(clusterID, profile, roleARN string, creds *credentials
 	cachedCredential := cachedCredential{}
 	// ensure path to cache file exists
 	_ = f.MkdirAll(filepath.Dir(filename), 0700)
-	if info, err := f.Stat(filename); !os.IsNotExist(err) {
+	if info, err := f.Stat(filename); err == nil {
 		if info.Mode()&0077 != 0 {
 			// cache file has secret credentials and should only be accessible to the user, refuse to use it.
 			return FileCacheProvider{}, fmt.Errorf("cache file %s is not private", filename)
@@ -211,8 +212,12 @@ func NewFileCacheProvider(clusterID, profile, roleARN string, creds *credentials
 
 		cachedCredential = cache.Get(cacheKey)
 	} else {
-		// cache file is missing.  maybe this is the very first run?  continue to use cache.
-		_, _ = fmt.Fprintf(os.Stderr, "Cache file %s does not exist.\n", filename)
+		if errors.Is(err, fs.ErrNotExist) {
+			// cache file is missing.  maybe this is the very first run?  continue to use cache.
+			_, _ = fmt.Fprintf(os.Stderr, "Cache file %s does not exist.\n", filename)
+		} else {
+			return FileCacheProvider{}, fmt.Errorf("couldn't stat cache file: %w", err)
+		}
 	}
 
 	return FileCacheProvider{
