@@ -4,12 +4,15 @@ images:
 options:
   substitution_option: ALLOW_LOOSE
 steps:
-  - name: gcr.io/cloud-builders/docker
+  - name: gcr.io/k8s-testimages/gcb-docker-gcloud
+    entrypoint: /buildx-entrypoint
     args:
     - build
     - --tag=gcr.io/$PROJECT_ID/aws-iam-authenticator:$_GIT_TAG
     - --tag=gcr.io/$PROJECT_ID/aws-iam-authenticator:latest
     - --build-arg=IMAGE=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-08-26-1630012071
+    - --platform=linux/amd64,linux/arm64
+    - --output=type=registry
     - .
 substitutions:
   _GIT_TAG: '12345'

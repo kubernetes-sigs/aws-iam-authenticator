@@ -79,7 +79,7 @@ build-all-bins:
 
 .PHONY: image
 image:
-	docker build \
+	docker buildx build --output=type=registry --platform linux/amd64,linux/arm64 \
 		--build-arg image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-08-26-1630012071 \
 		--tag aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(shell date +%s) .
 
