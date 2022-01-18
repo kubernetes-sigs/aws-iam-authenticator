@@ -48,6 +48,9 @@ NETWORK_SUBNET="${NETWORK_SUBNET:-172.30.0.0/16}"
 AUTHENTICATOR_IP="${AUTHENTICATOR_IP:-172.30.0.10}"
 AUTHENTICATOR_PORT="${AUTHENTICATOR_PORT:-21362}"
 
+# Not configurable:
+authenticator_healthz_port=21363
+
 # Location of templates, config files, mounts
 authenticator_config_template="${REPO_ROOT}/hack/dev/authenticator.yaml"
 kind_config_template="${REPO_ROOT}/hack/dev/env.yaml"
@@ -130,6 +133,8 @@ function start_authenticator() {
         --mount "type=bind,src=${authenticator_export_host_dir},dst=${authenticator_export_dest_dir}" \
         --name aws-iam-authenticator \
         --network "${NETWORK_NAME}" \
+        --publish ${authenticator_healthz_port}:${authenticator_healthz_port} \
+        --publish ${AUTHENTICATOR_PORT}:${AUTHENTICATOR_PORT} \
         --rm \
         "${AUTHENTICATOR_IMAGE}" \
         server \
