@@ -483,6 +483,11 @@ server:
   - MountedFile
 ```
 
+## Development
+
+See the [development](./docs/development.md) page.
+
+
 ## Community, discussion, contribution, and support
 
 Learn how to engage with the Kubernetes community on the [community page](http://kubernetes.io/community/).

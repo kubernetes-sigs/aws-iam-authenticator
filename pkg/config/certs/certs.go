@@ -123,6 +123,8 @@ func selfSignedCertificate(address, hostname string, lifetime time.Duration) ([]
 		return nil, nil, err
 	}
 
+	logrus.WithField("address", address).Infof("Creating certificate with address")
+
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
