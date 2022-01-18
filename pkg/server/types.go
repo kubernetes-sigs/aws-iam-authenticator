@@ -21,7 +21,6 @@ import (
 	"net/http"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
 // Server for the authentication webhook.
@@ -30,5 +29,4 @@ type Server struct {
 	config.Config
 	httpServer http.Server
 	listener   net.Listener
-	metrics    metrics.Metrics
 }

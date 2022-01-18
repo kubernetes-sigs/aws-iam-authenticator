@@ -102,9 +102,9 @@ func newIAMIdentityMapping(arn, canonicalARN, username string, groups []string) 
 }
 
 func setup(verifier token.Verifier) *handler {
+	metrics.InitMetrics(prometheus.NewRegistry())
 	return &handler{
 		verifier: verifier,
-		metrics:  metrics.CreateMetrics(prometheus.NewRegistry()),
 	}
 }
 

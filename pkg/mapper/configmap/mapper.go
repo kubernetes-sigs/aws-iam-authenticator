@@ -5,7 +5,6 @@ import (
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
 type ConfigMapMapper struct {
@@ -14,8 +13,8 @@ type ConfigMapMapper struct {
 
 var _ mapper.Mapper = &ConfigMapMapper{}
 
-func NewConfigMapMapper(cfg config.Config, authenticatorMetrics metrics.Metrics) (*ConfigMapMapper, error) {
-	ms, err := New(cfg.Master, cfg.Kubeconfig, authenticatorMetrics)
+func NewConfigMapMapper(cfg config.Config) (*ConfigMapMapper, error) {
+	ms, err := New(cfg.Master, cfg.Kubeconfig)
 	if err != nil {
 		return nil, err
 	}

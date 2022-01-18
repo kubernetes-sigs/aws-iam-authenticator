@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/prometheus/client_golang/prometheus"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	client "k8s.io/client-go/kubernetes"
@@ -20,6 +21,7 @@ import (
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/server"
 )
 
@@ -39,6 +41,8 @@ type AuthenticatorTestFrameworkSetup struct {
 }
 
 func StartAuthenticatorTestFramework(t *testing.T, stopCh <-chan struct{}, setup AuthenticatorTestFrameworkSetup) (client.Interface, client.Interface) {
+	metrics.InitMetrics(prometheus.NewRegistry())
+
 	cfg, err := testConfig(t, setup)
 	if err != nil {
 		t.Fatal(err)
