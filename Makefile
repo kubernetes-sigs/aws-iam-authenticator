@@ -10,7 +10,8 @@ GOPROXY ?= $(shell go env GOPROXY)
 SOURCES := $(shell find . -name '*.go')
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-OUTPUT ?= _output
+BUILD_DATE_STRIPPED := $(subst -,,$(subst :,,$(BUILD_DATE)))
+OUTPUT ?= $(shell pwd)/_output
 CHECKSUM_FILE ?= $(OUTPUT)/bin/authenticator_$(VERSION)_checksums.txt
 
 # Architectures for binary builds
@@ -81,7 +82,7 @@ build-all-bins:
 image:
 	docker build \
 		--build-arg image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-08-26-1630012071 \
-		--tag aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(shell date +%s) .
+		--tag aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(BUILD_DATE_STRIPPED) .
 
 .PHONY: goreleaser
 goreleaser:
@@ -111,3 +112,31 @@ codegen:
 .PHONY: clean
 clean:
 	rm -rf $(shell pwd)/_output
+	
+.PHONY: clean-dev
+clean-dev:
+	rm -rf $(shell pwd)/_output/dev
+
+# Use make start-dev when you want to create a kind cluster for
+# testing the authenticator.  You must pass in the admin ARN and
+# the image under test.
+.PHONY: start-dev
+start-dev: bin
+	./hack/start-dev-env.sh 
+
+.PHONY: stop-dev
+stop-dev:
+	./hack/stop-dev-env.sh 
+
+# Use make kill-dev when you want to remove a dev environment
+# and clean everything up in preparation for creating another
+# in the future.
+# This command will: 
+# 1. Delete the kind cluster created for testing.
+# 2. Kill the authenticator container.
+# 3. Delete the docker network created for our kind cluster.
+# 4. Remove the _output/dev directory where all the generated
+#    config is stored.
+.PHONY: kill-dev
+kill-dev: stop-dev clean-dev
+

@@ -1,0 +1,12 @@
+clusterID: {{CLUSTER_NAME}}
+server:
+  address: {{AUTHENTICATOR_IP}}
+  port: {{AUTHENTICATOR_PORT}}
+  stateDir: {{AUTHENTICATOR_STATE_DIR}}
+  generateKubeconfig: {{AUTHENTICATOR_GENERATE_KUBECONFIG}}
+  kubeconfig: {{AUTHENTICATOR_KUBECONFIG}}
+  mapUsers:
+  - userARN: {{ADMIN_ARN}}
+    username: kubernetes-admin
+    groups:
+    - system:masters
