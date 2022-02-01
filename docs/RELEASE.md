@@ -39,7 +39,7 @@ You also might need to create a release branch, if it doesn't already exist, if 
 
 ## Creating the release commit
 
-We need to generate the CHANGELOG for the new release by running `./hack/changelog.py`.  First check the correctness of the output using the `--print-only` flag.  Pass the previous release tag, and the commit SHA of the most recent commit (the new tag will include the changelog, so it hasn't been created yet).
+We need to generate the CHANGELOG for the new release by running `./hack/changelog.py`.  First check the correctness of the output using the `--print-only` flag.  Pass the previous release tag, and the commit SHA of the most recent commit (the new tag will include the changelog, so it hasn't been created yet). The commands use a `--token` field. Generate it from [github personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
 ```
 ./hack/changelog.py --token=$GITHUB_TOKEN --section-title="Release v0.5.2" --range=v0.5.1..90653708db3f6437a446bbeec15b5036db66a855 --print-only
