@@ -11,6 +11,10 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
     env:
       - CGO_ENABLED=0
     ldflags:
@@ -19,10 +23,24 @@ builds:
 dockers:
   - ids:
      - aws-iam-authenticator
+    use: buildx
+    goarch: amd64
     dockerfile: Dockerfile.scratch
+    build_flag_templates:
+      - "--platform=linux/amd64"
     image_templates:
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-scratch"
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}"
+     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-scratch-amd64"
+     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amd64"
+  - ids:
+      - aws-iam-authenticator
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile.scratch
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-scratch-arm64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-arm64"
   - ids:
      - aws-iam-authenticator
     dockerfile: Dockerfile.alpine-3.6
@@ -30,10 +48,24 @@ dockers:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.6"
   - ids:
      - aws-iam-authenticator
+    use: buildx
+    goarch: amd64
     dockerfile: Dockerfile.alpine-3.7
+    build_flag_templates:
+      - "--platform=linux/amd64"
     image_templates:
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.7"
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine"
+     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.7-amd64"
+     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-amd64"
+  - ids:
+      - aws-iam-authenticator
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile.alpine-3.7
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.7-arm64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-arm64"
   - ids:
      - aws-iam-authenticator
     dockerfile: Dockerfile.debian-jessie
@@ -41,16 +73,78 @@ dockers:
      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-jessie"
   - ids:
      - aws-iam-authenticator
+    use: buildx
+    goarch: amd64
     dockerfile: Dockerfile.debian-stretch
+    build_flag_templates:
+      - "--platform=linux/amd64"
     image_templates:
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-stretch"
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian"
+     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-stretch-amd64"
+     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-amd64"
+  - ids:
+      - aws-iam-authenticator
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile.debian-stretch
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-stretch-3.7-arm64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-arm64"
   - ids:
      - aws-iam-authenticator
+    use: buildx
+    goarch: amd64
     dockerfile: Dockerfile.amazonlinux-2
+    build_flag_templates:
+      - "--platform=linux/amd64"
     image_templates:
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-2"
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux"
+     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-2-amd64"
+     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-amd64"
+  - ids:
+      - aws-iam-authenticator
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile.amazonlinux-2
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-2-arm64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-arm64"
+
+docker_manifests:
+  - name_template: "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-scratch"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-scratch-amd64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-scratch-arm64"
+  - name_template: "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amd64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-arm64"
+  - name_template: "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.7"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.7-amd64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-3.7-arm64"
+  - name_template: "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-amd64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-alpine-arm64"
+  - name_template: "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-stretch"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-stretch-amd64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-stretch-arm64"
+  - name_template: "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-amd64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-debian-arm64"
+  - name_template: "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-2"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-2-amd64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-2-arm64"
+  - name_template: "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux"
+    image_templates:
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-amd64"
+      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amazonlinux-arm64"
 
 snapshot:
   name_template: "git-{{.ShortCommit}}"
