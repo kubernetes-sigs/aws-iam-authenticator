@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-ARG image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:latest
+ARG image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-12-01-1638322424
 
 FROM golang:1.16 AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-iam-authenticator
