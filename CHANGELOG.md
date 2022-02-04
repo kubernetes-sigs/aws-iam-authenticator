@@ -1,4 +1,7 @@
 Release v0.5.4
+* Embed go-runner into the image ([#426](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/426), @jyotimahapatra)
+* Bump Go to 1.17 in Travis ([#414](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/414), @gliptak)
+* Build multi-arch images ([#417](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/417), @glebiller)
 * Add kind-based development environment ([#422](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/422), @nckturner)
 * Add jaypipes to approvers/reviewers ([#407](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/407), @nckturner)
 * Fix deps ([#396](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/396), @frioux)
