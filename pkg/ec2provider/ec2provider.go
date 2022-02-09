@@ -19,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/httputil"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
 const (
@@ -193,6 +194,7 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(id string) (string, error) {
 	}
 
 	logrus.Infof("Calling ec2:DescribeInstances for the InstanceId = %s ", id)
+	metrics.Get().EC2DescribeInstanceCallCount.Inc()
 	// Look up instance from EC2 API
 	output, err := p.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
 		InstanceIds: aws.StringSlice([]string{id}),
@@ -254,6 +256,7 @@ func (p *ec2ProviderImpl) StartEc2DescribeBatchProcessing() {
 func (p *ec2ProviderImpl) getPrivateDnsAndPublishToCache(instanceIdList []string) {
 	// Look up instance from EC2 API
 	logrus.Infof("Making Batch Query to DescribeInstances for %v instances ", len(instanceIdList))
+	metrics.Get().EC2DescribeInstanceCallCount.Inc()
 	output, err := p.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIdList),
 	})

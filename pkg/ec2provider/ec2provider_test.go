@@ -9,6 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/prometheus/client_golang/prometheus"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
 const (
@@ -61,6 +63,7 @@ func newMockedEC2ProviderImpl() *ec2ProviderImpl {
 }
 
 func TestGetPrivateDNSName(t *testing.T) {
+	metrics.InitMetrics(prometheus.NewRegistry())
 	ec2Provider := newMockedEC2ProviderImpl()
 	ec2Provider.ec2 = &mockEc2Client{Reservations: prepareSingleInstanceOutput()}
 	go ec2Provider.StartEc2DescribeBatchProcessing()
@@ -92,6 +95,7 @@ func prepareSingleInstanceOutput() []*ec2.Reservation {
 }
 
 func TestGetPrivateDNSNameWithBatching(t *testing.T) {
+	metrics.InitMetrics(prometheus.NewRegistry())
 	ec2Provider := newMockedEC2ProviderImpl()
 	reservations := prepare100InstanceOutput()
 	ec2Provider.ec2 = &mockEc2Client{Reservations: reservations}
