@@ -17,7 +17,7 @@ const (
 var authenticatorMetrics Metrics
 
 func InitMetrics(registerer prometheus.Registerer) {
-	authenticatorMetrics = CreateMetrics(registerer)
+	authenticatorMetrics = createMetrics(registerer)
 }
 
 func Get() Metrics {
@@ -29,9 +29,11 @@ type Metrics struct {
 	ConfigMapWatchFailures       prometheus.Counter
 	Latency                      *prometheus.HistogramVec
 	EC2DescribeInstanceCallCount prometheus.Counter
+	StsConnectionFailure         prometheus.Counter
+	StsResponses                 *prometheus.CounterVec
 }
 
-func CreateMetrics(reg prometheus.Registerer) Metrics {
+func createMetrics(reg prometheus.Registerer) Metrics {
 	factory := promauto.With(reg)
 
 	return Metrics{
@@ -41,6 +43,20 @@ func CreateMetrics(reg prometheus.Registerer) Metrics {
 				Name:      "configmap_watch_failures_total",
 				Help:      "EKS Configmap watch failures",
 			},
+		),
+		StsConnectionFailure: factory.NewCounter(
+			prometheus.CounterOpts{
+				Namespace: Namespace,
+				Name:      "sts_connection_failures_total",
+				Help:      "Sts call could not succeed or timedout",
+			},
+		),
+		StsResponses: factory.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: Namespace,
+				Name:      "sts_responses_total",
+				Help:      "Sts responses with error code label",
+			}, []string{"ResponseCode"},
 		),
 		Latency: factory.NewHistogramVec(
 			prometheus.HistogramOpts{

@@ -41,6 +41,7 @@ import (
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
 // Identity is returned on successful Verify() results. It contains a parsed
@@ -510,6 +511,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 
 	response, err := v.client.Do(req)
 	if err != nil {
+		metrics.Get().StsConnectionFailure.Inc()
 		// special case to avoid printing the full URL if possible
 		if urlErr, ok := err.(*url.Error); ok {
 			return nil, NewSTSError(fmt.Sprintf("error during GET: %v", urlErr.Err))
@@ -523,6 +525,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, NewSTSError(fmt.Sprintf("error reading HTTP result: %v", err))
 	}
 
+	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode)).Inc()
 	if response.StatusCode != 200 {
 		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d). Body: %s", response.StatusCode, string(responseBody[:])))
 	}
