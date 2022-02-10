@@ -1,4 +1,4 @@
-# Copyright 2017 by the contributors.
+# Copyright 2022 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,19 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+ARG image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-12-01-1638322424
 
-FROM debian:jessie
-RUN adduser \
-    --system \
-    --no-create-home \
-    --uid 10000 \
-    --disabled-password \
-    --disabled-login \
-    aws-iam-authenticator && \
-    apt-get update && \
-    apt-get install -y ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-COPY aws-iam-authenticator /
-RUN chown aws-iam-authenticator /aws-iam-authenticator
-USER aws-iam-authenticator
+FROM public.ecr.aws/eks-distro/kubernetes/go-runner:v0.9.0-eks-1-21-4 as go-runner
+
+FROM $image
+COPY --from=go-runner /usr/local/bin/go-runner /usr/local/bin/go-runner
+COPY aws-iam-authenticator /aws-iam-authenticator
 ENTRYPOINT ["/aws-iam-authenticator"]
