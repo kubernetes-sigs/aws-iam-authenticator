@@ -31,10 +31,9 @@ type MapStore struct {
 	// Used as set.
 	awsAccounts map[string]interface{}
 	configMap   v1.ConfigMapInterface
-	metrics     metrics.Metrics
 }
 
-func New(masterURL, kubeConfig string, authenticatorMetrics metrics.Metrics) (*MapStore, error) {
+func New(masterURL, kubeConfig string) (*MapStore, error) {
 	clientconfig, err := clientcmd.BuildConfigFromFlags(masterURL, kubeConfig)
 	if err != nil {
 		return nil, err
@@ -46,7 +45,6 @@ func New(masterURL, kubeConfig string, authenticatorMetrics metrics.Metrics) (*M
 
 	ms := MapStore{}
 	ms.configMap = clientset.CoreV1().ConfigMaps("kube-system")
-	ms.metrics = authenticatorMetrics
 	return &ms, nil
 }
 
@@ -65,7 +63,7 @@ func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
 				})
 				if err != nil {
 					logrus.Errorf("Unable to re-establish watch: %v, sleeping for 5 seconds.", err)
-					ms.metrics.ConfigMapWatchFailures.Inc()
+					metrics.Get().ConfigMapWatchFailures.Inc()
 					time.Sleep(5 * time.Second)
 					continue
 				}

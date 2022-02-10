@@ -14,6 +14,16 @@ const (
 	Success   = "success"
 )
 
+var authenticatorMetrics Metrics
+
+func InitMetrics(registerer prometheus.Registerer) {
+	authenticatorMetrics = CreateMetrics(registerer)
+}
+
+func Get() Metrics {
+	return authenticatorMetrics
+}
+
 // Metrics are handles to the collectors for prometheus for the various metrics we are tracking.
 type Metrics struct {
 	ConfigMapWatchFailures prometheus.Counter

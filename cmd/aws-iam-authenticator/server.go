@@ -23,9 +23,11 @@ import (
 
 	"k8s.io/sample-controller/pkg/signals"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/server"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -46,7 +48,7 @@ var serverCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
-
+		metrics.InitMetrics(prometheus.DefaultRegisterer)
 		stopCh := signals.SetupSignalHandler()
 
 		cfg, err := getConfig()
