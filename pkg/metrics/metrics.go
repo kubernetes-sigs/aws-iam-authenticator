@@ -37,7 +37,7 @@ func CreateMetrics(reg prometheus.Registerer) Metrics {
 		ConfigMapWatchFailures: factory.NewCounter(
 			prometheus.CounterOpts{
 				Namespace: Namespace,
-				Name:      "configmap_watch_failures",
+				Name:      "configmap_watch_failures_total",
 				Help:      "EKS Configmap watch failures",
 			},
 		),
