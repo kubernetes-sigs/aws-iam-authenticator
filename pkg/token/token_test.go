@@ -13,7 +13,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
+
+func TestMain(m *testing.M) {
+	metrics.InitMetrics(prometheus.NewRegistry())
+	m.Run()
+}
 
 func validationErrorTest(t *testing.T, partition string, token string, expectedErr string) {
 	t.Helper()
