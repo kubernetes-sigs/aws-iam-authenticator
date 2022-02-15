@@ -3,6 +3,7 @@ approvers:
 - micahhausler
 - wongma7
 - jaypipes
+- jyotimahapatra
 
 reviewers:
 - nckturner
@@ -10,6 +11,7 @@ reviewers:
 - justinsb
 - wongma7
 - jaypipes
+- jyotimahapatra
 
 emeritus_approvers:
 - christopherhein
