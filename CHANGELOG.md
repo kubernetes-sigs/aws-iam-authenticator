@@ -1,3 +1,11 @@
+Release v0.5.5
+* Use full package name for goreleaser version ([#433](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/433), @nckturner)
+* add sts error metric ([#430](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/430), @jyotimahapatra)
+* emit metric for EC2 describeInstance calls ([#428](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/428), @jyotimahapatra)
+* Rename configmap_watch_failures to configmap_watch_failures_total ([#432](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/432), @nckturner)
+* Simplify goreleaser Dockerfiles ([#431](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/431), @jyotimahapatra)
+* Don't pass metrics around ([#423](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/423), @nckturner)
+
 Release v0.5.4
 * Embed go-runner into the image ([#426](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/426), @jyotimahapatra)
 * Bump Go to 1.17 in Travis ([#414](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/414), @gliptak)
