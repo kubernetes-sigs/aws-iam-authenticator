@@ -90,7 +90,9 @@ const (
 	clusterIDHeader        = "x-k8s-aws-id"
 	// Format of the X-Amz-Date header used for expiration
 	// https://golang.org/pkg/time/#pkg-constants
-	dateHeaderFormat = "20060102T150405Z"
+	dateHeaderFormat   = "20060102T150405Z"
+	kindExecCredential = "ExecCredential"
+	execInfoEnvKey     = "KUBERNETES_EXEC_INFO"
 )
 
 // Token is generated and used by Kubernetes client-go to authenticate with a Kubernetes cluster.
@@ -342,7 +344,7 @@ func (g generator) FormatJSON(token Token) string {
 	apiVersion := clientauthv1beta1.SchemeGroupVersion.String()
 	for _, e := range os.Environ() {
 		pair := strings.SplitN(e, "=", 2)
-		if pair[0] == "KUBERNETES_EXEC_INFO" {
+		if pair[0] == execInfoEnvKey {
 			cred := &clientauthentication.ExecCredential{}
 			if err := json.Unmarshal([]byte(pair[1]), cred); err == nil {
 				apiVersion = cred.APIVersion
@@ -355,7 +357,7 @@ func (g generator) FormatJSON(token Token) string {
 	execInput := &clientauthv1beta1.ExecCredential{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiVersion,
-			Kind:       "ExecCredential",
+			Kind:       kindExecCredential,
 		},
 		Status: &clientauthv1beta1.ExecCredentialStatus{
 			ExpirationTimestamp: &expirationTimestamp,

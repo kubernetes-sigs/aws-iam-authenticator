@@ -10,11 +10,17 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/pkg/apis/clientauthentication"
+	clientauthv1 "k8s.io/client-go/pkg/apis/clientauthentication/v1"
+	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
+	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
@@ -316,5 +322,88 @@ func TestVerifyCanonicalARN(t *testing.T) {
 	}
 	if identity.CanonicalARN != canonicalARN {
 		t.Errorf("expected CannonicalARN to be %q but was %q", canonicalARN, identity.CanonicalARN)
+	}
+}
+
+func TestFormatJson(t *testing.T) {
+	cases := []struct {
+		Name             string
+		EnvKey           string
+		ExpectApiVersion string
+		IsMalformedEnv   bool
+	}{
+		{
+			Name:             "Default",
+			ExpectApiVersion: clientauthv1beta1.SchemeGroupVersion.String(),
+		},
+		{
+			Name:             "Malformed KUBERNETES_EXEC_INFO",
+			EnvKey:           "KUBERNETES_EXEC_INFO",
+			ExpectApiVersion: clientauthv1beta1.SchemeGroupVersion.String(),
+		},
+		{
+			Name:             "Malformed KUBERNETES_EXEC_INFO",
+			EnvKey:           "KUBERNETES_EXEC_INFO",
+			IsMalformedEnv:   true,
+			ExpectApiVersion: clientauthv1beta1.SchemeGroupVersion.String(),
+		},
+		{
+			Name:             "KUBERNETES_EXEC_INFO with v1beta1",
+			EnvKey:           "KUBERNETES_EXEC_INFO",
+			ExpectApiVersion: clientauthv1beta1.SchemeGroupVersion.String(),
+		},
+		{
+			Name:             "KUBERNETES_EXEC_INFO with v1alpha1",
+			EnvKey:           "KUBERNETES_EXEC_INFO",
+			ExpectApiVersion: clientauthv1alpha1.SchemeGroupVersion.String(),
+		},
+		{
+			Name:             "KUBERNETES_EXEC_INFO with v1",
+			EnvKey:           "KUBERNETES_EXEC_INFO",
+			ExpectApiVersion: clientauthv1.SchemeGroupVersion.String(),
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			expiry, _ := time.Parse(time.RFC3339, "2012-11-01T22:08:41+00:00")
+			token := "token"
+			g, _ := NewGenerator(true, true)
+
+			if c.EnvKey != "" {
+				marshal := make([]byte, 0)
+				if !c.IsMalformedEnv {
+					marshal, _ = json.Marshal(clientauthentication.ExecCredential{
+						TypeMeta: v1.TypeMeta{
+							Kind:       "ExecCredential",
+							APIVersion: c.ExpectApiVersion,
+						},
+					})
+				}
+
+				os.Setenv(c.EnvKey, string(marshal))
+			}
+
+			jsonResponse := g.FormatJSON(Token{Token: token, Expiration: expiry})
+			output := &clientauthentication.ExecCredential{}
+			json.Unmarshal([]byte(jsonResponse), output)
+
+			if output.TypeMeta.Kind != kindExecCredential {
+				t.Errorf("expected Kind to be %s but was %s", kindExecCredential, output.TypeMeta.Kind)
+			}
+
+			if output.TypeMeta.APIVersion != c.ExpectApiVersion {
+				t.Errorf("expected APIVersion to be %s but was %s", c.ExpectApiVersion, output.TypeMeta.APIVersion)
+			}
+
+			if output.Status.Token != token {
+				t.Errorf("expected token to be %s but was %s", token, output.Status.Token)
+			}
+
+			if !output.Status.ExpirationTimestamp.Time.Equal(expiry) {
+				t.Errorf("expected expiration to be %s but was %s", expiry, output.Status.ExpirationTimestamp)
+			}
+
+			os.Unsetenv(c.EnvKey)
+		})
 	}
 }
