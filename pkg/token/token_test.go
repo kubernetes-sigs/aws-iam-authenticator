@@ -339,11 +339,6 @@ func TestFormatJson(t *testing.T) {
 		{
 			Name:             "Malformed KUBERNETES_EXEC_INFO",
 			EnvKey:           "KUBERNETES_EXEC_INFO",
-			ExpectApiVersion: clientauthv1beta1.SchemeGroupVersion.String(),
-		},
-		{
-			Name:             "Malformed KUBERNETES_EXEC_INFO",
-			EnvKey:           "KUBERNETES_EXEC_INFO",
 			IsMalformedEnv:   true,
 			ExpectApiVersion: clientauthv1beta1.SchemeGroupVersion.String(),
 		},
