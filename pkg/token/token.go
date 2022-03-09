@@ -342,14 +342,11 @@ func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, 
 // FormatJSON formats the json to support ExecCredential authentication
 func (g generator) FormatJSON(token Token) string {
 	apiVersion := clientauthv1beta1.SchemeGroupVersion.String()
-	for _, e := range os.Environ() {
-		pair := strings.SplitN(e, "=", 2)
-		if pair[0] == execInfoEnvKey {
-			cred := &clientauthentication.ExecCredential{}
-			if err := json.Unmarshal([]byte(pair[1]), cred); err == nil {
-				apiVersion = cred.APIVersion
-			}
-			break
+	env := os.Getenv(execInfoEnvKey)
+	if env != "" {
+		cred := &clientauthentication.ExecCredential{}
+		if err := json.Unmarshal([]byte(env), cred); err == nil {
+			apiVersion = cred.APIVersion
 		}
 	}
 
