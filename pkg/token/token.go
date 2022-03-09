@@ -38,6 +38,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/pkg/apis/clientauthentication"
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
@@ -338,10 +339,22 @@ func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, 
 
 // FormatJSON formats the json to support ExecCredential authentication
 func (g generator) FormatJSON(token Token) string {
+	apiVersion := clientauthv1beta1.SchemeGroupVersion.String()
+	for _, e := range os.Environ() {
+		pair := strings.SplitN(e, "=", 2)
+		if pair[0] == "KUBERNETES_EXEC_INFO" {
+			cred := &clientauthentication.ExecCredential{}
+			if err := json.Unmarshal([]byte(pair[1]), cred); err == nil {
+				apiVersion = cred.APIVersion
+			}
+			break
+		}
+	}
+
 	expirationTimestamp := metav1.NewTime(token.Expiration)
 	execInput := &clientauthv1beta1.ExecCredential{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "client.authentication.k8s.io/v1beta1",
+			APIVersion: apiVersion,
 			Kind:       "ExecCredential",
 		},
 		Status: &clientauthv1beta1.ExecCredentialStatus{
