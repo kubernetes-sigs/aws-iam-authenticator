@@ -21,9 +21,11 @@ import (
 	"fmt"
 	"os"
 
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -70,6 +72,7 @@ var verifyCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(verifyCmd)
+	metrics.InitMetrics(prometheus.DefaultRegisterer)
 	verifyCmd.Flags().StringP("token", "t", "", "Token to verify")
 	verifyCmd.Flags().StringP("output", "o", "", "Output format. Only `json` is supported currently.")
 	viper.BindPFlag("token", verifyCmd.Flags().Lookup("token"))

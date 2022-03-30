@@ -506,6 +506,7 @@ k8s.io/client-go/rest/fake
 k8s.io/client-go/rest/watch
 k8s.io/client-go/testing
 k8s.io/client-go/tools/auth
+k8s.io/client-go/tools/auth/exec
 k8s.io/client-go/tools/cache
 k8s.io/client-go/tools/clientcmd
 k8s.io/client-go/tools/clientcmd/api
