@@ -39,6 +39,18 @@ You also might need to create a release branch, if it doesn't already exist, if 
 
 ## Creating the release commit
 
+### Updating the Makefile
+
+Bump the version number in the Makefile:
+
+```
+VERSION ?= v0.5.2
+```
+
+This ensures the binary version is correct.
+
+### Updating the CHANGELOG
+
 We need to generate the CHANGELOG for the new release by running `./hack/changelog.py`.  First check the correctness of the output using the `--print-only` flag.  Pass the previous release tag, and the commit SHA of the most recent commit (the new tag will include the changelog, so it hasn't been created yet). The commands use a `--token` field. Generate it from [github personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
 ```
@@ -115,3 +127,11 @@ $(aws ecr get-login --no-include-email --region us-west-2 --registry-ids 6024011
 * `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.5.2-alpine-3.6`
 * `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.5.2-scratch`
 ````
+
+## Post Release
+
+In a new PR after the images are pushed to ECR, update the yaml in `deploy/example.yaml`:
+
+```
+        image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.5.2
+```
