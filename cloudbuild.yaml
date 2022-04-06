@@ -1,6 +1,3 @@
-images:
-  - 'gcr.io/$PROJECT_ID/aws-iam-authenticator:$_GIT_TAG'
-  - 'gcr.io/$PROJECT_ID/aws-iam-authenticator:latest'
 options:
   substitution_option: ALLOW_LOOSE
 steps:

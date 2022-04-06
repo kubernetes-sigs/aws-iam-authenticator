@@ -13,10 +13,10 @@
 # limitations under the License.
 ARG image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-12-01-1638322424
 
-FROM golang:1.16 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.16 AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-iam-authenticator
 COPY . .
-RUN make bin
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make bin
 RUN chown 65532 _output/bin/aws-iam-authenticator
 
 FROM public.ecr.aws/eks-distro/kubernetes/go-runner:v0.9.0-eks-1-21-4 as go-runner
