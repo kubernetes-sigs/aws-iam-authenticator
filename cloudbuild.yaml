@@ -1,6 +1,3 @@
-images:
-  - 'gcr.io/$PROJECT_ID/aws-iam-authenticator:$_GIT_TAG'
-  - 'gcr.io/$PROJECT_ID/aws-iam-authenticator:latest'
 options:
   substitution_option: ALLOW_LOOSE
 steps:
@@ -17,4 +14,4 @@ steps:
 substitutions:
   _GIT_TAG: '12345'
   _PULL_BASE_REF: 'master'
-timeout: 1200s
+timeout: 1600s

@@ -1,3 +1,8 @@
+Release v0.5.6
+* Bump AWS SDK to v1.43.28 ([#445](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/445), @nckturner)
+* Use the apiversion from KUBERNETES_EXEC_INFO ([#439](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/439), @jyotimahapatra)
+* Bump promptui module to v0.9.0 ([#437](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/437), @abhay-krishna)
+
 Release v0.5.5
 * Use full package name for goreleaser version ([#433](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/433), @nckturner)
 * add sts error metric ([#430](https://github.com/kubernetes-sigs/aws-iam-authenticator/pull/430), @jyotimahapatra)
