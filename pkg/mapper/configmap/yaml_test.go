@@ -56,16 +56,6 @@ func TestConfigMap(t *testing.T) {
 			// Valid aws-auth.yaml based on one in EKS documentation.
 			"aws-auth.yaml", validRoleMappings, validUserMappings, validAWSAccounts, false,
 		},
-		{
-			// RoLeArN instead of rolearn
-			// parsing succeeds, values are case-insensitive for compatibility with upstream
-			"aws-auth-crazy-case-keys.yaml", validRoleMappings, validUserMappings, validAWSAccounts, false,
-		},
-		{
-			// roleARN instead of rolearn
-			// parsing succeeds, values are case-insensitive for compatibility with upstream
-			"aws-auth-open-source-case-keys.yaml", validRoleMappings, validUserMappings, validAWSAccounts, false,
-		},
 		// Fail cases -- ideally, validation should reject these before they reach us
 		{
 			// mapusers instead of mapUsers

@@ -2,11 +2,12 @@ package configmap
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"strings"
 	"sync"
+
+	"fmt"
+
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -14,7 +15,6 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -115,27 +115,17 @@ func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappi
 	errs := make([]error, 0)
 	userMappings = make([]config.UserMapping, 0)
 	if userData, ok := m["mapUsers"]; ok {
-		userJson, err := utilyaml.ToJSON([]byte(userData))
+		err := yaml.Unmarshal([]byte(userData), &userMappings)
 		if err != nil {
 			errs = append(errs, err)
-		} else {
-			err = json.Unmarshal(userJson, &userMappings)
-			if err != nil {
-				errs = append(errs, err)
-			}
 		}
 	}
 
 	roleMappings = make([]config.RoleMapping, 0)
 	if roleData, ok := m["mapRoles"]; ok {
-		roleJson, err := utilyaml.ToJSON([]byte(roleData))
+		err := yaml.Unmarshal([]byte(roleData), &roleMappings)
 		if err != nil {
 			errs = append(errs, err)
-		} else {
-			err = json.Unmarshal(roleJson, &roleMappings)
-			if err != nil {
-				errs = append(errs, err)
-			}
 		}
 	}
 
