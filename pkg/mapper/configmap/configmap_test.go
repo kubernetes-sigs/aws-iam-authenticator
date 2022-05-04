@@ -160,7 +160,7 @@ func TestLoadConfigMap(t *testing.T) {
 	ms.startLoadConfigMap(stopCh)
 	defer close(stopCh)
 
-	time.Sleep(2 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	meta := metav1.ObjectMeta{Name: "aws-auth"}
 	data := make(map[string]string)
@@ -170,7 +170,7 @@ func TestLoadConfigMap(t *testing.T) {
 
 	watcher.Add(&core_v1.ConfigMap{ObjectMeta: meta, Data: data})
 
-	time.Sleep(2 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	if !ms.AWSAccount("123") {
 		t.Errorf("AWS Account '123' not in allowed accounts")
