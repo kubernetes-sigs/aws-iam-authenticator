@@ -19,7 +19,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication"
 	clientauthv1 "k8s.io/client-go/pkg/apis/clientauthentication/v1"
-	clientauthv1alpha1 "k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
@@ -346,11 +345,6 @@ func TestFormatJson(t *testing.T) {
 			Name:             "KUBERNETES_EXEC_INFO with v1beta1",
 			EnvKey:           "KUBERNETES_EXEC_INFO",
 			ExpectApiVersion: clientauthv1beta1.SchemeGroupVersion.String(),
-		},
-		{
-			Name:             "KUBERNETES_EXEC_INFO with v1alpha1",
-			EnvKey:           "KUBERNETES_EXEC_INFO",
-			ExpectApiVersion: clientauthv1alpha1.SchemeGroupVersion.String(),
 		},
 		{
 			Name:             "KUBERNETES_EXEC_INFO with v1",
