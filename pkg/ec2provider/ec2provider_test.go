@@ -81,7 +81,7 @@ func prepareSingleInstanceOutput() []*ec2.Reservation {
 		{
 			Groups: nil,
 			Instances: []*ec2.Instance{
-				&ec2.Instance{
+				{
 					InstanceId:     aws.String("ec2-1"),
 					PrivateDnsName: aws.String("ec2-dns-1"),
 				},

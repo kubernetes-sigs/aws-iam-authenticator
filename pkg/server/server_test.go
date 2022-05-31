@@ -442,7 +442,7 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 	}
 	h := setup(&testVerifier{err: nil, identity: identity})
 	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
-		"arn:aws:iam::0123456789012:role/test": config.RoleMapping{
+		"arn:aws:iam::0123456789012:role/test": {
 			RoleARN:  "arn:aws:iam::0123456789012:role/Test",
 			Username: "TestUser",
 			Groups:   []string{"sys:admin", "listers"},
@@ -457,10 +457,10 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		[]string{"sys:admin", "listers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{"ABCDEF"},
+			"arn":          {"arn:aws:iam::0123456789012:role/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {"ABCDEF"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -496,10 +496,10 @@ func TestAuthenticateVerifierRoleMappingCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		[]string{"sys:admin", "listers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
+			"arn":          {"arn:aws:iam::0123456789012:role/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -524,7 +524,7 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 		SessionName:  "TestSession",
 	}})
 	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(nil, map[string]config.UserMapping{
-		"arn:aws:iam::0123456789012:user/test": config.UserMapping{
+		"arn:aws:iam::0123456789012:user/test": {
 			UserARN:  "arn:aws:iam::0123456789012:user/Test",
 			Username: "TestUser",
 			Groups:   []string{"sys:admin", "listers"},
@@ -539,10 +539,10 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		[]string{"sys:admin", "listers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
+			"arn":          {"arn:aws:iam::0123456789012:user/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:user/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -578,10 +578,10 @@ func TestAuthenticateVerifierUserMappingCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		[]string{"sys:admin", "listers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
+			"arn":          {"arn:aws:iam::0123456789012:user/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:user/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -617,10 +617,10 @@ func TestAuthenticateVerifierAccountMappingForUser(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		nil,
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
+			"arn":          {"arn:aws:iam::0123456789012:user/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:user/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -656,10 +656,10 @@ func TestAuthenticateVerifierAccountMappingForUserCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		nil,
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
+			"arn":          {"arn:aws:iam::0123456789012:user/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:user/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -695,10 +695,10 @@ func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		nil,
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:assumed-role/Test/extra"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
+			"arn":          {"arn:aws:iam::0123456789012:assumed-role/Test/extra"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -734,10 +734,10 @@ func TestAuthenticateVerifierAccountMappingForRoleCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		nil,
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:assumed-role/Test/extra"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
+			"arn":          {"arn:aws:iam::0123456789012:assumed-role/Test/extra"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -763,7 +763,7 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 	}})
 	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14", 15, 5)
 	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
-		"arn:aws:iam::0123456789012:role/testnoderole": config.RoleMapping{
+		"arn:aws:iam::0123456789012:role/testnoderole": {
 			RoleARN:  "arn:aws:iam::0123456789012:role/TestNodeRole",
 			Username: "system:node:{{EC2PrivateDNSName}}",
 			Groups:   []string{"system:nodes", "system:bootstrappers"},
@@ -778,10 +778,10 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:TestNodeRole",
 		[]string{"system:nodes", "system:bootstrappers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"i-0c6f21bf1f24f9708"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
+			"arn":          {"arn:aws:iam::0123456789012:role/TestNodeRole"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/TestNodeRole"},
+			"sessionName":  {"i-0c6f21bf1f24f9708"},
+			"accessKeyId":  {""},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 
@@ -819,10 +819,10 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:TestNodeRole",
 		[]string{"system:nodes", "system:bootstrappers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"i-0c6f21bf1f24f9708"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
+			"arn":          {"arn:aws:iam::0123456789012:role/TestNodeRole"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/TestNodeRole"},
+			"sessionName":  {"i-0c6f21bf1f24f9708"},
+			"accessKeyId":  {""},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 
