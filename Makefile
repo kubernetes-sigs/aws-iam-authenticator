@@ -80,7 +80,7 @@ build-all-bins:
 
 .PHONY: image
 image:
-	docker buildx build --output=type=registry --platform linux/amd64,linux/arm64 \
+	docker buildx build --output=type=docker --platform linux/amd64 \
 		--tag aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(BUILD_DATE_STRIPPED) .
 
 .PHONY: goreleaser
@@ -111,7 +111,7 @@ codegen:
 .PHONY: clean
 clean:
 	rm -rf $(shell pwd)/_output
-	
+
 .PHONY: clean-dev
 clean-dev:
 	rm -rf $(shell pwd)/_output/dev
@@ -121,16 +121,16 @@ clean-dev:
 # the image under test.
 .PHONY: start-dev
 start-dev: bin
-	./hack/start-dev-env.sh 
+	./hack/start-dev-env.sh
 
 .PHONY: stop-dev
 stop-dev:
-	./hack/stop-dev-env.sh 
+	./hack/stop-dev-env.sh
 
 # Use make kill-dev when you want to remove a dev environment
 # and clean everything up in preparation for creating another
 # in the future.
-# This command will: 
+# This command will:
 # 1. Delete the kind cluster created for testing.
 # 2. Kill the authenticator container.
 # 3. Delete the docker network created for our kind cluster.
