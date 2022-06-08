@@ -50,7 +50,7 @@ func (m *RoleMapping) Validate() error {
 		}
 
 		switch m.SSO.Partition {
-		case "aws", "aws-cn", "aws-us-gov":
+		case "aws", "aws-cn", "aws-us-gov", "aws-iso", "aws-iso-b":
 			// valid
 		case "":
 			// treated as "aws"

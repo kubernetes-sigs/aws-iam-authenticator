@@ -89,6 +89,20 @@ func TestArnLikeNetagiveMatches(t *testing.T) {
 	}
 }
 
+func TestIncompleteArnLikePattern(t *testing.T) {
+	incompleteArnLikePattern := "arn:*"
+	validArn := `arn:aws:iam::000000000000:role/some-role`
+
+	ok, err := ArnLike(validArn, incompleteArnLikePattern)
+	if ok {
+		t.Errorf("Expected false result on error for input arn: %s, pattern: %s", incompleteArnLikePattern, validArn)
+	}
+	expectedErrorText := "Could not parse ArnLike string: not enough sections"
+	if !strings.EqualFold(expectedErrorText, err.Error()) {
+		t.Errorf("Did not receive expected error text. Expected: '%s', got: '%s'", expectedErrorText, err.Error())
+	}
+}
+
 func TestArnLikeInvalidArns(t *testing.T) {
 	invalidPrefixArn := `nar:aws:iam::000000000000:role/some-role`
 	invalidSectionsArn := `arn:aws:iam:000000000000:role/some-role`
