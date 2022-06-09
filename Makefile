@@ -80,7 +80,7 @@ build-all-bins:
 
 .PHONY: image
 image:
-	docker buildx build --output=type=registry --platform linux/amd64,linux/arm64 \
+	docker buildx build --output=type=docker --platform linux/amd64 \
 		--tag aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(BUILD_DATE_STRIPPED) .
 
 .PHONY: goreleaser
