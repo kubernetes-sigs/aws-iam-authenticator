@@ -36,19 +36,15 @@ var initCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		localCfg := cfg
-		localCfg.GenerateKubeconfigPath = "aws-iam-authenticator.kubeconfig"
-		localCfg.StateDir = "./"
-
-		err = localCfg.GenerateFiles()
+		err = cfg.GenerateFiles()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not initialize: %v\n", err)
 			os.Exit(1)
 		}
 
-		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.CertPath(), cfg.CertPath())
-		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.KeyPath(), cfg.KeyPath())
-		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.GenerateKubeconfigPath, cfg.GenerateKubeconfigPath)
+		logrus.Infof("copy %s to %s on kubernetes master node(s)", cfg.CertPath(), cfg.CertPath())
+		logrus.Infof("copy %s to %s on kubernetes master node(s)", cfg.KeyPath(), cfg.KeyPath())
+		logrus.Infof("copy %s to %s on kubernetes master node(s)", cfg.GenerateKubeconfigPath, cfg.GenerateKubeconfigPath)
 		logrus.Infof("configure your apiserver with `--authentication-token-webhook-config-file=%s` to enable authentication with aws-iam-authenticator", cfg.GenerateKubeconfigPath)
 	},
 }
