@@ -21,10 +21,14 @@ import (
 )
 
 const (
+	// ConfiguredInitDirectories enables placing files directly in configured
+	// directories with init
+	ConfiguredInitDirectories featuregate.Feature = "ConfiguredInitDirectories"
 	// IAMIdentityMappingCRD enables using CRDs to manage allowed users
 	IAMIdentityMappingCRD featuregate.Feature = "IAMIdentityMappingCRD"
 )
 
 var DefaultFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	IAMIdentityMappingCRD: {Default: false, PreRelease: featuregate.Alpha},
+	ConfiguredInitDirectories: {Default: false, PreRelease: featuregate.Alpha},
+	IAMIdentityMappingCRD:     {Default: false, PreRelease: featuregate.Alpha},
 }
