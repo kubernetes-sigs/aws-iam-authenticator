@@ -1,0 +1,306 @@
+# Copyright 2022 by the contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: aws-iam-authenticator
+rules:
+- apiGroups:
+  - iamauthenticator.k8s.aws
+  resources:
+  - iamidentitymappings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - iamauthenticator.k8s.aws
+  resources:
+  - iamidentitymappings/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - aws-auth
+  verbs:
+  - get
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aws-iam-authenticator
+  namespace: kube-system
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: aws-iam-authenticator
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: aws-iam-authenticator
+subjects:
+- kind: ServiceAccount
+  name: aws-iam-authenticator
+  namespace: kube-system
+
+---
+# EKS-Style ConfigMap: roles and users can be mapped in the same way as supported on EKS.
+# If mappings are defined this way they do not need to be redefined on the other ConfigMap.
+# https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html
+# uncomment if using EKS-Style ConfigMap
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: aws-auth
+#   namespace: kube-system
+# data:
+#   mapRoles: |
+#     - rolearn: <ARN of instance role (not instance profile)>
+#       username: system:node:{{EC2PrivateDNSName}}
+#       groups:
+#         - system:bootstrappers
+#         - system:nodes
+#   mapUsers: |
+#     - rolearn: arn:aws:iam::000000000000:user/Alice
+#       username: alice
+#       groups:
+#         - system:masters
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: kube-system
+  name: aws-iam-authenticator
+  labels:
+    k8s-app: aws-iam-authenticator
+data:
+  config.yaml: |
+    # a unique-per-cluster identifier to prevent replay attacks
+    # (good choices are a random token or a domain name that will be unique to your cluster)
+    clusterID: <CLUSTER_NAME>
+    server:
+      # each mapRoles entry maps an IAM role to a username and set of groups
+      # Each username and group can optionally contain template parameters:
+      #  1) "{{AccountID}}" is the 12 digit AWS ID.
+      #  2) "{{SessionName}}" is the role session name, with `@` characters
+      #     transliterated to `-` characters.
+      #  3) "{{SessionNameRaw}}" is the role session name, without character
+      #     transliteration (available in version >= 0.5).
+      mapRoles:
+      # statically map arn:aws:iam::000000000000:role/KubernetesAdmin to a cluster admin
+      - roleARN: <ADMIN_ROLE>
+        username: kubernetes-admin
+        groups:
+        - system:masters
+      # map EC2 instances in my "KubernetesNode" role to users like
+      # "aws:000000000000:instance:i-0123456789abcdef0". Only use this if you
+      # trust that the role can only be assumed by EC2 instances. If an IAM user
+      # can assume this role directly (with sts:AssumeRole) they can control
+      # SessionName.
+      - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
+        username: aws:{{AccountID}}:instance:{{SessionName}}
+        groups:
+        - system:bootstrappers
+        - aws:instances
+      # map federated users in my "KubernetesAdmin" role to users like
+      # "admin:alice-example.com". The SessionName is an arbitrary role name
+      # like an e-mail address passed by the identity provider. Note that if this
+      # role is assumed directly by an IAM User (not via federation), the user
+      # can control the SessionName.
+      - roleARN: <ADMIN_ROLE>
+        username: admin:{{SessionName}}
+        groups:
+        - system:masters
+      # map federated users in my "KubernetesOtherAdmin" role to users like
+      # "alice-example.com". The SessionName is an arbitrary role name
+      # like an e-mail address passed by the identity provider. Note that if this
+      # role is assumed directly by an IAM User (not via federation), the user
+      # can control the SessionName.  Note that the "{{SessionName}}" macro is
+      # quoted to ensure it is properly parsed as a string.
+      - roleARN: arn:aws:iam::000000000000:role/KubernetesOtherAdmin
+        username: "{{SessionName}}"
+        groups:
+        - system:masters
+      # map federated users in my "KubernetesUsers" role to users like
+      # "alice@example.com". SessionNameRaw is sourced from the same place as
+      # SessionName with the distinction that no transformation is performed
+      # on the value. For example an email addresses passed by an identity
+      # provider will not have the `@` replaced with a `-`.
+      - roleARN: <USER_ROLE>
+        username: "{{SessionNameRaw}}"
+        groups:
+        - pods-group
+      # each mapUsers entry maps an IAM role to a static username and set of groups
+      mapUsers:
+      - userARN: <USER_ARN>
+        username: currentuser
+        groups:
+        - nodes-group
+      # List of Account IDs to whitelist for authentication
+      mapAccounts:
+      - <AWS_ACCOUNT_ID>
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  namespace: kube-system
+  name: aws-iam-authenticator
+  labels:
+    k8s-app: aws-iam-authenticator
+  annotations:
+    seccomp.security.alpha.kubernetes.io/pod: runtime/default
+spec:
+  selector:
+    matchLabels:
+      k8s-app: aws-iam-authenticator
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        k8s-app: aws-iam-authenticator
+    spec:
+
+      # use service account with access to
+      serviceAccountName: aws-iam-authenticator
+
+      # run on the host network (don't depend on CNI)
+      hostNetwork: true
+
+      # run on each master node
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      - key: CriticalAddonsOnly
+        operator: Exists
+
+      initContainers:
+      - name: aws-iam-authenticator-init
+        image: <IMAGE_NAME>
+        args:
+        - init
+        - -i <CLUSTER_NAME>
+        - --feature-gates=ConfiguredInitDirectories=true
+
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          runAsGroup: 0
+
+        volumeMounts:
+        - name: config
+          mountPath: /etc/aws-iam-authenticator/
+        - name: state
+          mountPath: /var/aws-iam-authenticator/
+        - name: output
+          mountPath: /etc/kubernetes/aws-iam-authenticator/
+
+      - name: chown-helper
+        image: busybox
+        command: ["sh", "-c", "chown -R 10000:10000 /var/aws-iam-authenticator /etc/kubernetes/aws-iam-authenticator"]
+
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          runAsGroup: 0
+
+        volumeMounts:
+        - name: state
+          mountPath: /var/aws-iam-authenticator/
+        - name: output
+          mountPath: /etc/kubernetes/aws-iam-authenticator/
+
+      # run `aws-iam-authenticator server` with three volumes
+      # - config (mounted from the ConfigMap at /etc/aws-iam-authenticator/config.yaml)
+      # - state (persisted TLS certificate and keys, mounted from the host)
+      # - output (output kubeconfig to plug into your apiserver configuration, mounted from the host)
+      containers:
+      - name: aws-iam-authenticator
+        image: <IMAGE_NAME>
+        args:
+        - server
+        - --config=/etc/aws-iam-authenticator/config.yaml
+        - --state-dir=/var/aws-iam-authenticator
+      # the kubeconfig.yaml is pregenerated by the 'aws-iam-authenticator init' step
+        - --kubeconfig-pregenerated=true
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 10000
+          runAsGroup: 10000
+          capabilities:
+            drop:
+            - ALL
+
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+          limits:
+            memory: 20Mi
+            cpu: 100m
+
+        volumeMounts:
+        - name: config
+          mountPath: /etc/aws-iam-authenticator/
+        - name: state
+          mountPath: /var/aws-iam-authenticator/
+        - name: output
+          mountPath: /etc/kubernetes/aws-iam-authenticator/
+
+      imagePullSecrets:
+          - name: regcred
+
+      volumes:
+      - name: config
+        configMap:
+          name: aws-iam-authenticator
+      - name: output
+        hostPath:
+          path: /srv/kubernetes/aws-iam-authenticator/
+          type: DirectoryOrCreate
+      - name: state
+        hostPath:
+          path: /srv/kubernetes/aws-iam-authenticator/
+          type: DirectoryOrCreate
