@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: kube-system
+  name: apiserver-restarter
+spec:
+  template:
+    spec:
+      hostNetwork: true
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+
+      volumes:
+      - name: manifest
+        hostPath:
+          path: /etc/kubernetes/manifests/kube-apiserver.manifest
+          type: File
+
+      containers:
+      - name: apiserver-updater
+        image: busybox
+        command: ["sh", "-c", "echo '-' >> /etc/kubernetes/manifests/kube-apiserver.manifest && sleep 30 && echo \"$(sed '$d' /etc/kubernetes/manifests/kube-apiserver.manifest)\" > /etc/kubernetes/manifests/kube-apiserver.manifest"]
+
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          runAsGroup: 0
+
+        volumeMounts:
+        - name: manifest
+          mountPath: /etc/kubernetes/manifests/kube-apiserver.manifest
+
+      restartPolicy: OnFailure
