@@ -15,8 +15,22 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 )
 
-var testUser = config.UserMapping{Username: "matlan", Groups: []string{"system:master", "dev"}}
-var testRole = config.RoleMapping{Username: "computer", Groups: []string{"system:nodes"}}
+func init() {
+	config.SSORoleMatchEnabled = true
+}
+
+var (
+	testUser    = config.UserMapping{UserARN: "arn:aws:iam::012345678912:user/matt", Username: "matlan", Groups: []string{"system:master", "dev"}}
+	testRole    = config.RoleMapping{RoleARN: "arn:aws:iam::012345678912:role/computer", Username: "computer", Groups: []string{"system:nodes"}}
+	testSSORole = config.RoleMapping{
+		SSO: &config.SSOARNMatcher{
+			PermissionSetName: "ViewOnlyAccess",
+			AccountID:         "012345678912",
+		},
+		Username: "television",
+		Groups:   []string{"system:nodes"},
+	}
+)
 
 func makeStore() MapStore {
 	ms := MapStore{
@@ -24,8 +38,9 @@ func makeStore() MapStore {
 		roles:       make(map[string]config.RoleMapping),
 		awsAccounts: make(map[string]interface{}),
 	}
-	ms.users["matt"] = testUser
-	ms.roles["instance"] = testRole
+	ms.users["arn:aws:iam::012345678912:user/matt"] = testUser
+	ms.roles["arn:aws:iam::012345678912:role/awsreservedsso_viewonlyaccess_*"] = testSSORole
+	ms.roles["arn:aws:iam::012345678912:role/comp*"] = testRole
 	ms.awsAccounts["123"] = nil
 	return ms
 }
@@ -44,7 +59,7 @@ func makeStoreWClient() (MapStore, *fake.FakeConfigMaps) {
 
 func TestUserMapping(t *testing.T) {
 	ms := makeStore()
-	user, err := ms.UserMapping("matt")
+	user, err := ms.UserMapping("arn:aws:iam::012345678912:user/matt")
 	if err != nil {
 		t.Errorf("Could not find user 'matt' in map")
 	}
@@ -63,7 +78,7 @@ func TestUserMapping(t *testing.T) {
 
 func TestRoleMapping(t *testing.T) {
 	ms := makeStore()
-	role, err := ms.RoleMapping("instance")
+	role, err := ms.RoleMapping("arn:aws:iam::012345678912:role/computer")
 	if err != nil {
 		t.Errorf("Could not find user 'instance in map")
 	}
@@ -77,6 +92,17 @@ func TestRoleMapping(t *testing.T) {
 	}
 	if !reflect.DeepEqual(role, config.RoleMapping{}) {
 		t.Errorf("Role value returend when role is not in map was not empty: %+v", role)
+	}
+}
+
+func TestSSORoleMapping(t *testing.T) {
+	ms := makeStore()
+	role, err := ms.RoleMapping("arn:aws:iam::012345678912:role/awsreservedsso_viewonlyaccess_123123123")
+	if err != nil {
+		t.Errorf("Could not find a match for role arn 'arn:aws:iam::012345678912:role/awsreservedsso_viewonlyaccess_123123123' in map")
+	}
+	if !reflect.DeepEqual(role, testSSORole) {
+		t.Errorf("Role arn 'arn:aws:iam::012345678912:role/awsreservedsso_viewonlyaccess_123123123' does not match expected value. (Acutal: %+v, Expected: %+v", role, testSSORole)
 	}
 }
 
@@ -100,7 +126,7 @@ var userMapping = `
 -
   groups:
     - "system:master"
-  userarn: "arn:iam:NIC"
+  userarn: "arn:aws:iam::012345678912:user/NIC"
   username: nic
 `
 
@@ -116,7 +142,7 @@ var updatedUserMapping = `
   groups:
     - "system:master"
     - "test"
-  userarn: "arn:iam:NIC"
+  userarn: "arn:aws:iam::012345678912:user/NIC"
   username: nic
 - userarn: "arn:iam:beswar"
   username: beswar
@@ -160,7 +186,7 @@ func TestLoadConfigMap(t *testing.T) {
 	ms.startLoadConfigMap(stopCh)
 	defer close(stopCh)
 
-	time.Sleep(2 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	meta := metav1.ObjectMeta{Name: "aws-auth"}
 	data := make(map[string]string)
@@ -170,7 +196,7 @@ func TestLoadConfigMap(t *testing.T) {
 
 	watcher.Add(&core_v1.ConfigMap{ObjectMeta: meta, Data: data})
 
-	time.Sleep(2 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	if !ms.AWSAccount("123") {
 		t.Errorf("AWS Account '123' not in allowed accounts")
@@ -181,12 +207,12 @@ func TestLoadConfigMap(t *testing.T) {
 	}
 
 	expectedUser := config.UserMapping{
-		UserARN:  "arn:iam:NIC",
+		UserARN:  "arn:aws:iam::012345678912:user/NIC",
 		Username: "nic",
 		Groups:   []string{"system:master"},
 	}
 
-	user, err := ms.UserMapping("arn:iam:nic")
+	user, err := ms.UserMapping("arn:aws:iam::012345678912:user/NIC")
 	if err != nil {
 		t.Errorf("Expected to find user 'nic' but got error: %v", err)
 	}
@@ -212,7 +238,7 @@ func TestLoadConfigMap(t *testing.T) {
 	}
 
 	expectedUser.Groups = append(expectedUser.Groups, "test")
-	user, err = ms.UserMapping("arn:iam:nic")
+	user, err = ms.UserMapping("arn:aws:iam::012345678912:user/NIC")
 	if !reflect.DeepEqual(user, expectedUser) {
 		t.Errorf("Updated returned from mapping does not match expected user. (Actual: %+v, Expected: %+v", user, expectedUser)
 	}
@@ -242,6 +268,13 @@ func TestParseMap(t *testing.T) {
   groups:
   - system:bootstrappers
   - system:nodes
+- sso:
+    permissionSetName: ViewOnlyAccess
+    accountID: "012345678912"
+    partition: aws-cn
+  username: user1
+  groups:
+  - system:basic-users
 `,
 		"mapUsers": `- userarn: arn:aws:iam::123456789101:user/Hello
   username: Hello
@@ -258,7 +291,20 @@ func TestParseMap(t *testing.T) {
 		{UserARN: "arn:aws:iam::123456789101:user/World", Username: "World", Groups: []string{"system:masters"}},
 	}
 	roleMappings := []config.RoleMapping{
-		{RoleARN: "arn:aws:iam::123456789101:role/test-NodeInstanceRole-1VWRHZ3GKZ1T4", Username: "system:node:{{EC2PrivateDNSName}}", Groups: []string{"system:bootstrappers", "system:nodes"}},
+		{
+			RoleARN:  "arn:aws:iam::123456789101:role/test-NodeInstanceRole-1VWRHZ3GKZ1T4",
+			Username: "system:node:{{EC2PrivateDNSName}}",
+			Groups:   []string{"system:bootstrappers", "system:nodes"},
+		},
+		{
+			SSO: &config.SSOARNMatcher{
+				PermissionSetName: "ViewOnlyAccess",
+				AccountID:         "012345678912",
+				Partition:         "aws-cn",
+			},
+			Username: "user1",
+			Groups:   []string{"system:basic-users"},
+		},
 	}
 	accounts := []string{}
 
