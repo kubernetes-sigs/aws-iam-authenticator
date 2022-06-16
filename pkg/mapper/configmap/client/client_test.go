@@ -62,6 +62,41 @@ func TestAddRole(t *testing.T) {
 	if _, err := cli.AddUser(&config.UserMapping{UserARN: "a"}); err == nil || !strings.Contains(err.Error(), `cannot add duplicate user ARN`) {
 		t.Fatal(err)
 	}
+
+	cli = makeTestClient(t,
+		nil,
+		nil,
+		nil,
+	)
+	newSSORole := config.RoleMapping{
+		RoleARN: "",
+		SSO: &config.SSOARNMatcher{
+			PermissionSetName: "ViewOnlyAccess",
+			AccountID:         "012345678912",
+		},
+		Username: "b",
+		Groups:   []string{"b"}}
+	cm, err = cli.AddRole(&newSSORole)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, srm, _, err := configmap.ParseMap(cm.Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatedRole = srm[0]
+	if !reflect.DeepEqual(newSSORole, updatedRole) {
+		t.Fatalf("unexpected updated role %+v", updatedRole)
+	}
+
+	cli = makeTestClient(t,
+		nil,
+		[]config.RoleMapping{newSSORole},
+		nil,
+	)
+	if _, err := cli.AddRole(&newSSORole); err == nil || !strings.Contains(err.Error(), `cannot add duplicate role ARN`) {
+		t.Fatal(err)
+	}
 }
 
 func makeTestClient(

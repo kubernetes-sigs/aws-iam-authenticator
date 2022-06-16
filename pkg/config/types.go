@@ -44,11 +44,15 @@ type IdentityMapping struct {
 // You can use plain values without parameters to have a more static mapping.
 type RoleMapping struct {
 	// RoleARN is the AWS Resource Name of the role. (e.g., "arn:aws:iam::000000000000:role/Foo").
-	RoleARN string `json:"rolearn"`
+	RoleARN string `json:"rolearn,omitempty" yaml:"rolearn,omitempty"`
+
+	// SSO contains fields used to match Role ARNs that
+	// are generated for AWS SSO sessions.
+	SSO *SSOARNMatcher `json:"sso,omitempty" yaml:"sso,omitempty"`
 
 	// Username is the username pattern that this instances assuming this
 	// role will have in Kubernetes.
-	Username string `json:"username"`
+	Username string `json:"username" yaml:"username"`
 
 	// Groups is a list of Kubernetes groups this role will authenticate
 	// as (e.g., `system:masters`). Each group name can include placeholders.
@@ -62,16 +66,39 @@ type RoleMapping struct {
 // Kubernetes username and a list of Kubernetes groups
 type UserMapping struct {
 	// UserARN is the AWS Resource Name of the user. (e.g., "arn:aws:iam::000000000000:user/Test").
-	UserARN string `json:"userarn"`
+	UserARN string `json:"userarn" yaml:"userarn"`
 
 	// Username is the Kubernetes username this role will authenticate as (e.g., `mycorp:foo`)
-	Username string `json:"username"`
+	Username string `json:"username" yaml:"username"`
 
 	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:masters`)
 	Groups []string `json:"groups" yaml:"groups"`
 
 	// UserId is the AWS PrincipalId of the user. (e.g., "ABCXSOTJDDV").
 	UserId string `json:"userid,omitempty" yaml:"userid,omitempty"`
+}
+
+// SSOARNMatcher contains fields used to match Role ARNs that
+// are generated for AWS SSO sessions. These SSO Role ARNs
+// follow this pattern:
+//
+// arn:aws:iam::<ACCOUNT_ID>:role/aws-reserved/sso.amazonaws.com/<SSO_REGION>/AWSReservedSSO_<SSO_PermissionSetName>_<RANDOM_STRING>
+//
+// These ARNs are canonicalized to look like:
+//
+// arn:aws:iam::<ACCOUNT_ID>:role/AWSReservedSSO_<SSO_PermissionSetName>_<RANDOM_STRING>
+//
+// This struct enables aws-iam-authenticator to match SSO generated Role ARNs with
+// handling for their random string suffixes.
+type SSOARNMatcher struct {
+	// PermissionSetName is the name of the SSO Permission Set that will be found
+	// after the "AWSReservedSSO_" string in the Role ARN.
+	// See: https://docs.aws.amazon.com/singlesignon/latest/userguide/permissionsets.html
+	PermissionSetName string `json:"permissionSetName" yaml:"permissionSetName"`
+	// AccountID is the AWS Account ID to match in the Role ARN
+	AccountID string `json:"accountID" yaml:"accountID"`
+	// Partition is the AWS partition to match in the Role ARN. Defaults to "aws"
+	Partition string `json:"partition,omitempty" yaml:"partition,omitempty"`
 }
 
 // Config specifies the configuration for a aws-iam-authenticator server
