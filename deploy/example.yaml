@@ -192,8 +192,6 @@ metadata:
   name: aws-iam-authenticator
   labels:
     k8s-app: aws-iam-authenticator
-  annotations:
-    seccomp.security.alpha.kubernetes.io/pod: runtime/default
 spec:
   selector:
     matchLabels:
@@ -246,6 +244,8 @@ spec:
           capabilities:
             drop:
             - ALL
+          seccompProfile:
+            type: RuntimeDefault
 
         resources:
           requests:
