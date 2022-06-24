@@ -202,8 +202,6 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ""
       labels:
         k8s-app: aws-iam-authenticator
     spec:
@@ -221,6 +219,9 @@ spec:
         key: node-role.kubernetes.io/master
       - key: CriticalAddonsOnly
         operator: Exists
+
+      # mark pod as critical to the cluster
+      priorityClassName: system-cluster-critical
 
       # run `aws-iam-authenticator server` with three volumes
       # - config (mounted from the ConfigMap at /etc/aws-iam-authenticator/config.yaml)
