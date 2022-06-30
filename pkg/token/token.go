@@ -473,6 +473,10 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, FormatError{"malformed query parameter"}
 	}
 
+	if err = validateDuplicateParameters(queryParams); err != nil {
+		return nil, err
+	}
+
 	for key, values := range queryParams {
 		if !parameterWhitelist[strings.ToLower(key)] {
 			return nil, FormatError{fmt.Sprintf("non-whitelisted query parameter %q", key)}
@@ -574,6 +578,17 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	}
 
 	return id, nil
+}
+
+func validateDuplicateParameters(queryParams url.Values) error {
+	duplicateCheck := make(map[string]bool)
+	for key, _ := range queryParams {
+		if _, found := duplicateCheck[strings.ToLower(key)]; found {
+			return FormatError{fmt.Sprintf("duplicate query parameter found: %q", key)}
+		}
+		duplicateCheck[strings.ToLower(key)] = true
+	}
+	return nil
 }
 
 func hasSignedClusterIDHeader(paramsLower *url.Values) bool {
