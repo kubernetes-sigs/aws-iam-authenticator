@@ -3,7 +3,7 @@ default: bin/aws-iam-authenticator
 PKG ?= sigs.k8s.io/aws-iam-authenticator
 GORELEASER := $(shell command -v goreleaser 2> /dev/null)
 
-VERSION ?= v0.5.9
+VERSION ?= v0.6.0-alpha.0
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 GOPROXY ?= $(shell go env GOPROXY)
