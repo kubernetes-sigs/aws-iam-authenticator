@@ -408,7 +408,7 @@ server:
   #     transliteration (available in version >= 0.5).
   mapRoles:
   # statically map arn:aws:iam::000000000000:role/KubernetesAdmin to cluster admin
-  - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
+  - rolearn: arn:aws:iam::000000000000:role/KubernetesAdmin
     username: kubernetes-admin
     groups:
     - system:masters
@@ -418,7 +418,7 @@ server:
   # trust that the role can only be assumed by EC2 instances. If an IAM user
   # can assume this role directly (with sts:AssumeRole) they can control
   # SessionName.
-  - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
+  - rolearn: arn:aws:iam::000000000000:role/KubernetesNode
     username: aws:{{AccountID}}:instance:{{SessionName}}
     groups:
     - system:bootstrappers
@@ -429,7 +429,7 @@ server:
   # DNS of the EC2 instance originating the authentication request.  Optionally, you
   # may specify a role that should be assumed before querying the EC2 API with the
   # key "server.ec2DescribeInstancesRoleARN" (see above).
-  - roleARN: arn:aws:iam::000000000000:role/KubernetesNode
+  - rolearn: arn:aws:iam::000000000000:role/KubernetesNode
     username: system:node:{{EC2PrivateDNSName}}
     groups:
     - system:nodes
@@ -440,7 +440,7 @@ server:
   # like an e-mail address passed by the identity provider. Note that if this
   # role is assumed directly by an IAM User (not via federation), the user
   # can control the SessionName.
-  - roleARN: arn:aws:iam::000000000000:role/KubernetesAdmin
+  - rolearn: arn:aws:iam::000000000000:role/KubernetesAdmin
     username: admin:{{SessionName}}
     groups:
     - system:masters
@@ -451,14 +451,14 @@ server:
   # role is assumed directly by an IAM User (not via federation), the user
   # can control the SessionName.  Note that the "{{SessionName}}" macro is
   # quoted to ensure it is properly parsed as a string.
-  - roleARN: arn:aws:iam::000000000000:role/KubernetesOtherAdmin
+  - rolearn: arn:aws:iam::000000000000:role/KubernetesOtherAdmin
     username: "{{SessionName}}"
     groups:
     - system:masters
 
   # If unalterable identification of an IAM User is desirable, you can map against
   # AccessKeyID.
-  - roleARN: arn:aws:iam::000000000000:role/KubernetesOtherAdmin
+  - rolearn: arn:aws:iam::000000000000:role/KubernetesOtherAdmin
     username: "admin:{{AccessKeyID}}"
     groups:
     - system:masters
@@ -466,7 +466,7 @@ server:
   # each mapUsers entry maps an IAM role to a static username and set of groups
   mapUsers:
   # map user IAM user Alice in 000000000000 to user "alice" in group "system:masters"
-  - userARN: arn:aws:iam::000000000000:user/Alice
+  - userarn: arn:aws:iam::000000000000:user/Alice
     username: alice
     groups:
     - system:masters
