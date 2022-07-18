@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
@@ -69,6 +70,7 @@ func init() {
 
 	featureGates.Add(config.DefaultFeatureGates)
 	featureGates.AddFlag(rootCmd.PersistentFlags())
+	viper.BindPFlag("feature-gates", rootCmd.PersistentFlags().Lookup("feature-gates"))
 }
 
 func initConfig() {
@@ -109,6 +111,15 @@ func getConfig() (config.Config, error) {
 	}
 	if err := viper.UnmarshalKey("server.mapAccounts", &cfg.AutoMappedAWSAccounts); err != nil {
 		logrus.WithError(err).Fatal("invalid server account mappings")
+	}
+	if featureGateString := viper.GetString("feature-gates"); featureGateString != "" {
+		for _, fg := range strings.Split(featureGateString, ",") {
+			if strings.Contains(fg, string(config.SSORoleMatch)) &&
+				strings.Contains(fg, "true") {
+				logrus.Info("SSORoleMatch feature enabled")
+				config.SSORoleMatchEnabled = true
+			}
+		}
 	}
 
 	if cfg.ClusterID == "" {

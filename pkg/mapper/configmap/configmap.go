@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -113,28 +112,48 @@ func (err ErrParsingMap) Error() string {
 
 func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappings []config.RoleMapping, awsAccounts []string, err error) {
 	errs := make([]error, 0)
+	rawUserMappings := make([]config.UserMapping, 0)
 	userMappings = make([]config.UserMapping, 0)
 	if userData, ok := m["mapUsers"]; ok {
 		userJson, err := utilyaml.ToJSON([]byte(userData))
 		if err != nil {
 			errs = append(errs, err)
 		} else {
-			err = json.Unmarshal(userJson, &userMappings)
+			err = json.Unmarshal(userJson, &rawUserMappings)
 			if err != nil {
 				errs = append(errs, err)
+			}
+
+			for _, userMapping := range rawUserMappings {
+				err = userMapping.Validate()
+				if err != nil {
+					errs = append(errs, err)
+				} else {
+					userMappings = append(userMappings, userMapping)
+				}
 			}
 		}
 	}
 
+	rawRoleMappings := make([]config.RoleMapping, 0)
 	roleMappings = make([]config.RoleMapping, 0)
 	if roleData, ok := m["mapRoles"]; ok {
 		roleJson, err := utilyaml.ToJSON([]byte(roleData))
 		if err != nil {
 			errs = append(errs, err)
 		} else {
-			err = json.Unmarshal(roleJson, &roleMappings)
+			err = json.Unmarshal(roleJson, &rawRoleMappings)
 			if err != nil {
 				errs = append(errs, err)
+			}
+
+			for _, roleMapping := range rawRoleMappings {
+				err = roleMapping.Validate()
+				if err != nil {
+					errs = append(errs, err)
+				} else {
+					roleMappings = append(roleMappings, roleMapping)
+				}
 			}
 		}
 	}
@@ -184,7 +203,11 @@ func EncodeMap(userMappings []config.UserMapping, roleMappings []config.RoleMapp
 	return m, nil
 }
 
-func (ms *MapStore) saveMap(userMappings []config.UserMapping, roleMappings []config.RoleMapping, awsAccounts []string) {
+func (ms *MapStore) saveMap(
+	userMappings []config.UserMapping,
+	roleMappings []config.RoleMapping,
+	awsAccounts []string) {
+
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
 	ms.users = make(map[string]config.UserMapping)
@@ -192,10 +215,10 @@ func (ms *MapStore) saveMap(userMappings []config.UserMapping, roleMappings []co
 	ms.awsAccounts = make(map[string]interface{})
 
 	for _, user := range userMappings {
-		ms.users[strings.ToLower(user.UserARN)] = user
+		ms.users[user.Key()] = user
 	}
 	for _, role := range roleMappings {
-		ms.roles[strings.ToLower(role.RoleARN)] = role
+		ms.roles[role.Key()] = role
 	}
 	for _, awsAccount := range awsAccounts {
 		ms.awsAccounts[awsAccount] = nil
@@ -211,21 +234,23 @@ var RoleNotFound = errors.New("Role not found in configmap")
 func (ms *MapStore) UserMapping(arn string) (config.UserMapping, error) {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
-	if user, ok := ms.users[arn]; !ok {
-		return config.UserMapping{}, UserNotFound
-	} else {
-		return user, nil
+	for _, user := range ms.users {
+		if user.Matches(arn) {
+			return user, nil
+		}
 	}
+	return config.UserMapping{}, UserNotFound
 }
 
 func (ms *MapStore) RoleMapping(arn string) (config.RoleMapping, error) {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
-	if role, ok := ms.roles[arn]; !ok {
-		return config.RoleMapping{}, RoleNotFound
-	} else {
-		return role, nil
+	for _, role := range ms.roles {
+		if role.Matches(arn) {
+			return role, nil
+		}
 	}
+	return config.RoleMapping{}, RoleNotFound
 }
 
 func (ms *MapStore) AWSAccount(id string) bool {
