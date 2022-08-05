@@ -15,9 +15,17 @@ const (
 )
 
 var authenticatorMetrics Metrics
+var initialized bool
 
 func InitMetrics(registerer prometheus.Registerer) {
 	authenticatorMetrics = createMetrics(registerer)
+	initialized = true
+}
+
+// Initialized returns true if InitMetrics() has been called, and false
+// otherwise.
+func Initialized() bool {
+	return initialized
 }
 
 func Get() Metrics {
