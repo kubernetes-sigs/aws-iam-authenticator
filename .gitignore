@@ -5,6 +5,7 @@ aws-iam-authenticator
 
 # For testing
 test-artifacts
+hack/e2e/e2e-test-artifacts
 
 # == kubernetes .gitignore ==
 
