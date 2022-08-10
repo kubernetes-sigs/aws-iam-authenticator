@@ -110,6 +110,7 @@ else
 	echo "make e2e RUNNER=[kops|kind]"
 endif
 
+
 .PHONY: format
 format:
 	test -z "$$(find . -path ./vendor -prune -type f -o -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)" || \
