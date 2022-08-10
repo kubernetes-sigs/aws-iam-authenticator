@@ -99,6 +99,10 @@ test:
 integration:
 	./hack/test-integration.sh
 
+.PHONY: e2e
+e2e:
+	./hack/e2e/run.sh
+
 .PHONY: format
 format:
 	test -z "$$(find . -path ./vendor -prune -type f -o -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)" || \
