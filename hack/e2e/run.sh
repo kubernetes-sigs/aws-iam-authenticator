@@ -39,7 +39,7 @@ INSTANCE_TYPE=${INSTANCE_TYPE:-c5.large}
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 USER_ARN=$(aws sts get-caller-identity --query Arn --output text)
-REPO_NAME=${REPO_NAME:-aws-iam-authenticator}
+REPO_NAME=${REPO_NAME:-aws-iam-authenticator-e2e}
 ECR_URL=${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
 IMAGE_NAME=${IMAGE_NAME:-${ECR_URL}/${REPO_NAME}}
 IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
@@ -47,7 +47,8 @@ IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 K8S_VERSION=${K8S_VERSION:-1.22.10}
 
 KOPS_VERSION=${KOPS_VERSION:-1.23.0}
-KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-authy-e2e}
+KOPS_STATE_BUCKET=${KOPS_STATE_BUCKET:-k8s-kops-auth-e2e}
+KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://${KOPS_STATE_BUCKET}}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-${BASE_DIR}/kops-patch.yaml}
 
 ROLES_SPEC_FILE=${ROLES_SPEC_FILE:-${BASE_DIR}/roles.yaml}
@@ -104,20 +105,31 @@ IMAGE_URL="${IMAGE_NAME}:${IMAGE_TAG}"
 docker tag "${REPO_NAME}":"${IMAGE_TAG}" $IMAGE_URL
 
 set +e
-aws ecr describe-repositories --repository-names "${REPO_NAME}" > /dev/null 2>&1
-set -e
+aws ecr describe-repositories --region "${REGION}" --repository-names "${REPO_NAME}" --query 'repositories[0].repositoryName'
 if [[ $? != 0 ]]; then
+  set -e
   loudecho "Creating repository ${REPO_NAME} in ECR"
-  aws ecr create-repository --repository-name "${REPO_NAME}"
+  aws ecr create-repository --region "${REGION}" --repository-name "${REPO_NAME}"
 fi
+set -e
 
 docker push $IMAGE_URL
 
+make bin
 BUILD_BIN=./_output/bin/aws-iam-authenticator
 cp $BUILD_BIN $BIN_DIR
 AUTHENTICATOR_BIN="${BIN_DIR}/aws-iam-authenticator"
 
 # Cluster creation
+
+set +e
+aws s3api head-bucket --bucket ${KOPS_STATE_BUCKET}
+if [[ $? != 0 ]]; then
+  set -e
+  loudecho "Creating bucket ${KOPS_STATE_BUCKET} in S3"
+  aws s3api create-bucket --bucket ${KOPS_STATE_BUCKET} --region ${REGION} --create-bucket-configuration "LocationConstraint=${REGION}"
+fi
+set -e
 
 set +e
 if ${KOPS_BIN} get cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}"; then
@@ -130,9 +142,9 @@ fi
 
 ## setting up the configmap
 loudecho "Setting up roles"
-ADMIN_ROLE="$(create_role "KubernetesAdmin" "Kubernetes administrator role (for AWS IAM Authenticator for Kubernetes)." "${AWS_ACCOUNT_ID}")"
+ADMIN_ROLE="$(create_role "KubernetesAdmin" "Kubernetes administrator role (for AWS IAM Authenticator for Kubernetes)." "${AWS_ACCOUNT_ID}" "${REGION}")"
 echo "admin role: $ADMIN_ROLE"
-USER_ROLE="$(create_role "KubernetesUsers" "Kubernetes user role (for AWS IAM Authenticator for Kubernetes)." "${AWS_ACCOUNT_ID}")"
+USER_ROLE="$(create_role "KubernetesUsers" "Kubernetes user role (for AWS IAM Authenticator for Kubernetes)." "${AWS_ACCOUNT_ID}" "${REGION}")"
 echo "user role: $USER_ROLE"
 
 ## actually creating the cluster
@@ -230,6 +242,16 @@ if [[ "${CLEAN}" == true ]]; then
     "${KOPS_BIN}" \
     "${CLUSTER_NAME}" \
     "${KOPS_STATE_FILE}"
+
+  aws iam delete-role --role-name "KubernetesAdmin" --region ${REGION}
+  aws iam delete-role --role-name "KubernetesUsers" --region ${REGION}
 else
   loudecho "Not cleaning"
+fi
+
+if [[ $TEST_PASSED -ne 0 ]]; then
+  loudecho "FAIL!"
+  # exit 1
+else
+  loudecho "SUCCESS!"
 fi
