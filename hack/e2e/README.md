@@ -17,7 +17,7 @@ From the base directory, run `./hack/e2e/run.sh`. Alternatively, run `make test-
 
 You can change the behavior of the tests by setting certain environment variables beforehand. Most of these can stay unchanged, but some should be noted:
 - `REGION`, `ZONES`: AWS region that the tests should be run on.
-- `KOPS_STATE_FILE`: An S3 bucket that you have access to. Defaults to `s3://k8s-kops-authy-e2e`.
+- `KOPS_STATE_FILE`: An S3 bucket that you have access to. **Change this to a bucket you own!**
 - `K8S_VERSION`: Kuberenetes version. Don't change this off `1.22.10`; you might end up with a bunch of build errors otherwise.
 - `TEST_ID`: Normally a random number, but can be set for a more controlled environment.
 - `CLEAN`: Set to false if you don't want the cluster to be torn down after the tests are done running. Useful if you want to inspect the cluster state after setup.
