@@ -51,6 +51,7 @@ KOPS_STATE_BUCKET=${KOPS_STATE_BUCKET:-k8s-kops-auth-e2e}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://${KOPS_STATE_BUCKET}}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-${BASE_DIR}/kops-patch.yaml}
 
+ROLE_PREFIX=${ROLE_PREFIX:-"aws-iam-authenticator-test-role-"}
 ROLES_SPEC_FILE=${ROLES_SPEC_FILE:-${BASE_DIR}/roles.yaml}
 APISERVER_UPDATE_FILE=${APISERVER_UPDATE_FILE:-${BASE_DIR}/apiserver-update.yaml}
 KUBECONFIG_UPDATE_FILE=${KUBECONFIG_UPDATE_FILE:-${BASE_DIR}/kubeconfig-update.yaml}
@@ -142,9 +143,11 @@ fi
 
 ## setting up the configmap
 loudecho "Setting up roles"
-ADMIN_ROLE="$(create_role "KubernetesAdmin" "Kubernetes administrator role (for AWS IAM Authenticator for Kubernetes)." "${AWS_ACCOUNT_ID}" "${REGION}")"
+ADMIN_ROLE_NAME="${ROLE_PREFIX}KubernetesAdmin"
+ADMIN_ROLE="$(create_role "${ADMIN_ROLE_NAME}" "Kubernetes administrator role (for AWS IAM Authenticator for Kubernetes)." "${AWS_ACCOUNT_ID}" "${REGION}")"
 echo "admin role: $ADMIN_ROLE"
-USER_ROLE="$(create_role "KubernetesUsers" "Kubernetes user role (for AWS IAM Authenticator for Kubernetes)." "${AWS_ACCOUNT_ID}" "${REGION}")"
+USER_ROLE_NAME="${ROLE_PREFIX}KubernetesUsers"
+USER_ROLE="$(create_role "${USER_ROLE_NAME}" "Kubernetes user role (for AWS IAM Authenticator for Kubernetes)." "${AWS_ACCOUNT_ID}" "${REGION}")"
 echo "user role: $USER_ROLE"
 
 ## actually creating the cluster
@@ -243,15 +246,15 @@ if [[ "${CLEAN}" == true ]]; then
     "${CLUSTER_NAME}" \
     "${KOPS_STATE_FILE}"
 
-  aws iam delete-role --role-name "KubernetesAdmin" --region ${REGION}
-  aws iam delete-role --role-name "KubernetesUsers" --region ${REGION}
+  aws iam delete-role --role-name "${ADMIN_ROLE_NAME}" --region ${REGION}
+  aws iam delete-role --role-name "${USER_ROLE_NAME}" --region ${REGION}
 else
   loudecho "Not cleaning"
 fi
 
 if [[ $TEST_PASSED -ne 0 ]]; then
   loudecho "FAIL!"
-  # exit 1
+  exit 1
 else
   loudecho "SUCCESS!"
 fi
