@@ -36,6 +36,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication"
@@ -413,6 +414,11 @@ func stsHostsForPartition(partitionID string) map[string]bool {
 
 // NewVerifier creates a Verifier that is bound to the clusterID and uses the default http client.
 func NewVerifier(clusterID string, partitionID string) Verifier {
+	// Initialize metrics if they haven't already been initialized to avoid a
+	// nil pointer panic when setting metric values.
+	if !metrics.Initialized() {
+		metrics.InitMetrics(prometheus.NewRegistry())
+	}
 	return tokenVerifier{
 		client: &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
