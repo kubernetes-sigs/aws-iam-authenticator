@@ -1,4 +1,4 @@
-module sigs.k8s.io/aws-iam-authenticator
+module github.com/gripo-io/aws-iam-authenticator
 
 go 1.16
 
@@ -21,6 +21,7 @@ require (
 	k8s.io/component-base v0.24.0
 	k8s.io/kubernetes v1.24.0
 	k8s.io/sample-controller v0.24.0
+	sigs.k8s.io/aws-iam-authenticator v0.5.9
 	sigs.k8s.io/yaml v1.2.0
 )
 

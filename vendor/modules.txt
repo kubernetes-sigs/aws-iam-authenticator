@@ -1052,6 +1052,36 @@ k8s.io/utils/trace
 # sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.22
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/proto/client
+# sigs.k8s.io/aws-iam-authenticator v0.5.9
+## explicit
+sigs.k8s.io/aws-iam-authenticator/pkg
+sigs.k8s.io/aws-iam-authenticator/pkg/arn
+sigs.k8s.io/aws-iam-authenticator/pkg/config
+sigs.k8s.io/aws-iam-authenticator/pkg/config/certs
+sigs.k8s.io/aws-iam-authenticator/pkg/config/kubeconfig
+sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider
+sigs.k8s.io/aws-iam-authenticator/pkg/httputil
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap/client
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/apis/iamauthenticator
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/apis/iamauthenticator/v1alpha1
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/controller
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/clientset/versioned
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/clientset/versioned/fake
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/clientset/versioned/scheme
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/clientset/versioned/typed/iamauthenticator/v1alpha1
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/clientset/versioned/typed/iamauthenticator/v1alpha1/fake
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/informers/externalversions
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/informers/externalversions/iamauthenticator
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/informers/externalversions/iamauthenticator/v1alpha1
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/informers/externalversions/internalinterfaces
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/listers/iamauthenticator/v1alpha1
+sigs.k8s.io/aws-iam-authenticator/pkg/mapper/file
+sigs.k8s.io/aws-iam-authenticator/pkg/metrics
+sigs.k8s.io/aws-iam-authenticator/pkg/server
+sigs.k8s.io/aws-iam-authenticator/pkg/token
 # sigs.k8s.io/structured-merge-diff/v4 v4.2.1
 sigs.k8s.io/structured-merge-diff/v4/fieldpath
 sigs.k8s.io/structured-merge-diff/v4/schema
