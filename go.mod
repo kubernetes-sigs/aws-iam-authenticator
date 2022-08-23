@@ -55,3 +55,5 @@ replace (
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.22.0
 	k8s.io/sample-controller => k8s.io/sample-controller v0.22.0
 )
+
+replace sigs.k8s.io/aws-iam-authenticator => github.com/gripo-io/aws-iam-authenticator v0.5.8-0.20220823101745-b3137acc58c5
