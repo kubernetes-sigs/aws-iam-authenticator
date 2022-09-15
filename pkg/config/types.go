@@ -32,8 +32,8 @@ type IdentityMapping struct {
 // list of Kubernetes groups. The username and groups are specified as templates
 // that may optionally contain two template parameters:
 //
-//  1) "{{AccountID}}" is the 12 digit AWS ID.
-//  2) "{{SessionName}}" is the role session name.
+//  1. "{{AccountID}}" is the 12 digit AWS ID.
+//  2. "{{SessionName}}" is the role session name.
 //
 // The meaning of SessionName depends on the type of entity assuming the role.
 // In the case of an EC2 instance role this will be the EC2 instance ID. In the
@@ -169,4 +169,6 @@ type Config struct {
 	// understand we don't need to change
 	EC2DescribeInstancesQps   int
 	EC2DescribeInstancesBurst int
+	//Dynamic File Path for DynamicFile BackendMode
+	DynamicFilePath string
 }
