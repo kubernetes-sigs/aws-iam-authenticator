@@ -16,7 +16,7 @@ ARG image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroo
 FROM --platform=$BUILDPLATFORM golang:1.19 AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-iam-authenticator
 COPY . .
-RUN go mod download
+RUN GOPROXY=direct go mod download
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make bin
 RUN chown 65532 _output/bin/aws-iam-authenticator
 
