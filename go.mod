@@ -3,7 +3,7 @@ module sigs.k8s.io/aws-iam-authenticator
 go 1.16
 
 require (
-    github.com/aws/aws-sdk-go v1.43.28
+    github.com/aws/aws-sdk-go v1.44.107
     github.com/gofrs/flock v0.7.0
     github.com/manifoldco/promptui v0.9.0
     github.com/onsi/ginkgo v1.14.0
@@ -25,6 +25,7 @@ require (
 )
 
 replace (
+    k8s.io.client-go => k8s.io/client-go v0.20.0
     k8s.io/api => k8s.io/api v0.22.0
     k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.22.0
     k8s.io/apimachinery => k8s.io/apimachinery v0.23.0-alpha.0
@@ -48,9 +49,8 @@ replace (
     k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.22.0
     k8s.io/metrics => k8s.io/metrics v0.22.0
     k8s.io/mount-utils => k8s.io/mount-utils v0.22.1-rc.0
+    k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.22.0
     k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.22.0
     k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.22.0
     k8s.io/sample-controller => k8s.io/sample-controller v0.22.0
-    k8s.io.client-go => k8s.io/client-go v0.20.0
-    k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.22.0
 )
