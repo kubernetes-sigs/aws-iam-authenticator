@@ -21,6 +21,11 @@ import (
 
 var log = logrus.New()
 
+func init() {
+	config.SSORoleMatchEnabled = true
+	EKSYaml = true
+}
+
 func TestConfigMap(t *testing.T) {
 	log.Level = logrus.DebugLevel
 
@@ -56,16 +61,6 @@ func TestConfigMap(t *testing.T) {
 			// Valid aws-auth.yaml based on one in EKS documentation.
 			"aws-auth.yaml", validRoleMappings, validUserMappings, validAWSAccounts, false,
 		},
-		{
-			// RoLeArN instead of rolearn
-			// parsing succeeds, values are case-insensitive for compatibility with upstream
-			"aws-auth-crazy-case-keys.yaml", validRoleMappings, validUserMappings, validAWSAccounts, false,
-		},
-		{
-			// roleARN instead of rolearn
-			// parsing succeeds, values are case-insensitive for compatibility with upstream
-			"aws-auth-open-source-case-keys.yaml", validRoleMappings, validUserMappings, validAWSAccounts, false,
-		},
 		// Fail cases -- ideally, validation should reject these before they reach us
 		{
 			// mapusers instead of mapUsers
@@ -93,6 +88,26 @@ func TestConfigMap(t *testing.T) {
 			// create fails, mapRoles is a top-level configMap key unlike upstream
 			"aws-auth-missing-bar.yaml", nil, nil, nil, true,
 		},
+	}
+	if !EKSYaml {
+		tests = append(tests, []struct {
+			configMapYaml        string
+			expectedRoleMappings []config.RoleMapping
+			expectedUserMappings []config.UserMapping
+			expectedAWSAccounts  map[string]bool
+			expectCreateError    bool
+		}{
+			{
+				// RoLeArN instead of rolearn
+				// parsing succeeds, values are case-insensitive for compatibility with upstream
+				"aws-auth-crazy-case-keys.yaml", validRoleMappings, validUserMappings, validAWSAccounts, false,
+			},
+			{
+				// roleARN instead of rolearn
+				// parsing succeeds, values are case-insensitive for compatibility with upstream
+				"aws-auth-open-source-case-keys.yaml", validRoleMappings, validUserMappings, validAWSAccounts, false,
+			},
+		}...)
 	}
 
 	for _, tt := range tests {

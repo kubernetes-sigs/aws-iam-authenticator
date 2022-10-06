@@ -115,15 +115,19 @@ func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappi
 	rawUserMappings := make([]config.UserMapping, 0)
 	userMappings = make([]config.UserMapping, 0)
 	if userData, ok := m["mapUsers"]; ok {
-		userJson, err := utilyaml.ToJSON([]byte(userData))
+		if EKSYaml {
+			//use Lenient Yaml Parser
+			err = yaml.Unmarshal([]byte(userData), &rawUserMappings)
+		} else {
+			//use Strict Yaml Parser
+			userJson, err := utilyaml.ToJSON([]byte(userData))
+			if err == nil {
+				err = json.Unmarshal(userJson, &rawUserMappings)
+			}
+		}
 		if err != nil {
 			errs = append(errs, err)
 		} else {
-			err = json.Unmarshal(userJson, &rawUserMappings)
-			if err != nil {
-				errs = append(errs, err)
-			}
-
 			for _, userMapping := range rawUserMappings {
 				err = userMapping.Validate()
 				if err != nil {
@@ -138,15 +142,20 @@ func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappi
 	rawRoleMappings := make([]config.RoleMapping, 0)
 	roleMappings = make([]config.RoleMapping, 0)
 	if roleData, ok := m["mapRoles"]; ok {
-		roleJson, err := utilyaml.ToJSON([]byte(roleData))
+		if EKSYaml {
+			//use Lenient Yaml Parser
+			err = yaml.Unmarshal([]byte(roleData), &rawRoleMappings)
+		} else {
+			//use Strict Yaml Parser
+			roleJson, err := utilyaml.ToJSON([]byte(roleData))
+			if err == nil {
+				err = json.Unmarshal(roleJson, &rawRoleMappings)
+			}
+		}
+
 		if err != nil {
 			errs = append(errs, err)
 		} else {
-			err = json.Unmarshal(roleJson, &rawRoleMappings)
-			if err != nil {
-				errs = append(errs, err)
-			}
-
 			for _, roleMapping := range rawRoleMappings {
 				err = roleMapping.Validate()
 				if err != nil {

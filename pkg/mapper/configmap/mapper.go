@@ -13,7 +13,10 @@ type ConfigMapMapper struct {
 
 var _ mapper.Mapper = &ConfigMapMapper{}
 
+var EKSYaml = false
+
 func NewConfigMapMapper(cfg config.Config) (*ConfigMapMapper, error) {
+	EKSYaml = cfg.EKSYaml
 	ms, err := New(cfg.Master, cfg.Kubeconfig)
 	if err != nil {
 		return nil, err

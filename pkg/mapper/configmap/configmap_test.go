@@ -17,6 +17,7 @@ import (
 
 func init() {
 	config.SSORoleMatchEnabled = true
+	EKSYaml = true
 }
 
 var (
