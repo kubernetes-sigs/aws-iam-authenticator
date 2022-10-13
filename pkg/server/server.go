@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/dynamicfile"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/file"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
@@ -220,6 +221,12 @@ func BuildMapperChain(cfg config.Config) ([]mapper.Mapper, error) {
 				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
 			mappers = append(mappers, crdMapper)
+		case mapper.ModeDynamicFile:
+			dynamicFileMapper, err := dynamicfile.NewDynamicFileMapper(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
+			}
+			mappers = append(mappers, dynamicFileMapper)
 		default:
 			return nil, fmt.Errorf("backend-mode %q is not a valid mode", mode)
 		}

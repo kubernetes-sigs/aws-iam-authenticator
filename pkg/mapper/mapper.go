@@ -20,15 +20,17 @@ const (
 	ModeEKSConfigMap string = "EKSConfigMap"
 
 	ModeCRD string = "CRD"
+
+	ModeDynamicFile string = "DynamicFile"
 )
 
 var (
-	ValidBackendModeChoices      = []string{ModeFile, ModeConfigMap, ModeMountedFile, ModeEKSConfigMap, ModeCRD}
+	ValidBackendModeChoices      = []string{ModeFile, ModeConfigMap, ModeMountedFile, ModeEKSConfigMap, ModeCRD, ModeDynamicFile}
 	DeprecatedBackendModeChoices = map[string]string{
 		ModeFile:      ModeMountedFile,
 		ModeConfigMap: ModeEKSConfigMap,
 	}
-	BackendModeChoices = []string{ModeMountedFile, ModeEKSConfigMap, ModeCRD}
+	BackendModeChoices = []string{ModeMountedFile, ModeEKSConfigMap, ModeCRD, ModeDynamicFile}
 )
 
 var ErrNotMapped = errors.New("ARN is not mapped")
