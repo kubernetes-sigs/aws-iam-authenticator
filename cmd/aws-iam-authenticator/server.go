@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"k8s.io/sample-controller/pkg/signals"
+	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/server"
@@ -48,6 +49,7 @@ var serverCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
+		fmt.Printf("Authenticator Version: %q, %q\n", pkg.Version, pkg.CommitID)
 		metrics.InitMetrics(prometheus.DefaultRegisterer)
 		stopCh := signals.SetupSignalHandler()
 

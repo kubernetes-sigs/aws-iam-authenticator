@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 
+	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 
 	"github.com/sirupsen/logrus"
@@ -32,6 +33,7 @@ var initCmd = &cobra.Command{
 	Short: "Pre-generate certificate, private key, and kubeconfig files for the server.",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("Authenticator Version: %q, %q\n", pkg.Version, pkg.CommitID)
 		cfg, err := getConfig()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get config: %v\n", err)

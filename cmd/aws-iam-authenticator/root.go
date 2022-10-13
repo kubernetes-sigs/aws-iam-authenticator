@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 
-	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 
@@ -87,8 +86,6 @@ func initConfig() {
 }
 
 func getConfig() (config.Config, error) {
-
-	fmt.Printf("Authenticator Version: %q\n", pkg.Version)
 
 	cfg := config.Config{
 		PartitionID:                       viper.GetString("server.partition"),
