@@ -123,8 +123,8 @@ function write_kind_config() {
 function start_authenticator() {
     mkdir -p "${authenticator_state_host_dir}"
     mkdir -p "${authenticator_export_host_dir}"
-    chmod 777 "${authenticator_state_host_dir}"
-    chmod 777 "${authenticator_export_host_dir}"
+    chmod -R 777 "${authenticator_state_host_dir}"
+    chmod -R 777 "${authenticator_export_host_dir}"
     docker run \
         --detach \
         --ip "${AUTHENTICATOR_IP}" \
