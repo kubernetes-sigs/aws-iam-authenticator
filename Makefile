@@ -131,6 +131,14 @@ start-dev: bin
 stop-dev:
 	./hack/stop-dev-env.sh 
 
+.PHONY: start-dev-dynamicfile-e2e
+start-dev-dynamicfile:
+	./hack/start-dev-env-dynamicfile.sh
+
+.PHONY: stop-dev-dynamicfile-e2e
+stop-dev-dynamicfile:
+	./hack/stop-dev-env.sh
+
 # Use make kill-dev when you want to remove a dev environment
 # and clean everything up in preparation for creating another
 # in the future.
