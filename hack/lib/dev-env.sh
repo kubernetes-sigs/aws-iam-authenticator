@@ -53,13 +53,20 @@ authenticator_healthz_port=21363
 
 # Location of templates, config files, mounts
 authenticator_config_template="${REPO_ROOT}/hack/dev/authenticator.yaml"
+authenticator_access_entry_template="${REPO_ROOT}/hack/dev/access-entries.json"
+authenticator_dynamicfile_mode_config_template="${REPO_ROOT}/hack/dev/authenticator_with_dynamicfile_mode.yaml"
 kind_config_template="${REPO_ROOT}/hack/dev/env.yaml"
 kind_config_host_dir="${OUTPUT}/dev/kind"
 kind_config="${kind_config_host_dir}/env.yaml"
 authenticator_config_host_dir="${OUTPUT}/dev/authenticator/config"
 authenticator_config="${authenticator_config_host_dir}/authenticator.yaml"
+authenticator_dynamicfile_mode_config="${authenticator_config_host_dir}/authenticator_dynamicfile_mode.yaml"
 authenticator_export_host_dir="${OUTPUT}/dev/authenticator/export"
 authenticator_state_host_dir="${OUTPUT}/dev/authenticator/state"
+authenticator_dynamicfile_host_path="${OUTPUT}/dev/authenticator/access-entry"
+authenticator_access_entry_host_file="${authenticator_dynamicfile_host_path}/access-entries.json"
+authenticator_dynamicfile_dest_path="/var/authenticator/access-entry"
+authenticator_access_entry_dest_file="${authenticator_dynamicfile_dest_path}/access-entries.json"
 authenticator_config_dest_dir="/etc/authenticator"
 authenticator_export_dest_dir="/var/authenticator/export"
 authenticator_state_dest_dir="/var/authenticator/state"
@@ -111,6 +118,22 @@ function write_authenticator_config() {
         "${authenticator_config_template}" > "${authenticator_config}"
 }
 
+function write_authenticator_with_dynamicfile_mode_config() {
+    mkdir -p "${authenticator_config_host_dir}"
+    mkdir -p "${authenticator_dynamicfile_host_path}"
+    sed -e "s|{{ADMIN_ARN}}|${ADMIN_ARN}|g" \
+        -e "s|{{AUTHENTICATOR_STATE_DIR}}|${authenticator_state_dest_dir}|g" \
+        -e "s|{{AUTHENTICATOR_GENERATE_KUBECONFIG}}|${authenticator_generate_kubeconfig}|g" \
+        -e "s|{{AUTHENTICATOR_KUBECONFIG}}|${authenticator_kubeconfig}|g" \
+        -e "s|{{AUTHENTICATOR_PORT}}|${AUTHENTICATOR_PORT}|g" \
+        -e "s|{{AUTHENTICATOR_IP}}|${AUTHENTICATOR_IP}|g" \
+        -e "s|{{CLUSTER_NAME}}|${CLUSTER_NAME}|g" \
+        -e "s|{{AUTHENTICATOR_DYNAMICFILE_PATH}}|${authenticator_access_entry_dest_file}|g" \
+        "${authenticator_dynamicfile_mode_config_template}" > "${authenticator_dynamicfile_mode_config}"
+    cat "${authenticator_dynamicfile_mode_config}"
+    cp "${authenticator_access_entry_template}" "${authenticator_access_entry_host_file}"
+}
+
 function write_kind_config() {
     mkdir -p "${kind_config_host_dir}"
     sed -e "s|{{AUTHENTICATOR_EXPORT_HOST_DIR}}|${authenticator_export_host_dir}|g" \
@@ -139,6 +162,33 @@ function start_authenticator() {
         "${AUTHENTICATOR_IMAGE}" \
         server \
         --config "${authenticator_config_dest_dir}/authenticator.yaml"
+}
+
+function start_authenticator_with_dynamicfile() {
+    mkdir -p "${authenticator_state_host_dir}"
+    mkdir -p "${authenticator_export_host_dir}"
+    chmod -R 777 "${authenticator_state_host_dir}"
+    chmod -R 777 "${authenticator_export_host_dir}"
+    chmod -R 777 "${authenticator_dynamicfile_host_path}"
+    chmod 777 "${authenticator_access_entry_host_file}"
+
+    docker run \
+        --detach \
+        --ip "${AUTHENTICATOR_IP}" \
+        --mount "type=bind,src=${authenticator_config_host_dir},dst=${authenticator_config_dest_dir}" \
+        --mount "type=bind,src=${authenticator_state_host_dir},dst=${authenticator_state_dest_dir}" \
+        --mount "type=bind,src=${authenticator_export_host_dir},dst=${authenticator_export_dest_dir}" \
+        --mount "type=bind,src=${authenticator_dynamicfile_host_path},dst=${authenticator_dynamicfile_dest_path}" \
+        --name aws-iam-authenticator \
+        --network "${NETWORK_NAME}" \
+        --publish ${authenticator_healthz_port}:${authenticator_healthz_port} \
+        --publish ${AUTHENTICATOR_PORT}:${AUTHENTICATOR_PORT} \
+        --env AWS_REGION="us-west-2" \
+        --rm \
+        "${AUTHENTICATOR_IMAGE}" \
+        server \
+        --config "${authenticator_config_dest_dir}/authenticator_dynamicfile_mode.yaml"
+
 }
 
 function kill_authenticator() {

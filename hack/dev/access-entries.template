@@ -1,0 +1,12 @@
+{
+  "mapRoles": [
+    {
+      "rolearn": "arn:aws:iam::{{AWS_ACCOUNT}}:role/{{AWS_TEST_ROLE}}",
+      "username": "kubernetes-admin",
+      "groups": [
+        "system:masters"
+      ]
+    }
+  ]
+}
+
