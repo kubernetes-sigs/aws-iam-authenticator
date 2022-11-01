@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 )
 
@@ -147,18 +149,16 @@ func ParseMap(filename string) (userMappings []config.UserMapping, roleMappings 
 	}
 
 	for _, userMapping := range dynamicFileData.UserMappings {
-		err = userMapping.Validate()
-		if err != nil {
-			errs = append(errs, err)
+		if userMapping.UserARN == "" {
+			errs = append(errs, fmt.Errorf("Value for userarn must be supplied"))
 		} else {
 			userMappings = append(userMappings, userMapping)
 		}
 	}
 
 	for _, roleMapping := range dynamicFileData.RoleMappings {
-		err = roleMapping.Validate()
-		if err != nil {
-			errs = append(errs, err)
+		if roleMapping.RoleARN == "" {
+			errs = append(errs, fmt.Errorf("Value for rolearn must be supplied"))
 		} else {
 			roleMappings = append(roleMappings, roleMapping)
 		}
@@ -184,10 +184,12 @@ func (ms *DynamicFileMapStore) saveMap(
 	ms.awsAccounts = make(map[string]interface{})
 
 	for _, user := range userMappings {
-		ms.users[user.Key()] = user
+		canonicalizedARN, _ := arn.Canonicalize(strings.ToLower(user.UserARN))
+		ms.users[canonicalizedARN] = user
 	}
 	for _, role := range roleMappings {
-		ms.roles[role.Key()] = role
+		canonicalizedARN, _ := arn.Canonicalize(strings.ToLower(role.RoleARN))
+		ms.roles[canonicalizedARN] = role
 	}
 	for _, awsAccount := range awsAccounts {
 		ms.awsAccounts[awsAccount] = nil
@@ -203,23 +205,21 @@ var RoleNotFound = errors.New("Role not found in dynamic file")
 func (ms *DynamicFileMapStore) UserMapping(arn string) (config.UserMapping, error) {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
-	for _, user := range ms.users {
-		if user.Matches(arn) {
-			return user, nil
-		}
+	if user, ok := ms.users[arn]; !ok {
+		return config.UserMapping{}, UserNotFound
+	} else {
+		return user, nil
 	}
-	return config.UserMapping{}, UserNotFound
 }
 
 func (ms *DynamicFileMapStore) RoleMapping(arn string) (config.RoleMapping, error) {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
-	for _, role := range ms.roles {
-		if role.Matches(arn) {
-			return role, nil
-		}
+	if role, ok := ms.roles[arn]; !ok {
+		return config.RoleMapping{}, RoleNotFound
+	} else {
+		return role, nil
 	}
-	return config.RoleMapping{}, RoleNotFound
 }
 
 func (ms *DynamicFileMapStore) AWSAccount(id string) bool {
