@@ -42,7 +42,7 @@ var addUserCmd = &cobra.Command{
 	Long:  "NOTE: this does not currently support the CRD and file backends",
 	Run: func(cmd *cobra.Command, args []string) {
 		if userARN == "" || userName == "" || len(groups) == 0 {
-			fmt.Printf("invalid empty value in userARN %q, username %q, groups %q\n", userARN, userName, groups)
+			fmt.Printf("invalid empty value in userARN %q, username %q, groups %q", userARN, userName, groups)
 			os.Exit(1)
 		}
 
@@ -73,52 +73,16 @@ var addRoleCmd = &cobra.Command{
 	Short: "add a role entity to an existing aws-auth configmap, not for CRD/file backends",
 	Long:  "NOTE: this does not currently support the CRD and file backends",
 	Run: func(cmd *cobra.Command, args []string) {
-		if (roleARN == "" && ssoRole == nil) || userName == "" || len(groups) == 0 {
-			fmt.Printf("invalid empty value in rolearn %q, username %q, groups %q\n", roleARN, userName, groups)
+		if roleARN == "" || userName == "" || len(groups) == 0 {
+			fmt.Printf("invalid empty value in rolearn %q, username %q, groups %q", roleARN, userName, groups)
 			os.Exit(1)
 		}
 
-		var arnOrSSORole string
-		switch {
-		case roleARN != "" && ssoRole != nil:
-			fmt.Printf("only one of --rolearn or --sso can be supplied\n")
-			os.Exit(1)
-		case roleARN != "":
-			arnOrSSORole = "rolearn"
-		case ssoRole != nil:
-			arnOrSSORole = "sso"
-
-			for _, key := range []string{"permissionSetName", "accountID"} {
-				if _, ok := ssoRole[key]; !ok {
-					fmt.Printf("required key '%s' missing from --sso flag\n", key)
-					os.Exit(1)
-				}
-			}
-
-			var ssoPartition string
-			if partition, ok := ssoRole["partition"]; !ok {
-				ssoPartition = "aws"
-			} else {
-				ssoPartition = partition
-			}
-			ssoRoleConfig.PermissionSetName = ssoRole["permissionSetName"]
-			ssoRoleConfig.AccountID = ssoRole["accountID"]
-			ssoRoleConfig.Partition = ssoPartition
-
-			rm := config.RoleMapping{SSO: ssoRoleConfig}
-			err := rm.Validate()
-			if err != nil {
-				fmt.Printf("error validating --sso: %s\n", err)
-				os.Exit(1)
-			}
-		}
-
-		checkPrompt(fmt.Sprintf("add %s %s, username %s, groups %s", arnOrSSORole, roleARN, userName, groups))
+		checkPrompt(fmt.Sprintf("add rolearn %s, username %s, groups %s", roleARN, userName, groups))
 		cli := createClient()
 
 		cm, err := cli.AddRole(&config.RoleMapping{
 			RoleARN:  roleARN,
-			SSO:      ssoRoleConfig,
 			Username: userName,
 			Groups:   groups,
 		})
@@ -210,10 +174,6 @@ var (
 	userName string
 	groups   []string
 	roleARN  string
-	// ssoRole contains the settings for a config.SSOARNMatcher
-	// it expects the keys "permissionSetName", "accountID", and "partition" (optional)
-	ssoRole       map[string]string
-	ssoRoleConfig *config.SSOARNMatcher
 )
 
 func init() {
@@ -231,7 +191,6 @@ func init() {
 	addUserCmd.PersistentFlags().StringSliceVar(&groups, "groups", nil, "A new user groups")
 
 	addRoleCmd.PersistentFlags().StringVar(&roleARN, "rolearn", "", "A new role ARN")
-	addRoleCmd.PersistentFlags().StringToStringVar(&ssoRole, "sso", nil, `Settings for a new SSO role. Expects "permissionSetName", "accountID", and "partition" (optional)`)
 	addRoleCmd.PersistentFlags().StringVar(&userName, "username", "", "A new user name")
 	addRoleCmd.PersistentFlags().StringSliceVar(&groups, "groups", nil, "A new role groups")
 }
