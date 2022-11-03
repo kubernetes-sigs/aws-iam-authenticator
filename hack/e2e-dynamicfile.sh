@@ -36,6 +36,22 @@ REGION=${AWS_REGION:-us-west-2}
 AWS_ACCOUNT=$(aws sts get-caller-identity --query "Account" --output text)
 AWS_TEST_ROLE=${AWS_TEST_ROLE-authenticator-dev-cluster-testrole}
 
+
+function e2e_mountfile() {
+  sleep 5
+  set +e
+  OUT=$(kubectl --kubeconfig=${kubectl_kubeconfig} --context="test-authenticator" get nodes|grep Ready 2>/dev/null)
+  echo $OUT
+  if [ ! -z "$OUT" ]
+      then
+          echo "e2e mountfile test pass"
+      else
+          echo "e2e mountfile test fail"
+          exit 1
+  fi
+
+}
+
 function e2e_dynamicfile(){
   set +e
   RoleOutput=$(aws iam get-role --role-name authenticator-dev-cluster-testrole 2>/dev/null)
