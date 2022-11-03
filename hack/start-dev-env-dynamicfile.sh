@@ -56,6 +56,7 @@ write_kind_config
 create_kind_cluster
 certificate_authority_data="$(extract_certificate_authority_data)"
 write_kubectl_kubeconfig
+echo "start end to end testing for mountfile mode"
+e2e_mountfile
 echo "starting end to end testing for dynamicfile mode"
 e2e_dynamicfile
-
