@@ -18,7 +18,7 @@ if __name__ == '__main__':
     kubeconfig = args.kubeconfig
     cluster = args.cluster
     with open(kubeconfig, 'r') as f:
-        config = yaml.load(f)
+        config = yaml.safe_load(f)
         clusters = config['clusters']
         for c in clusters:
             if c['name'] == cluster:
