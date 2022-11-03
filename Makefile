@@ -100,8 +100,15 @@ integration:
 	./hack/test-integration.sh
 
 .PHONY: e2e
-e2e:
+e2e: bin
+ifeq ($(RUNNER),kops)
 	./hack/e2e/run.sh
+else ifeq ($(RUNNER),kind)
+	./hack/start-dev-env-dynamicfile.sh
+	./hack/stop-dev-env.sh
+else
+	echo "make e2e RUNNER=[kops|kind]"
+endif
 
 .PHONY: format
 format:
