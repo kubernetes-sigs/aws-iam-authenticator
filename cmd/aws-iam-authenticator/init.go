@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"os"
 
+	"sigs.k8s.io/aws-iam-authenticator/pkg"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -30,25 +33,39 @@ var initCmd = &cobra.Command{
 	Short: "Pre-generate certificate, private key, and kubeconfig files for the server.",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("Authenticator Version: %q, %q\n", pkg.Version, pkg.CommitID)
 		cfg, err := getConfig()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get config: %v\n", err)
 			os.Exit(1)
 		}
 
-		localCfg := cfg
-		localCfg.GenerateKubeconfigPath = "aws-iam-authenticator.kubeconfig"
-		localCfg.StateDir = "./"
+		if featureGates.Enabled(config.ConfiguredInitDirectories) {
+			if err := cfg.GenerateFiles(); err != nil {
 
-		err = localCfg.GenerateFiles()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not initialize: %v\n", err)
-			os.Exit(1)
+				fmt.Fprintf(os.Stderr, "could not initialize: %v\n", err)
+				os.Exit(1)
+			}
+
+			logrus.Infof("certificate generated at %s on kubernetes master node(s)", cfg.CertPath())
+			logrus.Infof("key generated at %s on kubernetes master node(s)", cfg.KeyPath())
+			logrus.Infof("kubeconfig generated at %s on kubernetes master node(s)", cfg.GenerateKubeconfigPath)
+		} else {
+			deprecatedCfg := cfg
+			deprecatedCfg.GenerateKubeconfigPath = "aws-iam-authenticator.kubeconfig"
+			deprecatedCfg.StateDir = "./"
+
+			err = deprecatedCfg.GenerateFiles()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "could not initialize: %v\n", err)
+				os.Exit(1)
+			}
+
+			logrus.Infof("copy %s to %s on kubernetes master node(s)", deprecatedCfg.CertPath(), cfg.CertPath())
+			logrus.Infof("copy %s to %s on kubernetes master node(s)", deprecatedCfg.KeyPath(), cfg.KeyPath())
+			logrus.Infof("copy %s to %s on kubernetes master node(s)", deprecatedCfg.GenerateKubeconfigPath, cfg.GenerateKubeconfigPath)
 		}
 
-		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.CertPath(), cfg.CertPath())
-		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.KeyPath(), cfg.KeyPath())
-		logrus.Infof("copy %s to %s on kubernetes master node(s)", localCfg.GenerateKubeconfigPath, cfg.GenerateKubeconfigPath)
 		logrus.Infof("configure your apiserver with `--authentication-token-webhook-config-file=%s` to enable authentication with aws-iam-authenticator", cfg.GenerateKubeconfigPath)
 	},
 }

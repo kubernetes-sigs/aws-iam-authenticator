@@ -69,6 +69,8 @@ func init() {
 
 	featureGates.Add(config.DefaultFeatureGates)
 	featureGates.AddFlag(rootCmd.PersistentFlags())
+
+	viper.BindPFlag("feature-gates", rootCmd.PersistentFlags().Lookup("feature-gates"))
 }
 
 func initConfig() {
@@ -84,6 +86,7 @@ func initConfig() {
 }
 
 func getConfig() (config.Config, error) {
+
 	cfg := config.Config{
 		PartitionID:                       viper.GetString("server.partition"),
 		ClusterID:                         viper.GetString("clusterID"),
@@ -100,6 +103,7 @@ func getConfig() (config.Config, error) {
 		EC2DescribeInstancesQps:           viper.GetInt("server.ec2DescribeInstancesQps"),
 		EC2DescribeInstancesBurst:         viper.GetInt("server.ec2DescribeInstancesBurst"),
 		ScrubbedAWSAccounts:               viper.GetStringSlice("server.scrubbedAccounts"),
+		DynamicFilePath:                   viper.GetString("server.dynamicfilepath"),
 	}
 	if err := viper.UnmarshalKey("server.mapRoles", &cfg.RoleMappings); err != nil {
 		return cfg, fmt.Errorf("invalid server role mappings: %v", err)
@@ -109,6 +113,10 @@ func getConfig() (config.Config, error) {
 	}
 	if err := viper.UnmarshalKey("server.mapAccounts", &cfg.AutoMappedAWSAccounts); err != nil {
 		logrus.WithError(err).Fatal("invalid server account mappings")
+	}
+
+	if featureGates.Enabled(config.ConfiguredInitDirectories) {
+		logrus.Info("ConfiguredInitDirectories feature enabled")
 	}
 
 	if cfg.ClusterID == "" {
@@ -123,6 +131,20 @@ func getConfig() (config.Config, error) {
 	}
 	if _, ok := partitionMap[cfg.PartitionID]; !ok {
 		return cfg, errors.New("Invalid partition")
+	}
+
+	// DynamicFile BackendMode and DynamicFilePath are mutually inclusive.
+	var dynamicFileModeSet bool
+	for _, mode := range cfg.BackendMode {
+		if mode == mapper.ModeDynamicFile {
+			dynamicFileModeSet = true
+		}
+	}
+	if dynamicFileModeSet && cfg.DynamicFilePath == "" {
+		logrus.Fatal("dynamicfile is set in backend-mode but dynamicfilepath is not set")
+	}
+	if !dynamicFileModeSet && cfg.DynamicFilePath != "" {
+		logrus.Fatal("dynamicfile is not set in backend-mode but dynamicfilepath is set")
 	}
 
 	if errs := mapper.ValidateBackendMode(cfg.BackendMode); len(errs) > 0 {

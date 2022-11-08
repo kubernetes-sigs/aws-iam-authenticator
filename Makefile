@@ -99,6 +99,17 @@ test:
 integration:
 	./hack/test-integration.sh
 
+.PHONY: e2e
+e2e: bin
+ifeq ($(RUNNER),kops)
+	./hack/e2e/run.sh
+else ifeq ($(RUNNER),kind)
+	./hack/start-dev-env-dynamicfile.sh
+	./hack/stop-dev-env.sh
+else
+	echo "make e2e RUNNER=[kops|kind]"
+endif
+
 .PHONY: format
 format:
 	test -z "$$(find . -path ./vendor -prune -type f -o -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)" || \
@@ -126,6 +137,14 @@ start-dev: bin
 .PHONY: stop-dev
 stop-dev:
 	./hack/stop-dev-env.sh 
+
+.PHONY: start-dev-dynamicfile-e2e
+start-dev-dynamicfile:
+	./hack/start-dev-env-dynamicfile.sh
+
+.PHONY: stop-dev-dynamicfile-e2e
+stop-dev-dynamicfile:
+	./hack/stop-dev-env.sh
 
 # Use make kill-dev when you want to remove a dev environment
 # and clean everything up in preparation for creating another
