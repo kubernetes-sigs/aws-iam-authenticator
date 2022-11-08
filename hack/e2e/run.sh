@@ -20,6 +20,17 @@ BASE_DIR=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
 source "${BASE_DIR}"/kops.sh
 source "${BASE_DIR}"/aws.sh
 
+KOPS_USERID=$(whoami)
+#detect if run on github and set var accordingly
+if [ $CI = true ]
+then
+  REPO_NAME=${REPO_NAME:-aws-iam-authenticator-e2e}
+  KOPS_STATE_BUCKET=${KOPS_STATE_BUCKET:-k8s-kops-auth-e2e}
+else
+  REPO_NAME=${REPO_NAME:-aws-iam-authenticator}
+  KOPS_STATE_BUCKET=${KOPS_STATE_BUCKET:-k8s-kops-auth-${KOPS_USERID}}
+fi
+
 TEST_ID=${TEST_ID:-$RANDOM}
 CLUSTER_NAME=test-cluster-${TEST_ID}.k8s.local
 CLUSTER_TYPE=kops
@@ -39,7 +50,6 @@ INSTANCE_TYPE=${INSTANCE_TYPE:-c5.large}
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 USER_ARN=$(aws sts get-caller-identity --query Arn --output text)
-REPO_NAME=${REPO_NAME:-aws-iam-authenticator-e2e}
 ECR_URL=${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
 IMAGE_NAME=${IMAGE_NAME:-${ECR_URL}/${REPO_NAME}}
 IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
@@ -47,7 +57,7 @@ IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 K8S_VERSION=${K8S_VERSION:-1.22.10}
 
 KOPS_VERSION=${KOPS_VERSION:-1.23.0}
-KOPS_STATE_BUCKET=${KOPS_STATE_BUCKET:-k8s-kops-auth-e2e}
+
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://${KOPS_STATE_BUCKET}}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-${BASE_DIR}/kops-patch.yaml}
 

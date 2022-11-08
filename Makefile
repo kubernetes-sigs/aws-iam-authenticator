@@ -19,6 +19,11 @@ BIN_ARCH_LINUX ?= amd64 arm64
 BIN_ARCH_WINDOWS ?= amd64
 BIN_ARCH_DARWIN ?= amd64
 
+#CI is defined in test-infra https://github.com/kubernetes/test-infra/blob/2e3dd84399745eb49cef69afc3ed5bded8a6580c/prow/pod-utils/downwardapi/jobspec.go#L89
+# and passed in when running on github prow
+CI ?= false
+RUNNER ?= kops
+
 ALL_LINUX_BIN_TARGETS = $(foreach arch,$(BIN_ARCH_LINUX),$(OUTPUT)/bin/aws-iam-authenticator_$(VERSION)_linux_$(arch))
 ALL_WINDOWS_BIN_TARGETS = $(foreach arch,$(BIN_ARCH_WINDOWS),$(OUTPUT)/bin/aws-iam-authenticator_$(VERSION)_windows_$(arch).exe)
 ALL_DARWIN_BIN_TARGETS = $(foreach arch,$(BIN_ARCH_DARWIN),$(OUTPUT)/bin/aws-iam-authenticator_$(VERSION)_darwin_$(arch))
@@ -102,7 +107,7 @@ integration:
 .PHONY: e2e
 e2e: bin
 ifeq ($(RUNNER),kops)
-	./hack/e2e/run.sh
+	CI=$(CI) ./hack/e2e/run.sh
 else ifeq ($(RUNNER),kind)
 	./hack/start-dev-env-dynamicfile.sh
 	./hack/stop-dev-env.sh
