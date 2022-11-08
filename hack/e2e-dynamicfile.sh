@@ -116,6 +116,11 @@ function e2e_dynamicfile(){
   fi
 }
 
+echo "start end to end testing for mountfile mode"
+e2e_mountfile
+echo "starting end to end testing for dynamicfile mode"
+e2e_dynamicfile
+
 
 
 
