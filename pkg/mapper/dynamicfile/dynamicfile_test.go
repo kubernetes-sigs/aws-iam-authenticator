@@ -22,7 +22,7 @@ func makeStore() DynamicFileMapStore {
 		filename:    "test.txt",
 	}
 	ms.users["arn:aws:iam::012345678912:user/matt"] = testUser
-	ms.roles["arn:aws:iam::012345678912:role/comp*"] = testRole
+	ms.roles["arn:aws:iam::012345678912:role/computer"] = testRole
 	ms.awsAccounts["123"] = nil
 	return ms
 }

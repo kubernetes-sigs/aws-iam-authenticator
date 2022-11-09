@@ -90,19 +90,11 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 	}
 
 	for _, mapping := range c.RoleMappings {
-		if mapping.RoleARN != "" {
-			logrus.WithFields(logrus.Fields{
-				"role":     mapping.RoleARN,
-				"username": mapping.Username,
-				"groups":   mapping.Groups,
-			}).Infof("mapping IAM role")
-		} else if mapping.SSO != nil {
-			logrus.WithFields(logrus.Fields{
-				"sso":      *mapping.SSO,
-				"username": mapping.Username,
-				"groups":   mapping.Groups,
-			}).Infof("mapping IAM role")
-		}
+		logrus.WithFields(logrus.Fields{
+			"role":     mapping.RoleARN,
+			"username": mapping.Username,
+			"groups":   mapping.Groups,
+		}).Infof("mapping IAM role")
 	}
 	for _, mapping := range c.UserMappings {
 		logrus.WithFields(logrus.Fields{
