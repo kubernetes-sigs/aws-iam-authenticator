@@ -38,7 +38,6 @@ ADMIN_ARN=$(aws sts get-caller-identity --query Arn --output text)
 REPO_NAME=${REPO_NAME:-aws-iam-authenticator}
 
 source "${REPO_ROOT}/hack/lib/dev-env.sh"
-source "${REPO_ROOT}/hack/e2e-dynamicfile.sh"
 
 make image
 LOCAL_IMAGE_TAG=$(docker images | awk '{print $2}' | awk 'NR==2')
@@ -56,7 +55,3 @@ write_kind_config
 create_kind_cluster
 certificate_authority_data="$(extract_certificate_authority_data)"
 write_kubectl_kubeconfig
-echo "start end to end testing for mountfile mode"
-e2e_mountfile
-echo "starting end to end testing for dynamicfile mode"
-e2e_dynamicfile
