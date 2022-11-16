@@ -110,6 +110,7 @@ ifeq ($(RUNNER),kops)
 	CI=$(CI) ./hack/e2e/run.sh
 else ifeq ($(RUNNER),kind)
 	./hack/start-dev-env-dynamicfile.sh
+	CI=$(CI) ./hack/e2e-dynamicfile.sh
 	./hack/stop-dev-env.sh
 else
 	echo "make e2e RUNNER=[kops|kind]"
