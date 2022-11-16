@@ -45,6 +45,7 @@ AUTHENTICATOR_IMAGE="${REPO_NAME}":"${LOCAL_IMAGE_TAG}"
 
 echo ${ADMIN_ARN} ${AUTHENTICATOR_IMAGE}
 
+install_kind
 create_network
 write_authenticator_with_dynamicfile_mode_config
 start_authenticator_with_dynamicfile
