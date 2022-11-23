@@ -68,7 +68,7 @@ KUBECONFIG_UPDATE_FILE=${KUBECONFIG_UPDATE_FILE:-${BASE_DIR}/kubeconfig-update.y
 
 KUBECTL_VERSION=${KUBECTL_VERSION:-1.24.0}
 
-TEST_PATH=${TEST_PATH:-"./tests/e2e/..."}
+TEST_PATH=${TEST_PATH:-"./..."}
 ARTIFACTS=${ARTIFACTS:-"${TEST_DIR}/artifacts"}
 GINKGO_FOCUS=${GINKGO_FOCUS:-"\[iam-auth-e2e\]"}
 GINKGO_SKIP=${GINKGO_SKIP:-"\[Disruptive\]"}
@@ -240,8 +240,10 @@ loudecho "Testing focus ${GINKGO_FOCUS}"
 eval "EXPANDED_TEST_EXTRA_FLAGS=$TEST_EXTRA_FLAGS"
 set -x
 set +e
+pushd tests/e2e
 BASE_DIR=${BASE_DIR} CLUSTER_NAME=${CLUSTER_NAME} ADMIN_ROLE=${ADMIN_ROLE} AUTHENTICATOR_BIN=${AUTHENTICATOR_BIN} USER_ROLE=${USER_ROLE} ${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG_ADMIN}" -report-dir="${ARTIFACTS}" -gce-zone="${FIRST_ZONE}" "${EXPANDED_TEST_EXTRA_FLAGS}"
 TEST_PASSED=$?
+popd
 set -e
 set +x
 loudecho "TEST_PASSED: ${TEST_PASSED}"
