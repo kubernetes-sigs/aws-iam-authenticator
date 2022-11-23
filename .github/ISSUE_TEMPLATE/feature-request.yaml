@@ -1,0 +1,29 @@
+name: Feature Request
+description: Submit an enhancement or feature request to aws-iam-authenticator
+title: "[Feature request]: "
+labels: ["kind/feature", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please use this template to submit a feature request
+  - type: textarea
+    id: what-you-want
+    attributes:
+      label: What would you like to be added?
+      placeholder: Tell us what you would like to see!
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is this needed?
+      placeholder: Tell us why you want to see this!
+    validations:
+      required: true
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else we need to know?
+    validations:
+      required: false
