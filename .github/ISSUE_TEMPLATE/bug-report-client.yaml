@@ -1,0 +1,81 @@
+name: Client Bug Report
+description: Report a bug encountered while using AWS IAM Authenticator client
+title: "[Bug]: "
+labels: ["kind/bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please use this template while reporting a client bug and provide as much info as possible. Not doing so may result in your bug not being addressed in a timely manner. Thanks!
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      placeholder: Tell us what you see!
+      value: "A bug happened!"
+    validations:
+      required: true
+  - type: textarea
+    id: what-did-you-expect
+    attributes:
+      label: What you expected to happen?
+      placeholder: Tell us what you want to see!
+      value: "A bug happened!"
+    validations:
+      required: true
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else we need to know?
+    validations:
+      required: false
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation tooling
+      description: How did you install aws-iam-authenticator?
+      options:
+        - homebrew
+        - go install
+        - other (please specify in description)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: AWS IAM Authenticator client version
+      description: What version of the aws-iam-authenticator are you running?
+      placeholder: Output from `aws-iam-authenticator version`
+    validations:
+      required: true
+  - type: textarea
+    id: client
+    attributes:
+      label: Client information
+      description: |
+        examples:
+          - **OS/arch**: Ubuntu 20.04 x86 or macOS 12.5.1 intel
+          - **kubernetes client & version**: kubectl or kubelet
+      value: |
+        - OS/arch:
+        - kubernetes client & version:
+      render: Markdown
+    validations:
+      required: true
+  - type: input
+    id: k8s-version
+    attributes:
+      label: Kubernetes API Version
+      description: What version of the Kubernetes API are you running?
+      placeholder: Output from `kubectl version`
+    validations:
+      required: true
+  - type: textarea
+    id: kubeconfig
+    attributes:
+      label: kubeconfig user
+      description: |
+        Please copy and paste the kubeconfig JSON from `kubectl config view --minify -o jsonpath-as-json="{.users[0]}" `.
+        This will be automatically formatted into JSON, so no need for backticks.
+        If you wish to redact any fields such as cluster name, replace with "REDACTED"
+      render: JSON
