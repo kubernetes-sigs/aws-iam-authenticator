@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ARG image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-12-01-1638322424
+ARG golang_image=public.ecr.aws/eks-distro-build-tooling/golang:1.19-gcc
 
-FROM --platform=$BUILDPLATFORM golang:1.16 AS builder
+FROM --platform=$BUILDPLATFORM $golang_image AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-iam-authenticator
 COPY . .
 RUN go mod download
