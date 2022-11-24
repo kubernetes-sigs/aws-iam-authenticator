@@ -77,16 +77,26 @@ $(MAKE) $(OUTPUT)/bin/aws-iam-authenticator_$(VERSION)_$(1)_$(2)$(3) GOOS=$(1) G
 
 endef
 
+define build-liunx-bin
+$(MAKE) $(OUTPUT)/bin/aws-iam-authenticator_$(2)$(3) GOOS=$(1) GOARCH=$(2)
+
+endef
+
 .PHONY: build-all-bins
 build-all-bins:
 	$(foreach arch,$(BIN_ARCH_LINUX),$(call build-bin,linux,$(arch),))
 	$(foreach arch,$(BIN_ARCH_WINDOWS),$(call build-bin,windows,$(arch),.exe))
 	$(foreach arch,$(BIN_ARCH_DARWIN),$(call build-bin,darwin,$(arch),))
 
+
+.PHONY: build-linux-bins
+build-linux-bins:
+	$(foreach arch,$(BIN_ARCH_LINUX),$(call build-liunx-bin,linux,$(arch),))
+
 .PHONY: image
 image:
-	docker buildx build --output=type=docker --platform linux/amd64 \
-		--tag aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(BUILD_DATE_STRIPPED) .
+	docker buildx build --platform linux/arm64,linux/amd64 \
+		-t aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(BUILD_DATE_STRIPPED) . --push
 
 .PHONY: goreleaser
 goreleaser:
