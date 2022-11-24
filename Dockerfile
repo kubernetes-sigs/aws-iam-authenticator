@@ -14,7 +14,6 @@
 ARG image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-12-01-1638322424
 ARG golang_image=public.ecr.aws/eks-distro-build-tooling/golang:1.19-gcc
 
-
 FROM --platform=$BUILDPLATFORM $golang_image AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-iam-authenticator
 COPY . .
