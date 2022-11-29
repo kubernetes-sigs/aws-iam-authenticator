@@ -27,6 +27,8 @@ OUTPUT="${OUTPUT:-${REPO_ROOT}/_output}"
 policies_template="${REPO_ROOT}/hack/dev/policies.template"
 access_entry_template="${REPO_ROOT}/hack/dev/access-entries.template"
 policies_json="${OUTPUT}/dev/authenticator/policies.json"
+allow_assume_role_policies_template="${REPO_ROOT}/hack/dev/allow_assume_role_policy.template"
+allow_assume_role_policies_json="${OUTPUT}/dev/authenticator/allow_assume_role_policy.json"
 access_entry_tmp="${OUTPUT}/dev/authenticator/access-entry/access-entries.tmp"
 access_entry_json="${OUTPUT}/dev/authenticator/access-entry/access-entries.json"
 client_dir="${OUTPUT}/dev/client"
@@ -57,10 +59,35 @@ function e2e_dynamicfile(){
   RoleOutput=$(aws iam get-role --role-name authenticator-dev-cluster-testrole 2>/dev/null)
 
   if [ -z "$RoleOutput" ]; then
-    sed -e "s|{{AWS_ACCOUNT}}|${AWS_ACCOUNT}|g" \
-            "${policies_template}" > "${policies_json}"
-    aws iam create-role --role-name ${AWS_TEST_ROLE} --assume-role-policy-document file://${policies_json} 1>/dev/null
-    sleep 10
+      sed -e "s|{{AWS_ACCOUNT}}|${AWS_ACCOUNT}|g" \
+              "${policies_template}" > "${policies_json}"
+      sleep 2
+      aws iam create-role --role-name ${AWS_TEST_ROLE} --assume-role-policy-document file://${policies_json} 1>/dev/null
+      sleep 10
+  fi
+
+  #detect if run on github and allow the test account to assume role accordingly
+  if [ $CI = true ]
+      then
+          OUT=$(aws iam list-attached-user-policies --user-name awstester)
+          echo $OUT
+          if [ -z "$OUT" ]
+              then
+                  OUT=$(aws iam list-policies|grep allow-assume-role|grep Arn| awk '{print $2}')
+                  if [ -z "$OUT" ]; then
+                      sed -e "s|{{AWS_ACCOUNT}}|${AWS_ACCOUNT}|g" \
+                          "${allow_assume_role_policies_template}" > "${allow_assume_role_policies_json}"
+                      sleep 2
+                      OUT=$(aws iam create-policy --policy-name allow-assume-role --policy-document file://${allow_assume_role_policies_json})
+                      policy_arn=$(echo $OUT| jq -r '.Policy.Arn')
+                  else
+                      policy_arn=$(echo ${OUT%?} | sed 's/\"//g')
+                  fi
+                  echo ${policy_arn}
+                  OUT=$(aws iam attach-user-policy --policy-arn ${policy_arn} --user-name awstester)
+                  echo $OUT
+                  echo $(aws iam get-user)
+          fi
   fi
 
   set -e
@@ -115,6 +142,11 @@ function e2e_dynamicfile(){
           exit 1
   fi
 }
+
+echo "start end to end testing for mountfile mode"
+e2e_mountfile
+echo "starting end to end testing for dynamicfile mode"
+e2e_dynamicfile
 
 
 
