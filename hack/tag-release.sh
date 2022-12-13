@@ -21,6 +21,21 @@ if [[ ! "${VERSION}" =~ ^([0-9]+[.][0-9]+)[.]([0-9]+)(-(alpha|beta)[.]([0-9]+))?
   exit 1
 fi
 
+BRANCH=$(git branch --show-current)
+
+if [[ ! "${BRANCH}" =~ ^(release-)([0-9]+[.][0-9]+)$ ]]; then
+    echo "Automatic tag creation must take place on a release branch."
+    exit 1
+fi
+
+BRANCH_MAJ_MIN=${BRANCH#release-}
+VERSION_MAJ_MIN=$(echo ${VERSION} | sed -Ee 's/-(alpha|beta)\.[0-9]+$//' | sed -Ee 's/\.[0-9]+$//')
+
+if [[ ! "${BRANCH_MAJ_MIN}" = $VERSION_MAJ_MIN ]]; then
+    echo "Major minor version of tag must match major minor version of branch."
+    exit 1
+fi
+
 if [ "$(git tag -l "v${VERSION}")" ]; then
   echo "Tag v${VERSION} already exists"
   exit 0
