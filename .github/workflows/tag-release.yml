@@ -3,7 +3,6 @@ name: tag-release
 on:
   push:
     branches:
-      - master
       - 'release-*'
     paths:
       - version.txt
