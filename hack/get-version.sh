@@ -1,3 +1,5 @@
+#!/bin/bash -xe
+
 # Copyright 2022 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,11 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-ARG image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2021-12-01-1638322424
 
-FROM public.ecr.aws/eks-distro/kubernetes/go-runner:v0.9.0-eks-1-21-4 as go-runner
+VERSION=$(cat version.txt)
 
-FROM $image
-COPY --from=go-runner /usr/local/bin/go-runner /usr/local/bin/go-runner
-COPY aws-iam-authenticator /aws-iam-authenticator
-ENTRYPOINT ["/aws-iam-authenticator"]
+printerr() { echo "$@" 1>&2; }
+
+if [[ ! "${VERSION}" =~ ^([0-9]+[.][0-9]+)[.]([0-9]+)(-(alpha|beta)[.]([0-9]+))?$ ]]; then
+  printerr "Version ${VERSION} must be 'X.Y.Z', 'X.Y.Z-alpha.N', or 'X.Y.Z-beta.N'"
+  exit 1
+fi
+
+echo "v${VERSION}"
