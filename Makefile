@@ -19,6 +19,11 @@ BIN_ARCH_LINUX ?= amd64 arm64
 BIN_ARCH_WINDOWS ?= amd64
 BIN_ARCH_DARWIN ?= amd64
 
+#CI is defined in test-infra https://github.com/kubernetes/test-infra/blob/2e3dd84399745eb49cef69afc3ed5bded8a6580c/prow/pod-utils/downwardapi/jobspec.go#L89
+# and passed in when running on github prow
+CI ?= false
+RUNNER ?= kops
+
 ALL_LINUX_BIN_TARGETS = $(foreach arch,$(BIN_ARCH_LINUX),$(OUTPUT)/bin/aws-iam-authenticator_$(VERSION)_linux_$(arch))
 ALL_WINDOWS_BIN_TARGETS = $(foreach arch,$(BIN_ARCH_WINDOWS),$(OUTPUT)/bin/aws-iam-authenticator_$(VERSION)_windows_$(arch).exe)
 ALL_DARWIN_BIN_TARGETS = $(foreach arch,$(BIN_ARCH_DARWIN),$(OUTPUT)/bin/aws-iam-authenticator_$(VERSION)_darwin_$(arch))
@@ -100,8 +105,16 @@ integration:
 	./hack/test-integration.sh
 
 .PHONY: e2e
-e2e:
-	./hack/e2e/run.sh
+e2e: bin
+ifeq ($(RUNNER),kops)
+	CI=$(CI) ./hack/e2e/run.sh
+else ifeq ($(RUNNER),kind)
+	./hack/start-dev-env-dynamicfile.sh
+	CI=$(CI) ./hack/e2e-dynamicfile.sh
+	./hack/stop-dev-env.sh
+else
+	echo "make e2e RUNNER=[kops|kind]"
+endif
 
 .PHONY: format
 format:
@@ -129,6 +142,14 @@ start-dev: bin
 
 .PHONY: stop-dev
 stop-dev:
+	./hack/stop-dev-env.sh
+
+.PHONY: start-dev-dynamicfile-e2e
+start-dev-dynamicfile:
+	./hack/start-dev-env-dynamicfile.sh
+
+.PHONY: stop-dev-dynamicfile-e2e
+stop-dev-dynamicfile:
 	./hack/stop-dev-env.sh
 
 # Use make kill-dev when you want to remove a dev environment
