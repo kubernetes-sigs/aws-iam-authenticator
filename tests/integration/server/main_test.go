@@ -18,9 +18,10 @@ package server
 
 import (
 	"flag"
+	"fmt"
+	"os"
 	"testing"
-
-	"k8s.io/kubernetes/test/integration/framework"
+	_ "unsafe"
 )
 
 var (
@@ -29,10 +30,21 @@ var (
 	testArtifactsDir        string
 )
 
+//go:linkname startEtcd k8s.io/kubernetes/test/integration/framework.startEtcd
+func startEtcd() (func(), error)
+
 func TestMain(m *testing.M) {
 	flag.StringVar(&authenticatorBinaryPath, "authenticator-binary-path", "/usr/local/bin/aws-iam-authenticator", "Location of the aws-iam-authenticator binary to test with.")
 	flag.StringVar(&roleARN, "role-arn", "", "ARN of role to be authenticated in the test. This role ARN is added to the configmap and it should be assumable by the test run.")
 	flag.StringVar(&testArtifactsDir, "test-artifacts-dir", "", "Directory used for artifacts generated from test runs.")
 
-	framework.EtcdMain(m.Run)
+	flag.Parse()
+	stop, err := startEtcd()
+	if err != nil {
+		fmt.Printf("unable to start etcd: %v\n", err)
+		os.Exit(1)
+	}
+	result := m.Run()
+	stop() // Don't defer this. See os.Exit documentation.
+	os.Exit(result)
 }
