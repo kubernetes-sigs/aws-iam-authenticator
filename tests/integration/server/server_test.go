@@ -13,11 +13,8 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-
-	adminClient, execClient := testutils.StartAuthenticatorTestFramework(
-		t, stopCh, testutils.AuthenticatorTestFrameworkSetup{
+	adminClient, execClient, tearDownFn := testutils.StartAuthenticatorTestFramework(
+		t, testutils.AuthenticatorTestFrameworkSetup{
 			ModifyAuthenticatorServerConfig: func(*config.Config) {},
 			AuthenticatorClientBinaryPath:   authenticatorBinaryPath,
 			TestArtifacts:                   testArtifactsDir,
@@ -26,6 +23,7 @@ func TestServer(t *testing.T) {
 			RoleArn:                         roleARN,
 		},
 	)
+	defer tearDownFn()
 
 	t.Log("Creating aws-auth")
 	userName := "test-user"
