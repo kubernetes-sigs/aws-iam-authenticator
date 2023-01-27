@@ -1,15 +1,15 @@
 options:
   substitution_option: ALLOW_LOOSE
 steps:
-  - name: gcr.io/k8s-testimages/gcb-docker-gcloud
+  - name: gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20221214-1b4dd4d69a
     entrypoint: /buildx-entrypoint
     args:
-    - build
-    - --tag=gcr.io/$PROJECT_ID/aws-iam-authenticator:$_GIT_TAG
-    - --tag=gcr.io/$PROJECT_ID/aws-iam-authenticator:latest
-    - --platform=linux/amd64,linux/arm64
-    - --output=type=registry
-    - .
+      - build
+      - --tag=gcr.io/$PROJECT_ID/aws-iam-authenticator:$_GIT_TAG
+      - --tag=gcr.io/$PROJECT_ID/aws-iam-authenticator:latest
+      - --platform=linux/amd64,linux/arm64
+      - --output=type=registry
+      - .
 substitutions:
   _GIT_TAG: '12345'
   _PULL_BASE_REF: 'master'
