@@ -12,6 +12,8 @@ builds:
     goarch:
       - amd64
       - arm64
+      - ppc64le
+      - s390x
     ignore:
       - goos: windows
         goarch: arm64
@@ -19,30 +21,6 @@ builds:
       - CGO_ENABLED=0
     ldflags:
       - "-s -w -X sigs.k8s.io/aws-iam-authenticator/pkg.Version={{.Version}} -X sigs.k8s.io/aws-iam-authenticator/pkg.CommitID={{.Commit}} -buildid=''"
-
-dockers:
-  - use: buildx
-    goarch: amd64
-    goos: linux
-    build_flag_templates:
-    - "--platform=linux/amd64"
-    dockerfile: Dockerfile.goreleaser
-    image_templates:
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amd64"
-  - use: buildx
-    goarch: arm64
-    goos: linux
-    build_flag_templates:
-    - "--platform=linux/arm64"
-    dockerfile: Dockerfile.goreleaser
-    image_templates:
-     - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-arm64"
-
-docker_manifests:
-  - name_template: "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}"
-    image_templates:
-      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-amd64"
-      - "602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:{{ .Tag }}-arm64"
 
 snapshot:
   name_template: "git-{{.ShortCommit}}"

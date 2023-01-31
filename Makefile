@@ -3,7 +3,7 @@ default: bin/aws-iam-authenticator
 PKG ?= sigs.k8s.io/aws-iam-authenticator
 GORELEASER := $(shell command -v goreleaser 2> /dev/null)
 
-VERSION ?= v0.6.0
+VERSION ?= $(shell $(shell pwd)/hack/get-version.sh)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 GOPROXY ?= $(shell go env GOPROXY)
@@ -18,6 +18,11 @@ CHECKSUM_FILE ?= $(OUTPUT)/bin/authenticator_$(VERSION)_checksums.txt
 BIN_ARCH_LINUX ?= amd64 arm64
 BIN_ARCH_WINDOWS ?= amd64
 BIN_ARCH_DARWIN ?= amd64
+
+#CI is defined in test-infra https://github.com/kubernetes/test-infra/blob/2e3dd84399745eb49cef69afc3ed5bded8a6580c/prow/pod-utils/downwardapi/jobspec.go#L89
+# and passed in when running on github prow
+CI ?= false
+RUNNER ?= kops
 
 ALL_LINUX_BIN_TARGETS = $(foreach arch,$(BIN_ARCH_LINUX),$(OUTPUT)/bin/aws-iam-authenticator_$(VERSION)_linux_$(arch))
 ALL_WINDOWS_BIN_TARGETS = $(foreach arch,$(BIN_ARCH_WINDOWS),$(OUTPUT)/bin/aws-iam-authenticator_$(VERSION)_windows_$(arch).exe)
@@ -100,8 +105,16 @@ integration:
 	./hack/test-integration.sh
 
 .PHONY: e2e
-e2e:
-	./hack/e2e/run.sh
+e2e: bin
+ifeq ($(RUNNER),kops)
+	CI=$(CI) ./hack/e2e/run.sh
+else ifeq ($(RUNNER),kind)
+	./hack/start-dev-env-dynamicfile.sh
+	CI=$(CI) ./hack/e2e-dynamicfile.sh
+	./hack/stop-dev-env.sh
+else
+	echo "make e2e RUNNER=[kops|kind]"
+endif
 
 .PHONY: format
 format:
