@@ -27,6 +27,12 @@ func newConfig() config.Config {
 				Username: "cookie-cutter",
 				Groups:   []string{"system:masters"},
 			},
+			{
+				// test compatibility with eks
+				RoleARN:  "arn:aws:sts::012345678910:assumed-role/test-assumed-role/session-name",
+				Username: "test",
+				Groups:   []string{"system:masters"},
+			},
 		},
 		UserMappings: []config.UserMapping{
 			{
@@ -55,6 +61,11 @@ func TestNewFileMapper(t *testing.T) {
 					AccountID:         "012345678910",
 				},
 				Username: "cookie-cutter",
+				Groups:   []string{"system:masters"},
+			},
+			"arn:aws:iam::012345678910:role/test-assumed-role": {
+				RoleARN:  "arn:aws:iam::012345678910:role/test-assumed-role",
+				Username: "test",
 				Groups:   []string{"system:masters"},
 			},
 		},

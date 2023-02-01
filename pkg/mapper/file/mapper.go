@@ -28,6 +28,13 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 		if err != nil {
 			return nil, err
 		}
+		if m.RoleARN != "" {
+			canonicalizedARN, err := arn.Canonicalize(m.RoleARN)
+			if err != nil {
+				return nil, err
+			}
+			m.RoleARN = canonicalizedARN
+		}
 		fileMapper.roleMap[m.Key()] = m
 	}
 	for _, m := range cfg.UserMappings {
