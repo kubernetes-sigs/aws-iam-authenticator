@@ -665,6 +665,7 @@ func TestAuthenticateVerifierAccountMappingForUserCRD(t *testing.T) {
 			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
 			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
 			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
+			"principalId":  authenticationv1beta1.ExtraValue{"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
