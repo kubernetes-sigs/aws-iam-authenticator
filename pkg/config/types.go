@@ -57,6 +57,9 @@ type RoleMapping struct {
 	// Groups is a list of Kubernetes groups this role will authenticate
 	// as (e.g., `system:masters`). Each group name can include placeholders.
 	Groups []string `json:"groups" yaml:"groups"`
+
+	// UserId is the AWS PrincipalId of the role. (e.g., "ABCXSOTJDDV").
+	UserId string `json:"userid,omitempty" yaml:"userid,omitempty"`
 }
 
 // UserMapping is a static mapping of a single AWS User ARN to a
@@ -70,6 +73,9 @@ type UserMapping struct {
 
 	// Groups is a list of Kubernetes groups this role will authenticate as (e.g., `system:masters`)
 	Groups []string `json:"groups" yaml:"groups"`
+
+	// UserId is the AWS PrincipalId of the user. (e.g., "ABCXSOTJDDV").
+	UserId string `json:"userid,omitempty" yaml:"userid,omitempty"`
 }
 
 // SSOARNMatcher contains fields used to match Role ARNs that
@@ -171,4 +177,6 @@ type Config struct {
 	EC2DescribeInstancesBurst int
 	//Dynamic File Path for DynamicFile BackendMode
 	DynamicFilePath string
+	//use UserId for mapping, IdentityArn is not used any more when DynamicFileUserIDStrict=true
+	DynamicFileUserIDStrict bool
 }

@@ -2,6 +2,8 @@ package file
 
 import (
 	"fmt"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
+	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
@@ -44,13 +46,11 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 		}
 		var key string
 		if m.UserARN != "" {
-			canonicalizedARN, err := arn.Canonicalize(m.UserARN)
+			canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
 			if err != nil {
 				return nil, fmt.Errorf("error canonicalizing ARN: %v", err)
 			}
 			key = canonicalizedARN
-		} else {
-			key = m.Key()
 		}
 		fileMapper.userMap[key] = m
 	}
@@ -80,7 +80,8 @@ func (m *FileMapper) Start(_ <-chan struct{}) error {
 	return nil
 }
 
-func (m *FileMapper) Map(canonicalARN string) (*config.IdentityMapping, error) {
+func (m *FileMapper) Map(identity *token.Identity) (*config.IdentityMapping, error) {
+	canonicalARN := strings.ToLower(identity.CanonicalARN)
 	for _, roleMapping := range m.roleMap {
 		if roleMapping.Matches(canonicalARN) {
 			return &config.IdentityMapping{
@@ -90,17 +91,13 @@ func (m *FileMapper) Map(canonicalARN string) (*config.IdentityMapping, error) {
 			}, nil
 		}
 	}
-
-	for _, userMapping := range m.userMap {
-		if userMapping.Matches(canonicalARN) {
-			return &config.IdentityMapping{
-				IdentityARN: canonicalARN,
-				Username:    userMapping.Username,
-				Groups:      userMapping.Groups,
-			}, nil
-		}
+	if userMapping, exists := m.userMap[canonicalARN]; exists {
+		return &config.IdentityMapping{
+			IdentityARN: canonicalARN,
+			Username:    userMapping.Username,
+			Groups:      userMapping.Groups,
+		}, nil
 	}
-
 	return nil, mapper.ErrNotMapped
 }
 

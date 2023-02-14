@@ -3,6 +3,7 @@ package dynamicfile
 import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strings"
 )
 
@@ -13,7 +14,7 @@ type DynamicFileMapper struct {
 var _ mapper.Mapper = &DynamicFileMapper{}
 
 func NewDynamicFileMapper(cfg config.Config) (*DynamicFileMapper, error) {
-	ms, err := NewDynamicFileMapStore(cfg.DynamicFilePath)
+	ms, err := NewDynamicFileMapStore(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -29,10 +30,14 @@ func (m *DynamicFileMapper) Start(stopCh <-chan struct{}) error {
 	return nil
 }
 
-func (m *DynamicFileMapper) Map(canonicalARN string) (*config.IdentityMapping, error) {
-	canonicalARN = strings.ToLower(canonicalARN)
+func (m *DynamicFileMapper) Map(identity *token.Identity) (*config.IdentityMapping, error) {
+	canonicalARN := strings.ToLower(identity.CanonicalARN)
+	key := canonicalARN
+	if m.userIDStrict {
+		key = identity.UserID
+	}
 
-	rm, err := m.RoleMapping(canonicalARN)
+	rm, err := m.RoleMapping(key)
 	// TODO: Check for non Role/UserNotFound errors
 	if err == nil {
 		return &config.IdentityMapping{
@@ -42,7 +47,7 @@ func (m *DynamicFileMapper) Map(canonicalARN string) (*config.IdentityMapping, e
 		}, nil
 	}
 
-	um, err := m.UserMapping(canonicalARN)
+	um, err := m.UserMapping(key)
 	if err == nil {
 		return &config.IdentityMapping{
 			IdentityARN: canonicalARN,
