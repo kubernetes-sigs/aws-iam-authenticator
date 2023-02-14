@@ -93,6 +93,7 @@ const (
 	dateHeaderFormat   = "20060102T150405Z"
 	kindExecCredential = "ExecCredential"
 	execInfoEnvKey     = "KUBERNETES_EXEC_INFO"
+	stsServiceID       = "sts"
 )
 
 // Token is generated and used by Kubernetes client-go to authenticate with a Kubernetes cluster.
@@ -376,7 +377,7 @@ type tokenVerifier struct {
 	validSTShostnames map[string]bool
 }
 
-func stsHostsForPartition(partitionID string) map[string]bool {
+func stsHostsForPartition(partitionID, region string) map[string]bool {
 	validSTShostnames := map[string]bool{}
 
 	var partition *endpoints.Partition
@@ -390,12 +391,14 @@ func stsHostsForPartition(partitionID string) map[string]bool {
 		logrus.Errorf("Partition %s not valid", partitionID)
 		return validSTShostnames
 	}
-	stsSvc, ok := partition.Services()["sts"]
+
+	stsSvc, ok := partition.Services()[stsServiceID]
 	if !ok {
 		logrus.Errorf("STS service not found in partition %s", partitionID)
 		return validSTShostnames
 	}
-	for epName, ep := range stsSvc.Endpoints() {
+	stsSvcEndPoints := stsSvc.Endpoints()
+	for epName, ep := range stsSvcEndPoints {
 		rep, err := ep.ResolveEndpoint(endpoints.STSRegionalEndpointOption)
 		if err != nil {
 			logrus.WithError(err).Errorf("Error resolving endpoint for %s in partition %s", epName, partitionID)
@@ -408,11 +411,28 @@ func stsHostsForPartition(partitionID string) map[string]bool {
 		}
 		validSTShostnames[parsedURL.Hostname()] = true
 	}
+
+	// Add the host of the current instances region if not already exists so we don't fail if the region is not
+	// present in the go sdk but matches the instances region.
+	if _, ok := stsSvcEndPoints[region]; !ok {
+		rep, err := partition.EndpointFor(stsServiceID, region, endpoints.STSRegionalEndpointOption)
+		if err != nil {
+			logrus.WithError(err).Errorf("Error resolving endpoint for %s in partition %s", region, partitionID)
+			return validSTShostnames
+		}
+		parsedURL, err := url.Parse(rep.URL)
+		if err != nil {
+			logrus.WithError(err).Errorf("Error parsing STS URL %s", rep.URL)
+			return validSTShostnames
+		}
+		validSTShostnames[parsedURL.Hostname()] = true
+	}
+
 	return validSTShostnames
 }
 
 // NewVerifier creates a Verifier that is bound to the clusterID and uses the default http client.
-func NewVerifier(clusterID string, partitionID string) Verifier {
+func NewVerifier(clusterID, partitionID, region string) Verifier {
 	return tokenVerifier{
 		client: &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -420,7 +440,7 @@ func NewVerifier(clusterID string, partitionID string) Verifier {
 			},
 		},
 		clusterID:         clusterID,
-		validSTShostnames: stsHostsForPartition(partitionID),
+		validSTShostnames: stsHostsForPartition(partitionID, region),
 	}
 }
 
