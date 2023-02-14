@@ -3,6 +3,7 @@ package mapper
 import (
 	"errors"
 	"fmt"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -39,7 +40,7 @@ type Mapper interface {
 	Name() string
 	// Start must be non-blocking
 	Start(stopCh <-chan struct{}) error
-	Map(canonicalARN string) (*config.IdentityMapping, error)
+	Map(identity *token.Identity) (*config.IdentityMapping, error)
 	IsAccountAllowed(accountID string) bool
 }
 

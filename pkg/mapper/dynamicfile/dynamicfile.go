@@ -4,16 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/fsnotify/fsnotify"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"os"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"strings"
+	"sync"
+	"time"
 )
 
 type DynamicFileMapStore struct {
@@ -21,8 +20,9 @@ type DynamicFileMapStore struct {
 	users map[string]config.UserMapping
 	roles map[string]config.RoleMapping
 	// Used as set.
-	awsAccounts map[string]interface{}
-	filename    string
+	awsAccounts  map[string]interface{}
+	filename     string
+	userIDStrict bool
 }
 
 type DynamicFileData struct {
@@ -66,7 +66,7 @@ func (m *DynamicFileMapStore) loadDynamicFile() error {
 	}
 	logrus.Infof("LoadDynamicFile: %v is available. loading", m.filename)
 	// load the initial file content into memory
-	userMappings, roleMappings, awsAccounts, err := ParseMap(m.filename)
+	userMappings, roleMappings, awsAccounts, err := ParseMap(m)
 	if err != nil {
 		logrus.Errorf("LoadDynamicFile: There was an error parsing the dynamic file: %+v. Map is not updated. Please correct dynamic file", err)
 		return err
@@ -76,9 +76,10 @@ func (m *DynamicFileMapStore) loadDynamicFile() error {
 	return nil
 }
 
-func NewDynamicFileMapStore(filename string) (*DynamicFileMapStore, error) {
+func NewDynamicFileMapStore(cfg config.Config) (*DynamicFileMapStore, error) {
 	ms := DynamicFileMapStore{}
-	ms.filename = filename
+	ms.filename = cfg.DynamicFilePath
+	ms.userIDStrict = cfg.DynamicFileUserIDStrict
 	return &ms, nil
 }
 
@@ -127,11 +128,11 @@ func (m *DynamicFileMapStore) startLoadDynamicFile(stopCh <-chan struct{}) {
 	}, time.Second, stopCh)
 }
 
-func ParseMap(filename string) (userMappings []config.UserMapping, roleMappings []config.RoleMapping, awsAccounts []string, err error) {
+func ParseMap(m *DynamicFileMapStore) (userMappings []config.UserMapping, roleMappings []config.RoleMapping, awsAccounts []string, err error) {
 	errs := make([]error, 0)
 	userMappings = make([]config.UserMapping, 0)
 	roleMappings = make([]config.RoleMapping, 0)
-
+	filename := m.filename
 	dynamicContent, err := os.ReadFile(filename)
 	if err != nil {
 		logrus.Errorf("ParseMap: could not read from dynamic file")
@@ -149,16 +150,24 @@ func ParseMap(filename string) (userMappings []config.UserMapping, roleMappings 
 	}
 
 	for _, userMapping := range dynamicFileData.UserMappings {
-		if userMapping.UserARN == "" {
-			errs = append(errs, fmt.Errorf("Value for userarn must be supplied"))
+		key := userMapping.UserARN
+		if m.userIDStrict {
+			key = userMapping.UserId
+		}
+		if key == "" {
+			errs = append(errs, fmt.Errorf("Value for userarn or userid(if dynamicfileUserIDStrict = true) must be supplied"))
 		} else {
 			userMappings = append(userMappings, userMapping)
 		}
 	}
 
 	for _, roleMapping := range dynamicFileData.RoleMappings {
-		if roleMapping.RoleARN == "" {
-			errs = append(errs, fmt.Errorf("Value for rolearn must be supplied"))
+		key := roleMapping.RoleARN
+		if m.userIDStrict {
+			key = roleMapping.UserId
+		}
+		if key == "" {
+			errs = append(errs, fmt.Errorf("Value for rolearn or userid(if dynamicfileUserIDStrict = true) must be supplied"))
 		} else {
 			roleMappings = append(roleMappings, roleMapping)
 		}
@@ -184,12 +193,18 @@ func (ms *DynamicFileMapStore) saveMap(
 	ms.awsAccounts = make(map[string]interface{})
 
 	for _, user := range userMappings {
-		canonicalizedARN, _ := arn.Canonicalize(strings.ToLower(user.UserARN))
-		ms.users[canonicalizedARN] = user
+		key, _ := arn.Canonicalize(strings.ToLower(user.UserARN))
+		if ms.userIDStrict {
+			key = user.UserId
+		}
+		ms.users[key] = user
 	}
 	for _, role := range roleMappings {
-		canonicalizedARN, _ := arn.Canonicalize(strings.ToLower(role.RoleARN))
-		ms.roles[canonicalizedARN] = role
+		key, _ := arn.Canonicalize(strings.ToLower(role.RoleARN))
+		if ms.userIDStrict {
+			key = role.UserId
+		}
+		ms.roles[key] = role
 	}
 	for _, awsAccount := range awsAccounts {
 		ms.awsAccounts[awsAccount] = nil
