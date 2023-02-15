@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -61,7 +60,7 @@ type ec2ProviderImpl struct {
 	instanceIdsChannel chan string
 }
 
-func New(roleARN string, qps int, burst int) EC2Provider {
+func New(roleARN, region string, qps int, burst int) EC2Provider {
 	dnsCache := ec2PrivateDNSCache{
 		cache: make(map[string]string),
 		lock:  sync.RWMutex{},
@@ -71,7 +70,7 @@ func New(roleARN string, qps int, burst int) EC2Provider {
 		lock: sync.RWMutex{},
 	}
 	return &ec2ProviderImpl{
-		ec2:                ec2.New(newSession(roleARN, qps, burst)),
+		ec2:                ec2.New(newSession(roleARN, region, qps, burst)),
 		privateDNSCache:    dnsCache,
 		ec2Requests:        ec2Requests,
 		instanceIdsChannel: make(chan string, maxChannelSize),
@@ -82,7 +81,7 @@ func New(roleARN string, qps int, burst int) EC2Provider {
 // the environment, shared credentials (~/.aws/credentials), or EC2 Instance
 // Role.
 
-func newSession(roleARN string, qps int, burst int) *session.Session {
+func newSession(roleARN, region string, qps int, burst int) *session.Session {
 	sess := session.Must(session.NewSession())
 	sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
 		Name: "authenticatorUserAgent",
@@ -90,12 +89,7 @@ func newSession(roleARN string, qps int, burst int) *session.Session {
 			"aws-iam-authenticator", pkg.Version),
 	})
 	if aws.StringValue(sess.Config.Region) == "" {
-		ec2metadata := ec2metadata.New(sess)
-		regionFound, err := ec2metadata.Region()
-		if err != nil {
-			logrus.WithError(err).Fatal("Region not found in shared credentials, environment variable, or instance metadata.")
-		}
-		sess.Config.Region = aws.String(regionFound)
+		sess.Config.Region = aws.String(region)
 	}
 
 	if roleARN != "" {
