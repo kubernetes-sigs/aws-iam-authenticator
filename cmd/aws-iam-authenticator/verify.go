@@ -23,7 +23,9 @@ import (
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -50,7 +52,14 @@ var verifyCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		id, err := token.NewVerifier(clusterID, partition).Verify(tok)
+		sess := session.Must(session.NewSession())
+		ec2metadata := ec2metadata.New(sess)
+		instanceRegion, err := ec2metadata.Region()
+		if err != nil {
+			fmt.Printf("[Warn] Region not found in instance metadata, err: %v", err)
+		}
+
+		id, err := token.NewVerifier(clusterID, partition, instanceRegion).Verify(tok)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not verify token: %v\n", err)
 			os.Exit(1)

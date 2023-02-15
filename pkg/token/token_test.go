@@ -31,7 +31,7 @@ func TestMain(m *testing.M) {
 func validationErrorTest(t *testing.T, partition string, token string, expectedErr string) {
 	t.Helper()
 
-	_, err := NewVerifier("", partition).(tokenVerifier).Verify(token)
+	_, err := NewVerifier("", partition, "").(tokenVerifier).Verify(token)
 	errorContains(t, err, expectedErr)
 }
 
@@ -86,7 +86,7 @@ func newVerifier(partition string, statusCode int, body string, err error) Verif
 				},
 			},
 		},
-		validSTShostnames: stsHostsForPartition(partition),
+		validSTShostnames: stsHostsForPartition(partition, ""),
 	}
 }
 
@@ -124,40 +124,42 @@ func TestSTSEndpoints(t *testing.T) {
 		partition string
 		domain    string
 		valid     bool
+		region    string
 	}{
-		{"aws-cn", "sts.cn-northwest-1.amazonaws.com.cn", true},
-		{"aws-cn", "sts.cn-north-1.amazonaws.com.cn", true},
-		{"aws-cn", "sts.us-iso-east-1.c2s.ic.gov", false},
-		{"aws", "sts.amazonaws.com", true},
-		{"aws", "sts-fips.us-west-2.amazonaws.com", true},
-		{"aws", "sts-fips.us-east-1.amazonaws.com", true},
-		{"aws", "sts.us-east-1.amazonaws.com", true},
-		{"aws", "sts.us-east-2.amazonaws.com", true},
-		{"aws", "sts.us-west-1.amazonaws.com", true},
-		{"aws", "sts.us-west-2.amazonaws.com", true},
-		{"aws", "sts.ap-south-1.amazonaws.com", true},
-		{"aws", "sts.ap-northeast-1.amazonaws.com", true},
-		{"aws", "sts.ap-northeast-2.amazonaws.com", true},
-		{"aws", "sts.ap-southeast-1.amazonaws.com", true},
-		{"aws", "sts.ap-southeast-2.amazonaws.com", true},
-		{"aws", "sts.ca-central-1.amazonaws.com", true},
-		{"aws", "sts.eu-central-1.amazonaws.com", true},
-		{"aws", "sts.eu-west-1.amazonaws.com", true},
-		{"aws", "sts.eu-west-2.amazonaws.com", true},
-		{"aws", "sts.eu-west-3.amazonaws.com", true},
-		{"aws", "sts.eu-north-1.amazonaws.com", true},
-		{"aws", "sts.amazonaws.com.cn", false},
-		{"aws", "sts.not-a-region.amazonaws.com", false},
-		{"aws-iso", "sts.us-iso-east-1.c2s.ic.gov", true},
-		{"aws-iso", "sts.cn-north-1.amazonaws.com.cn", false},
-		{"aws-iso-b", "sts.cn-north-1.amazonaws.com.cn", false},
-		{"aws-us-gov", "sts.us-gov-east-1.amazonaws.com", true},
-		{"aws-us-gov", "sts.amazonaws.com", false},
-		{"aws-not-a-partition", "sts.amazonaws.com", false},
+		{"aws-cn", "sts.cn-northwest-1.amazonaws.com.cn", true, ""},
+		{"aws-cn", "sts.cn-north-1.amazonaws.com.cn", true, ""},
+		{"aws-cn", "sts.us-iso-east-1.c2s.ic.gov", false, ""},
+		{"aws", "sts.amazonaws.com", true, ""},
+		{"aws", "sts-fips.us-west-2.amazonaws.com", true, ""},
+		{"aws", "sts-fips.us-east-1.amazonaws.com", true, ""},
+		{"aws", "sts.us-east-1.amazonaws.com", true, ""},
+		{"aws", "sts.us-east-2.amazonaws.com", true, ""},
+		{"aws", "sts.us-west-1.amazonaws.com", true, ""},
+		{"aws", "sts.us-west-2.amazonaws.com", true, ""},
+		{"aws", "sts.ap-south-1.amazonaws.com", true, ""},
+		{"aws", "sts.ap-northeast-1.amazonaws.com", true, ""},
+		{"aws", "sts.ap-northeast-2.amazonaws.com", true, ""},
+		{"aws", "sts.ap-southeast-1.amazonaws.com", true, ""},
+		{"aws", "sts.ap-southeast-2.amazonaws.com", true, ""},
+		{"aws", "sts.ca-central-1.amazonaws.com", true, ""},
+		{"aws", "sts.eu-central-1.amazonaws.com", true, ""},
+		{"aws", "sts.eu-west-1.amazonaws.com", true, ""},
+		{"aws", "sts.eu-west-2.amazonaws.com", true, ""},
+		{"aws", "sts.eu-west-3.amazonaws.com", true, ""},
+		{"aws", "sts.eu-north-1.amazonaws.com", true, ""},
+		{"aws", "sts.amazonaws.com.cn", false, ""},
+		{"aws", "sts.not-a-region.amazonaws.com", false, ""},
+		{"aws", "sts.default-region.amazonaws.com", true, "default-region"},
+		{"aws-iso", "sts.us-iso-east-1.c2s.ic.gov", true, ""},
+		{"aws-iso", "sts.cn-north-1.amazonaws.com.cn", false, ""},
+		{"aws-iso-b", "sts.cn-north-1.amazonaws.com.cn", false, ""},
+		{"aws-us-gov", "sts.us-gov-east-1.amazonaws.com", true, ""},
+		{"aws-us-gov", "sts.amazonaws.com", false, ""},
+		{"aws-not-a-partition", "sts.amazonaws.com", false, ""},
 	}
 
 	for _, c := range cases {
-		verifier := NewVerifier("", c.partition).(tokenVerifier)
+		verifier := NewVerifier("", c.partition, c.region).(tokenVerifier)
 		if err := verifier.verifyHost(c.domain); err != nil && c.valid {
 			t.Errorf("%s is not valid endpoint for partition %s", c.domain, c.partition)
 		}
@@ -215,7 +217,7 @@ func TestVerifyNoRedirectsFollowed(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	tokVerifier := NewVerifier("", "aws").(tokenVerifier)
+	tokVerifier := NewVerifier("", "aws", "").(tokenVerifier)
 
 	resp, err := tokVerifier.client.Get(ts.URL)
 	if err != nil {
@@ -242,7 +244,7 @@ func TestVerifyBodyReadError(t *testing.T) {
 				},
 			},
 		},
-		validSTShostnames: stsHostsForPartition("aws"),
+		validSTShostnames: stsHostsForPartition("aws", ""),
 	}
 	_, err := verifier.Verify(validToken)
 	errorContains(t, err, "error reading HTTP result")
