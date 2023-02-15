@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
@@ -167,10 +169,16 @@ func (c *Server) getHandler(mappers []mapper.Mapper, ec2DescribeQps int, ec2Desc
 			panic(fmt.Sprintf("describeinstancesrole %s is not a valid arn", c.ServerEC2DescribeInstancesRoleARN))
 		}
 	}
+	sess := session.Must(session.NewSession())
+	ec2metadata := ec2metadata.New(sess)
+	instanceRegion, err := ec2metadata.Region()
+	if err != nil {
+		logrus.WithError(err).Errorln("Region not found in instance metadata.")
+	}
 
 	h := &handler{
-		verifier:         token.NewVerifier(c.ClusterID, c.PartitionID),
-		ec2Provider:      ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, ec2DescribeQps, ec2DescribeBurst),
+		verifier:         token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
+		ec2Provider:      ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
 		clusterID:        c.ClusterID,
 		mappers:          mappers,
 		scrubbedAccounts: c.Config.ScrubbedAWSAccounts,
