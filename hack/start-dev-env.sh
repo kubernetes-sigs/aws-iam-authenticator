@@ -45,6 +45,7 @@ fi
 
 source "${REPO_ROOT}/hack/lib/dev-env.sh"
 
+install_kind
 create_network
 write_authenticator_config
 start_authenticator
