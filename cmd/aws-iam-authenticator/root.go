@@ -104,6 +104,7 @@ func getConfig() (config.Config, error) {
 		EC2DescribeInstancesBurst:         viper.GetInt("server.ec2DescribeInstancesBurst"),
 		ScrubbedAWSAccounts:               viper.GetStringSlice("server.scrubbedAccounts"),
 		DynamicFilePath:                   viper.GetString("server.dynamicfilepath"),
+		DynamicFileUserIDStrict:           viper.GetBool("server.dynamicfileUserIDStrict"),
 	}
 	if err := viper.UnmarshalKey("server.mapRoles", &cfg.RoleMappings); err != nil {
 		return cfg, fmt.Errorf("invalid server role mappings: %v", err)
