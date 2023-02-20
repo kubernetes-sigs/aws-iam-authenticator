@@ -339,6 +339,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 		userExtra["canonicalArn"] = authenticationv1beta1.ExtraValue{identity.CanonicalARN}
 		userExtra["sessionName"] = authenticationv1beta1.ExtraValue{identity.SessionName}
 		userExtra["accessKeyId"] = authenticationv1beta1.ExtraValue{identity.AccessKeyID}
+		userExtra["principalId"] = authenticationv1beta1.ExtraValue{identity.UserID}
 	}
 
 	json.NewEncoder(w).Encode(authenticationv1beta1.TokenReview{
@@ -357,10 +358,8 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 func (h *handler) doMapping(identity *token.Identity) (string, []string, error) {
 	var errs []error
 
-	canonicalARN := strings.ToLower(identity.CanonicalARN)
-
 	for _, m := range h.mappers {
-		mapping, err := m.Map(canonicalARN)
+		mapping, err := m.Map(identity)
 		if err == nil {
 			// Mapping found, try to render any templates like {{EC2PrivateDNSName}}
 			username, groups, err := h.renderTemplates(*mapping, identity)

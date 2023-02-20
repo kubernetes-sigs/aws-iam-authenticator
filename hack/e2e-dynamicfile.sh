@@ -103,7 +103,8 @@ function e2e_dynamicfile(){
           echo "can't assume-role: "${AWS_TEST_ROLE}
           exit 1
   fi
-
+  USERID=$(aws sts get-caller-identity|jq -r '.UserId'|cut -d: -f1)
+  echo "userid: " $USERID
   #run kubectl cmd without adding the role into access entry
   if [ -f ${access_entry_json} ]
       then
@@ -123,6 +124,7 @@ function e2e_dynamicfile(){
 
   sed -e "s|{{AWS_ACCOUNT}}|${AWS_ACCOUNT}|g" \
       -e "s|{{AWS_TEST_ROLE}}|${AWS_TEST_ROLE}|g" \
+      -e "s|{{USER_ID}}|${USERID}|g" \
             "${access_entry_template}" > "${access_entry_tmp}"
   mv "${access_entry_tmp}"  "${access_entry_json}"
   #sleep 10 seconds to make access entry effective

@@ -2,6 +2,7 @@ package crd
 
 import (
 	"fmt"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strings"
 	"time"
 
@@ -86,8 +87,8 @@ func (m *CRDMapper) Start(stopCh <-chan struct{}) error {
 	return nil
 }
 
-func (m *CRDMapper) Map(canonicalARN string) (*config.IdentityMapping, error) {
-	canonicalARN = strings.ToLower(canonicalARN)
+func (m *CRDMapper) Map(identity *token.Identity) (*config.IdentityMapping, error) {
+	canonicalARN := strings.ToLower(identity.CanonicalARN)
 
 	var iamidentity *iamauthenticatorv1alpha1.IAMIdentityMapping
 	var ok bool
