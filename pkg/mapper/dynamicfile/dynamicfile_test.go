@@ -22,7 +22,7 @@ func makeStore() DynamicFileMapStore {
 		filename:    "test.txt",
 	}
 	ms.users["arn:aws:iam::012345678912:user/matt"] = testUser
-	ms.roles["arn:aws:iam::012345678912:role/computer"] = testRole
+	ms.roles["UserId001"] = testRole
 	ms.awsAccounts["123"] = nil
 	return ms
 }
@@ -48,7 +48,7 @@ func TestUserMapping(t *testing.T) {
 
 func TestRoleMapping(t *testing.T) {
 	ms := makeStore()
-	role, err := ms.RoleMapping("arn:aws:iam::012345678912:role/computer")
+	role, err := ms.RoleMapping("UserId001")
 	if err != nil {
 		t.Errorf("Could not find user 'instance in map")
 	}
@@ -83,7 +83,8 @@ var origFileContent = `
       "username": "kubernetes-admin",
       "groups": [
         "system:masters"
-      ]
+      ],
+      "userid": "userid678"
     }
   ],
   "mapUsers": [
@@ -92,14 +93,16 @@ var origFileContent = `
       "username": "alice",
       "groups": [
         "system:masters"
-      ]
+      ],
+      "userid": "userid135"
     },
     {
       "userarn": "arn:aws:iam::000000000002:user/Alice2",
       "username": "alice2",
       "groups": [
         "system:masters"
-      ]
+      ],
+      "userid": "userid136"
     }
   ],
   "mapAccounts": [
@@ -117,7 +120,8 @@ var updatedFileContent = `
       "username": "kubernetes-admin",
       "groups": [
         "system:masters"
-      ]
+      ],
+      "userid": "userid12359"
     },
     {
       "rolearn": "arn:aws:iam::000000000002:role/KubernetesNode",
@@ -125,7 +129,8 @@ var updatedFileContent = `
       "groups": [
         "system:bootstrappers",
         "aws:instances"
-      ]
+      ],
+      "userid": "userid123"
     },
     {
       "rolearn": "arn:aws:iam::000000000003:role/KubernetesNode",
@@ -133,14 +138,16 @@ var updatedFileContent = `
       "groups": [
         "system:nodes",
         "system:bootstrappers"
-      ]
+      ],
+      "userid": "userid008"
     },
     {
       "rolearn": "arn:aws:iam::000000000004:role/KubernetesAdmin",
       "username": "admin:{{SessionName}}",
       "groups": [
         "system:masters"
-      ]
+      ],
+      "userid": "userid777"
     }
   ],
   "mapUsers": [
@@ -149,7 +156,8 @@ var updatedFileContent = `
       "username": "alice",
       "groups": [
         "system:masters"
-      ]
+      ],
+      "userid": "userid008"
     }
   ],
   "mapAccounts": [
@@ -159,12 +167,78 @@ var updatedFileContent = `
 }
 `
 
+func TestUserIdStrict(t *testing.T) {
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
+	//When the file doesn't exist, expect mapping should be empty map
+	cfg := config.Config{
+		DynamicFileUserIDStrict: true,
+		DynamicFilePath:         "/tmp/test.txt",
+	}
+	ms, err := NewDynamicFileMapStore(cfg)
+	if err != nil {
+		t.Errorf("failed to create a DynamicFileMapper")
+	}
+	data := []byte(origFileContent)
+	err = os.WriteFile("/tmp/test.txt", data, 0600)
+	if err != nil {
+		t.Errorf("failed to create a local file /tmp/test.txt")
+	}
+	ms.startLoadDynamicFile(stopCh)
+	time.Sleep(1 * time.Second)
+	ms.mutex.RLock()
+	for key, _ := range ms.roles {
+		if key[0:6] != "userid" {
+			t.Errorf("failed to generate key for userIDStrict")
+		}
+	}
+	ms.mutex.RUnlock()
+	//clean test files
+	defer os.Remove("/tmp/test.txt")
+}
+
+func TestWithoutUserIdStrict(t *testing.T) {
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
+	//When the file doesn't exist, expect mapping should be empty map
+	cfg := config.Config{
+		DynamicFileUserIDStrict: false,
+		DynamicFilePath:         "/tmp/test.txt",
+	}
+	ms, err := NewDynamicFileMapStore(cfg)
+	if err != nil {
+		t.Errorf("failed to create a DynamicFileMapper")
+	}
+	data := []byte(origFileContent)
+	err = os.WriteFile("/tmp/test.txt", data, 0600)
+	if err != nil {
+		t.Errorf("failed to create a local file /tmp/test.txt")
+	}
+	ms.startLoadDynamicFile(stopCh)
+	time.Sleep(1 * time.Second)
+	ms.mutex.RLock()
+	for key, _ := range ms.roles {
+		if key[0:3] != "arn" {
+			t.Errorf("failed to generate key for userIDStrict")
+		}
+	}
+	ms.mutex.RUnlock()
+	//clean test files
+	defer os.Remove("/tmp/test.txt")
+}
+
 func TestLoadDynamicFile(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
 	//When the file doesn't exist, expect mapping should be empty map
-	ms, err := NewDynamicFileMapStore("/tmp/test.txt")
+	cfg := config.Config{
+		DynamicFileUserIDStrict: true,
+		DynamicFilePath:         "/tmp/test.txt",
+	}
+	ms, err := NewDynamicFileMapStore(cfg)
 	if err != nil {
 		t.Errorf("failed to create a DynamicFileMapper")
 	}
@@ -207,11 +281,15 @@ func TestLoadDynamicFile(t *testing.T) {
 	expectedData := []byte(updatedFileContent)
 	err = os.WriteFile("/tmp/expected.txt", expectedData, 0600)
 
-	expectedMapStore, err := NewDynamicFileMapStore("/tmp/expected.txt")
+	cfg = config.Config{
+		DynamicFileUserIDStrict: true,
+		DynamicFilePath:         "/tmp/expected.txt",
+	}
+	expectedMapStore, err := NewDynamicFileMapStore(cfg)
 	if err != nil {
 		t.Errorf("failed to create expected DynamicFileMapper")
 	}
-	expectedUserMappings, expectedRoleMappings, expectedAwsAccounts, err := ParseMap(expectedMapStore.filename)
+	expectedUserMappings, expectedRoleMappings, expectedAwsAccounts, err := ParseMap(expectedMapStore)
 	if err != nil {
 		t.Errorf("failed to ParseMap expected DynamicFileMapper")
 	}
@@ -287,25 +365,30 @@ func TestParseMap(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create a local file /tmp/test.txt")
 	}
-	ms, err := NewDynamicFileMapStore("/tmp/test.txt")
+	cfg := config.Config{
+		DynamicFileUserIDStrict: true,
+		DynamicFilePath:         "/tmp/test.txt",
+	}
+	ms, err := NewDynamicFileMapStore(cfg)
 	if err != nil {
 		t.Errorf("failed to create a DynamicFileMapper")
 	}
 
-	u, r, a, err := ParseMap(ms.filename)
+	u, r, a, err := ParseMap(ms)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	origUserMappings := []config.UserMapping{
-		{UserARN: "arn:aws:iam::000000000000:user/Alice", Username: "alice", Groups: []string{"system:masters"}},
-		{UserARN: "arn:aws:iam::000000000002:user/Alice2", Username: "alice2", Groups: []string{"system:masters"}},
+		{UserARN: "arn:aws:iam::000000000000:user/Alice", Username: "alice", Groups: []string{"system:masters"}, UserId: "userid135"},
+		{UserARN: "arn:aws:iam::000000000002:user/Alice2", Username: "alice2", Groups: []string{"system:masters"}, UserId: "userid136"},
 	}
 	origRoleMappings := []config.RoleMapping{
 		{
 			RoleARN:  "arn:aws:iam::000000000098:role/KubernetesAdmin",
 			Username: "kubernetes-admin",
 			Groups:   []string{"system:masters"},
+			UserId:   "userid678",
 		},
 	}
 	origAccounts := []string{"012345678901", "456789012345"}

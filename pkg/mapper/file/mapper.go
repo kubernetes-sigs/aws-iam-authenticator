@@ -7,6 +7,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
 type FileMapper struct {
@@ -64,8 +65,8 @@ func (m *FileMapper) Start(_ <-chan struct{}) error {
 	return nil
 }
 
-func (m *FileMapper) Map(canonicalARN string) (*config.IdentityMapping, error) {
-	canonicalARN = strings.ToLower(canonicalARN)
+func (m *FileMapper) Map(identity *token.Identity) (*config.IdentityMapping, error) {
+	canonicalARN := strings.ToLower(identity.CanonicalARN)
 
 	if roleMapping, exists := m.lowercaseRoleMap[canonicalARN]; exists {
 		return &config.IdentityMapping{

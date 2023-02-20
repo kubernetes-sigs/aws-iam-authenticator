@@ -1,6 +1,7 @@
 package configmap
 
 import (
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
@@ -30,8 +31,8 @@ func (m *ConfigMapMapper) Start(stopCh <-chan struct{}) error {
 	return nil
 }
 
-func (m *ConfigMapMapper) Map(canonicalARN string) (*config.IdentityMapping, error) {
-	canonicalARN = strings.ToLower(canonicalARN)
+func (m *ConfigMapMapper) Map(identity *token.Identity) (*config.IdentityMapping, error) {
+	canonicalARN := strings.ToLower(identity.CanonicalARN)
 
 	rm, err := m.RoleMapping(canonicalARN)
 	// TODO: Check for non Role/UserNotFound errors

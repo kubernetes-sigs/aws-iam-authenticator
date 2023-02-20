@@ -46,6 +46,7 @@ NETWORK_NAME="${NETWORK_NAME:-authenticator-dev}"
 NETWORK_SUBNET="${NETWORK_SUBNET:-172.30.0.0/16}"
 AUTHENTICATOR_IP="${AUTHENTICATOR_IP:-172.30.0.10}"
 AUTHENTICATOR_PORT="${AUTHENTICATOR_PORT:-21362}"
+KIND_BIN="${KIND_BIN:-${OUTPUT}/bin/kind}"
 
 # Not configurable:
 authenticator_healthz_port=21363
@@ -85,16 +86,19 @@ kubectl_kubeconfig="${client_dir}/kubeconfig.yaml"
 kind_kubeconfig="${client_dir}/kind-kubeconfig.yaml"
 
 function install_kind() {
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-      # for Intel Macs
-      [ $(uname -m) = x86_64 ]&& curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.17.0/kind-darwin-amd64
-      # for M1 / ARM Macs
-      [ $(uname -m) = arm64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.17.0/kind-darwin-arm64
-  else
-      curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.17.0/kind-linux-amd64
-  fi
-  chmod +x ./kind
-  command -v ./kind >/dev/null 2>&1 || { echo >&2 "kind is required but it's not installed.  Aborting."; exit 1; }
+    if ! [[ -f "${KIND_BIN}" ]]; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # for Intel Macs
+            [ $(uname -m) = x86_64 ]&& curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.17.0/kind-darwin-amd64
+            # for M1 / ARM Macs
+            [ $(uname -m) = arm64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.17.0/kind-darwin-arm64
+        else
+            curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.17.0/kind-linux-amd64
+        fi
+        chmod +x ./kind
+        mv ./kind "${KIND_BIN}"
+    fi
+    command -v "${KIND_BIN}" >/dev/null 2>&1 || { echo >&2 "kind is required but it's not installed.  Aborting."; exit 1; }
 }
 
 function create_network() {
@@ -234,11 +238,11 @@ function write_kubectl_kubeconfig() {
 
 function create_kind_cluster() {
     export KIND_EXPERIMENTAL_DOCKER_NETWORK="${NETWORK_NAME}"
-    ./kind create cluster \
+    "${KIND_BIN}" create cluster \
         --config "${kind_config_host_dir}/env.yaml" \
         --kubeconfig "${kind_kubeconfig}"
 }
 
 function delete_kind_cluster() {
-    ./kind delete cluster --name "${CLUSTER_NAME}"
+    "${KIND_BIN}" delete cluster --name "${CLUSTER_NAME}"
 }
