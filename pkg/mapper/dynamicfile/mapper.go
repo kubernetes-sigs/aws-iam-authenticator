@@ -18,6 +18,9 @@ func NewDynamicFileMapper(cfg config.Config) (*DynamicFileMapper, error) {
 	if err != nil {
 		return nil, err
 	}
+	if value, exists := cfg.ReservedPrefixConfig[mapper.ModeDynamicFile]; exists {
+		ms.usernamePrefixReserveList = value.UsernamePrefixReserveList
+	}
 	return &DynamicFileMapper{ms}, nil
 }
 
@@ -61,4 +64,8 @@ func (m *DynamicFileMapper) Map(identity *token.Identity) (*config.IdentityMappi
 
 func (m *DynamicFileMapper) IsAccountAllowed(accountID string) bool {
 	return m.AWSAccount(accountID)
+}
+
+func (m *DynamicFileMapper) UsernamePrefixReserveList() []string {
+	return m.usernamePrefixReserveList
 }

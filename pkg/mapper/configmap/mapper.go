@@ -59,3 +59,7 @@ func (m *ConfigMapMapper) Map(identity *token.Identity) (*config.IdentityMapping
 func (m *ConfigMapMapper) IsAccountAllowed(accountID string) bool {
 	return m.AWSAccount(accountID)
 }
+
+func (m *ConfigMapMapper) UsernamePrefixReserveList() []string {
+	return []string{}
+}
