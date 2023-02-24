@@ -11,9 +11,10 @@ import (
 )
 
 type FileMapper struct {
-	lowercaseRoleMap map[string]config.RoleMapping
-	lowercaseUserMap map[string]config.UserMapping
-	accountMap       map[string]bool
+	lowercaseRoleMap          map[string]config.RoleMapping
+	lowercaseUserMap          map[string]config.UserMapping
+	accountMap                map[string]bool
+	usernamePrefixReserveList []string
 }
 
 var _ mapper.Mapper = &FileMapper{}
@@ -42,7 +43,9 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 	for _, m := range cfg.AutoMappedAWSAccounts {
 		fileMapper.accountMap[m] = true
 	}
-
+	if value, exists := cfg.ReservedPrefixConfig[mapper.ModeMountedFile]; exists {
+		fileMapper.usernamePrefixReserveList = value.UsernamePrefixReserveList
+	}
 	return fileMapper, nil
 }
 
@@ -89,4 +92,8 @@ func (m *FileMapper) Map(identity *token.Identity) (*config.IdentityMapping, err
 
 func (m *FileMapper) IsAccountAllowed(accountID string) bool {
 	return m.accountMap[accountID]
+}
+
+func (m *FileMapper) UsernamePrefixReserveList() []string {
+	return m.usernamePrefixReserveList
 }

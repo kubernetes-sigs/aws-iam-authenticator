@@ -120,3 +120,7 @@ func (m *CRDMapper) Map(identity *token.Identity) (*config.IdentityMapping, erro
 func (m *CRDMapper) IsAccountAllowed(accountID string) bool {
 	return false
 }
+
+func (m *CRDMapper) UsernamePrefixReserveList() []string {
+	return []string{}
+}

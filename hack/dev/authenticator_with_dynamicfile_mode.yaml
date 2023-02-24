@@ -7,6 +7,14 @@ server:
   kubeconfig: {{AUTHENTICATOR_KUBECONFIG}}
   backendmode: [ "MountedFile", "DynamicFile" ]
   dynamicfilepath: {{AUTHENTICATOR_DYNAMICFILE_PATH}}
+  reservedPrefixConfig:
+  - backendmode: DynamicFile
+    usernamePrefixReserveList:
+    - "aws:"
+    - "iam:"
+    - "amazon:"
+    - "system:"
+    - "eks:"
   mapUsers:
   - userARN: {{ADMIN_ARN}}
     username: kubernetes-admin

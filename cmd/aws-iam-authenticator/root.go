@@ -103,8 +103,11 @@ func getConfig() (config.Config, error) {
 		EC2DescribeInstancesQps:           viper.GetInt("server.ec2DescribeInstancesQps"),
 		EC2DescribeInstancesBurst:         viper.GetInt("server.ec2DescribeInstancesBurst"),
 		ScrubbedAWSAccounts:               viper.GetStringSlice("server.scrubbedAccounts"),
-		DynamicFilePath:                   viper.GetString("server.dynamicfilepath"),
-		DynamicFileUserIDStrict:           viper.GetBool("server.dynamicfileUserIDStrict"),
+		//flags for dynamicfile mode
+		//DynamicFilePath: the file path containing the roleMapping and userMapping
+		DynamicFilePath: viper.GetString("server.dynamicfilepath"),
+		//DynamicFileUserIDStrict: if true, then aws UserId from sts will be used to look up the roleMapping/userMapping; or aws IdentityArn is used
+		DynamicFileUserIDStrict: viper.GetBool("server.dynamicfileUserIDStrict"),
 	}
 	if err := viper.UnmarshalKey("server.mapRoles", &cfg.RoleMappings); err != nil {
 		return cfg, fmt.Errorf("invalid server role mappings: %v", err)
@@ -115,7 +118,16 @@ func getConfig() (config.Config, error) {
 	if err := viper.UnmarshalKey("server.mapAccounts", &cfg.AutoMappedAWSAccounts); err != nil {
 		logrus.WithError(err).Fatal("invalid server account mappings")
 	}
-
+	var reservedPrefixConfig []config.ReservedPrefixConfig
+	if err := viper.UnmarshalKey("server.reservedPrefixConfig", &reservedPrefixConfig); err != nil {
+		return cfg, fmt.Errorf("invalid reserved prefix config: %v", err)
+	}
+	if len(reservedPrefixConfig) > 0 {
+		cfg.ReservedPrefixConfig = make(map[string]config.ReservedPrefixConfig)
+		for _, c := range reservedPrefixConfig {
+			cfg.ReservedPrefixConfig[c.BackendMode] = c
+		}
+	}
 	if featureGates.Enabled(config.ConfiguredInitDirectories) {
 		logrus.Info("ConfiguredInitDirectories feature enabled")
 	}

@@ -169,6 +169,46 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 	}
 }
 
+func TestReservedPrefixExists(t *testing.T) {
+	cases := []struct {
+		username     string
+		reservedList []string
+		want         bool
+	}{
+		{
+			"system:masters",
+			[]string{"aws:", "eks:", "amazon:", "iam:", "system:"},
+			true,
+		},
+		{
+			"test",
+			[]string{"aws:", "eks:", "amazon:", "iam:", "system:"},
+			false,
+		},
+		{
+			"eksb:test",
+			[]string{"aws:", "eks:", "amazon:", "iam:", "system:"},
+			false,
+		},
+		{
+			"eks:test",
+			[]string{"aws:", "eks:", "amazon:", "iam:", "system:"},
+			true,
+		},
+	}
+	for _, c := range cases {
+		if got := ReservedPrefixExists(c.username, c.reservedList); got != c.want {
+			t.Errorf(
+				"Unexpected result: ReservedPrefixExists(%v,%v): got: %t, wanted %t",
+				c.username,
+				c.reservedList,
+				got,
+				c.want,
+			)
+		}
+	}
+}
+
 func TestAuthenticateNonPostError(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://k8s.io/authenticate", nil)

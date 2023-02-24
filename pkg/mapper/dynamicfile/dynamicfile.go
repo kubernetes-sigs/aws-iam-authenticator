@@ -20,9 +20,10 @@ type DynamicFileMapStore struct {
 	users map[string]config.UserMapping
 	roles map[string]config.RoleMapping
 	// Used as set.
-	awsAccounts  map[string]interface{}
-	filename     string
-	userIDStrict bool
+	awsAccounts               map[string]interface{}
+	filename                  string
+	userIDStrict              bool
+	usernamePrefixReserveList []string
 }
 
 type DynamicFileData struct {
