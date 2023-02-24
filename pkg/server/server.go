@@ -373,6 +373,15 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	})
 }
 
+func ReservedPrefixExists(username string, reservedList []string) bool {
+	for _, prefix := range reservedList {
+		if len(prefix) > 0 && strings.HasPrefix(username, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func (h *handler) doMapping(identity *token.Identity) (string, []string, error) {
 	var errs []error
 
@@ -383,6 +392,9 @@ func (h *handler) doMapping(identity *token.Identity) (string, []string, error) 
 			username, groups, err := h.renderTemplates(*mapping, identity)
 			if err != nil {
 				return "", nil, fmt.Errorf("mapper %s renderTemplates error: %v", m.Name(), err)
+			}
+			if len(m.UsernamePrefixReserveList()) > 0 && ReservedPrefixExists(username, m.UsernamePrefixReserveList()) {
+				return "", nil, fmt.Errorf("invalid username '%s' for mapper %s: username must not begin with with the following prefixes: %v", username, m.Name(), m.UsernamePrefixReserveList())
 			}
 			return username, groups, nil
 		} else {
