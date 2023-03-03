@@ -3,7 +3,7 @@ module sigs.k8s.io/aws-iam-authenticator
 go 1.19
 
 require (
-	github.com/aws/aws-sdk-go v1.44.145
+	github.com/aws/aws-sdk-go v1.44.213
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gofrs/flock v0.8.1
 	github.com/manifoldco/promptui v0.9.0
