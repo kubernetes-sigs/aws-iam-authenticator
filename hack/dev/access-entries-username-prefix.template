@@ -1,0 +1,13 @@
+{
+  "mapRoles": [
+    {
+      "rolearn": "arn:aws:iam::{{AWS_ACCOUNT}}:role/{{USERNAME_TEST_ROLE}}",
+      "username": "{{SessionName}}:masters",
+      "groups": [
+        "system:masters"
+      ],
+      "userid": "{{USER_ID}}"
+    }
+  ]
+}
+
