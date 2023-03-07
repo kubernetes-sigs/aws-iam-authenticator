@@ -42,6 +42,7 @@ type Mapper interface {
 	Start(stopCh <-chan struct{}) error
 	Map(identity *token.Identity) (*config.IdentityMapping, error)
 	IsAccountAllowed(accountID string) bool
+	UsernamePrefixReserveList() []string
 }
 
 func ValidateBackendMode(modes []string) []error {

@@ -141,15 +141,24 @@ type Config struct {
 	// +optional
 	Kubeconfig string
 
-	// BackendMode is an ordered list of backends to get mappings from. Comma-delimited list of: MountedFile,EKSConfigMap,CRD
+	// BackendMode is an ordered list of backends to get mappings from. Comma-delimited list of: MountedFile,EKSConfigMap,CRD,DynamicFile
 	BackendMode []string
 
 	// Ec2 DescribeInstances rate limiting variables initially set to defaults until we completely
 	// understand we don't need to change
 	EC2DescribeInstancesQps   int
 	EC2DescribeInstancesBurst int
-	//Dynamic File Path for DynamicFile BackendMode
+	// Dynamic File Path for DynamicFile BackendMode
 	DynamicFilePath string
-	//use UserId for mapping, IdentityArn is not used any more when DynamicFileUserIDStrict=true
+	// Use UserId for mapping, IdentityArn is not used any more when DynamicFileUserIDStrict=true
 	DynamicFileUserIDStrict bool
+	// ReservedPrefixConfig defines reserved username prefixes for each backend
+	ReservedPrefixConfig map[string]ReservedPrefixConfig
+}
+
+type ReservedPrefixConfig struct {
+	// Backend mode defined in Config.BackendMode
+	BackendMode string `json:"backendmode" yaml:"backendmode"`
+	// Defines the reserved prefixes for kubernetes username
+	UsernamePrefixReserveList []string `json:"usernamePrefixReserveList,omitempty" yaml:"usernamePrefixReserveList,omitempty"`
 }

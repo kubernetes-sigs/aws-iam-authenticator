@@ -158,7 +158,26 @@ useful if you're migrating from/to EKS and want to keep your mappings, or are
 running EKS in addition to some other AWS cluster(s) and want to have the same
 mappings in each.
 
-### 5. Set up kubectl to use authentication tokens provided by AWS IAM Authenticator for Kubernetes
+#### `DynamicFile`
+A local file specified by cfg.dynamicfilepath can serve as the backend. The file
+content is expected to be in exactly the same format as the EKSConfigMap. Whenever
+this file content changes, authenticator will automatically reload it.  This
+provides more flexibility on managing the ARN mappings.
+
+Check https://github.com/kubernetes-sigs/aws-iam-authenticator/blob/master/hack/dev/authenticator_with_dynamicfile_mode.yaml
+about how to configure the DynamicFile mode.
+
+Run `make e2e RUNNER=kind` to play with a kind cluster with DynamicFile mode enable.
+### 5. How to configure reservedPrefixConfig for Kubernetes usernames
+The aws-iam-authenticator can support reserved prefix for k8s username. If the reserved prefix is
+set, then the username with the reserved prefix will not be authenticated with the error
+"username must not begin with with the following prefixes:".
+
+Check https://github.com/kubernetes-sigs/aws-iam-authenticator/blob/master/hack/dev/authenticator_with_dynamicfile_mode.yaml
+about how to configure the reserved prefix.
+
+
+### 6. Set up kubectl to use authentication tokens provided by AWS IAM Authenticator for Kubernetes
 
 > This requires a 1.10+ `kubectl` binary to work. If you receive `Please enter Username:` when trying to use `kubectl` you need to update to the latest `kubectl`
 
