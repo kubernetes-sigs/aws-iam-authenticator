@@ -40,7 +40,7 @@ type AuthenticatorTestFrameworkSetup struct {
 	RoleArn                         string
 }
 
-func StartAuthenticatorTestFramework(t *testing.T, stopCh <-chan struct{}, setup AuthenticatorTestFrameworkSetup) (client.Interface, client.Interface) {
+func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFrameworkSetup) (client.Interface, client.Interface, framework.TearDownFunc) {
 	metrics.InitMetrics(prometheus.NewRegistry())
 
 	cfg, err := testConfig(t, setup)
@@ -56,7 +56,7 @@ func StartAuthenticatorTestFramework(t *testing.T, stopCh <-chan struct{}, setup
 		t.Fatal(err)
 	}
 
-	adminClient, kubeAPIServerClientConfig := framework.StartTestServer(t, stopCh, framework.TestServerSetup{
+	adminClient, kubeAPIServerClientConfig, tearDownFn := framework.StartTestServer(t, framework.TestServerSetup{
 		ModifyServerRunOptions: func(opts *options.ServerRunOptions) {
 			opts.Authentication.WebHook.ConfigFile = cfg.GenerateKubeconfigPath
 		},
@@ -73,8 +73,9 @@ func StartAuthenticatorTestFramework(t *testing.T, stopCh <-chan struct{}, setup
 		t.Fatal(err)
 	}
 
+	stopCh := make(chan struct{})
+	httpServer := server.New(cfg, stopCh)
 	go func() {
-		httpServer := server.New(cfg, stopCh)
 		httpServer.Run(stopCh)
 	}()
 
@@ -114,7 +115,11 @@ func StartAuthenticatorTestFramework(t *testing.T, stopCh <-chan struct{}, setup
 		t.Fatal(err)
 	}
 
-	return adminClient, clientWithExecAuthenticator
+	return adminClient, clientWithExecAuthenticator, func() {
+		close(stopCh)
+		httpServer.Close()
+		tearDownFn()
+	}
 }
 
 func testConfig(t *testing.T, setup AuthenticatorTestFrameworkSetup) (config.Config, error) {
