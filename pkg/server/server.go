@@ -17,6 +17,7 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -153,8 +154,17 @@ func (c *Server) Run(stopCh <-chan struct{}) {
 		http.ListenAndServe(":21363", &healthzHandler{})
 	}()
 	if err := c.httpServer.Serve(c.listener); err != nil {
-		logrus.WithError(err).Fatal("http server exited")
+		logrus.WithError(err).Warning("http server exited")
 	}
+}
+
+func (c *Server) Close() {
+	c.listener.Close()
+
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	c.httpServer.Shutdown(ctxTimeout)
 }
 
 type healthzHandler struct{}
