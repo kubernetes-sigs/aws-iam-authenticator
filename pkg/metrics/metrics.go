@@ -39,6 +39,7 @@ type Metrics struct {
 	EC2DescribeInstanceCallCount prometheus.Counter
 	StsConnectionFailure         prometheus.Counter
 	StsResponses                 *prometheus.CounterVec
+	DynamicFileFailures          prometheus.Counter
 }
 
 func createMetrics(reg prometheus.Registerer) Metrics {
@@ -50,6 +51,13 @@ func createMetrics(reg prometheus.Registerer) Metrics {
 				Namespace: Namespace,
 				Name:      "configmap_watch_failures_total",
 				Help:      "EKS Configmap watch failures",
+			},
+		),
+		DynamicFileFailures: factory.NewCounter(
+			prometheus.CounterOpts{
+				Namespace: Namespace,
+				Name:      "dynamicfile_failures_total",
+				Help:      "Dynamic file failures",
 			},
 		),
 		StsConnectionFailure: factory.NewCounter(
