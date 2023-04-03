@@ -10,6 +10,7 @@ import (
 	"os"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"strings"
 	"sync"
 	"time"
@@ -86,15 +87,24 @@ func NewDynamicFileMapStore(cfg config.Config) (*DynamicFileMapStore, error) {
 
 func (m *DynamicFileMapStore) startLoadDynamicFile(stopCh <-chan struct{}) {
 	go wait.Until(func() {
-		m.loadDynamicFile()
+		err := m.loadDynamicFile()
+		if err != nil {
+			logrus.Errorf("startLoadDynamicFile: failed when loadDynamicFile, %+v", err)
+			metrics.Get().DynamicFileFailures.Inc()
+			return
+		}
 		// start to watch the file change
 		watcher, err := fsnotify.NewWatcher()
 		if err != nil {
 			logrus.Errorf("startLoadDynamicFile: failed when call fsnotify.NewWatcher, %+v", err)
+			metrics.Get().DynamicFileFailures.Inc()
+			return
 		}
 		err = watcher.Add(m.filename)
 		if err != nil {
 			logrus.Errorf("startLoadDynamicFile: could not add file to watcher %v", err)
+			metrics.Get().DynamicFileFailures.Inc()
+			return
 		}
 
 		defer watcher.Close()
@@ -124,6 +134,8 @@ func (m *DynamicFileMapStore) startLoadDynamicFile(stopCh <-chan struct{}) {
 				}
 			case err := <-watcher.Errors:
 				logrus.Errorf("startLoadDynamicFile: watcher.Errors for dynamic file %v", err)
+				metrics.Get().DynamicFileFailures.Inc()
+				return
 			}
 		}
 	}, time.Second, stopCh)
