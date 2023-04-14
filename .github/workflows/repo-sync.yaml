@@ -1,0 +1,19 @@
+on:
+  schedule:
+  - cron:  "5 21 * * 0" # Monday 9:05am NZST
+  workflow_dispatch:
+
+jobs:
+  repo-sync:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        persist-credentials: false
+    - name: repo-sync
+      uses: repo-sync/github-sync@v2
+      with:
+        source_repo: kubernetes-sigs/aws-iam-authenticator
+        source_branch: master
+        destination_branch: upstream
+        github_token: ${{ secrets.GITHUB_TOKEN }}
