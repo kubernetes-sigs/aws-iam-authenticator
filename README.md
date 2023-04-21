@@ -67,7 +67,7 @@ If you do not pre-generate files, `aws-iam-authenticator server` will generate t
 This works but requires that you restart your Kubernetes API server after installation.
 
 ### 3. Configure your API server to talk to the server
-The Kubernetes API integrates with AWS IAM Authenticator for Kubernetes using a [token authentication webhook](https://kubernetes.io/docs/admin/authentication/#webhook-token-authentication).
+The Kubernetes API integrates with AWS IAM Authenticator for Kubernetes using a [token authentication webhook](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#webhook-token-authentication).
 When you run `aws-iam-authenticator server`, it will generate a webhook configuration file and save it onto the host filesystem.
 You'll need to add a single additional flag to your API server configuration:
 ```
