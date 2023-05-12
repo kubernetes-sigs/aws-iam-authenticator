@@ -38,6 +38,7 @@ var tokenCmd = &cobra.Command{
 		tokenOnly := viper.GetBool("tokenOnly")
 		forwardSessionName := viper.GetBool("forwardSessionName")
 		sessionName := viper.GetString("sessionName")
+		wiToken := viper.GetString("token")
 		cache := viper.GetBool("cache")
 
 		if clusterID == "" {
@@ -50,6 +51,15 @@ var tokenCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Error: cannot specify both --forward-session-name and --session-name parameter\n")
 			cmd.Usage()
 			os.Exit(1)
+		}
+
+		if wiToken != "" {
+			_, err := os.Stat(wiToken)
+			if os.IsNotExist(err) {
+				fmt.Fprintf(os.Stderr, "Error: token path is provided, but there is no such file\n")
+				cmd.Usage()
+				os.Exit(1)
+			}
 		}
 
 		var tok token.Token
@@ -67,6 +77,7 @@ var tokenCmd = &cobra.Command{
 			AssumeRoleExternalID: externalID,
 			SessionName:          sessionName,
 			Region:               region,
+			Token:                wiToken,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
@@ -88,6 +99,7 @@ func init() {
 	tokenCmd.Flags().StringP("external-id", "e", "", "External ID to pass when assuming the IAM Role")
 	tokenCmd.Flags().StringP("session-name", "s", "", "Session name to pass when assuming the IAM Role")
 	tokenCmd.Flags().Bool("token-only", false, "Return only the token for use with Bearer token based tools")
+	tokenCmd.Flags().StringP("token", "t", "", "Path to a web identity token file or it's raw value")
 	tokenCmd.Flags().Bool("forward-session-name",
 		false,
 		"Enable mapping a federated sessions caller-specified-role-name attribute onto newly assumed sessions. NOTE: Only applicable when a new role is requested via --role")
@@ -98,6 +110,7 @@ func init() {
 	viper.BindPFlag("tokenOnly", tokenCmd.Flags().Lookup("token-only"))
 	viper.BindPFlag("forwardSessionName", tokenCmd.Flags().Lookup("forward-session-name"))
 	viper.BindPFlag("sessionName", tokenCmd.Flags().Lookup("session-name"))
+	viper.BindPFlag("token", tokenCmd.Flags().Lookup("token"))
 	viper.BindPFlag("cache", tokenCmd.Flags().Lookup("cache"))
 	viper.BindEnv("role", "DEFAULT_ROLE")
 }

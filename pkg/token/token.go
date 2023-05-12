@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -109,6 +110,7 @@ type GetTokenOptions struct {
 	ClusterID            string
 	AssumeRoleARN        string
 	AssumeRoleExternalID string
+	Token                string
 	SessionName          string
 	Session              *session.Session
 }
@@ -276,9 +278,31 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 	// use an STS client based on the direct credentials
 	stsAPI := sts.New(options.Session)
 
-	// if a roleARN was specified, replace the STS client with one that uses
-	// temporary credentials from that role.
-	if options.AssumeRoleARN != "" {
+	if options.AssumeRoleARN != "" && options.Token != "" {
+		// if a roleARN and Token were specified,
+		// replace the STS client with one that uses web identity temporary credentials from that role.
+
+		webIdentityProvider := stscreds.NewWebIdentityRoleProviderWithOptions(
+			stsAPI,
+			options.AssumeRoleARN,
+			options.SessionName,
+			getTokenFetcher(options.Token),
+		)
+
+		// Check if the webIdentityProvider can successfully retrieve
+		// credentials (via sts:AssumeRole), and warn if there's a problem.
+		if _, err := webIdentityProvider.Retrieve(); err != nil {
+			return Token{}, errors.Wrap(err, "failed to get web identity provider")
+		}
+
+		stsAPI = sts.New(
+			options.Session,
+			&aws.Config{
+				Credentials: credentials.NewCredentials(webIdentityProvider),
+			})
+	} else if options.AssumeRoleARN != "" {
+		// if a roleARN was specified, replace the STS client with one that uses
+		// temporary credentials from that role.
 		var sessionSetters []func(*stscreds.AssumeRoleProvider)
 
 		if options.AssumeRoleExternalID != "" {
@@ -626,4 +650,18 @@ func hasSignedClusterIDHeader(paramsLower *url.Values) bool {
 		}
 	}
 	return false
+}
+
+func getTokenFetcher(token string) stscreds.TokenFetcher {
+	if strings.HasPrefix(token, "/") || strings.HasPrefix(token, "./") {
+		return stscreds.FetchTokenPath(token)
+	}
+	return FetchTokenRaw(token)
+}
+
+type FetchTokenRaw string
+
+// FetchToken returns a token by reading from the filesystem
+func (f FetchTokenRaw) FetchToken(_ credentials.Context) ([]byte, error) {
+	return []byte(f), nil
 }
