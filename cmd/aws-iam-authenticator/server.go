@@ -1,3 +1,4 @@
+//go:build !no_server
 /*
 Copyright 2017 by the contributors.
 
