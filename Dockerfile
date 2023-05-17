@@ -18,12 +18,13 @@ FROM --platform=$BUILDPLATFORM $golang_image AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-iam-authenticator
 COPY . .
 RUN go mod download
+ARG TARGETOS TARGETARCH
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make bin
 RUN chown 65532 _output/bin/aws-iam-authenticator
 
-FROM public.ecr.aws/eks-distro/kubernetes/go-runner:v0.9.0-eks-1-21-4 as go-runner
+FROM --platform=$TARGETPLATFORM public.ecr.aws/eks-distro/kubernetes/go-runner:v0.9.0-eks-1-21-4 as go-runner
 
-FROM $image
+FROM --platform=$TARGETPLATFORM $image
 COPY --from=go-runner /usr/local/bin/go-runner /usr/local/bin/go-runner
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-iam-authenticator/_output/bin/aws-iam-authenticator /aws-iam-authenticator
 ENTRYPOINT ["/aws-iam-authenticator"]
