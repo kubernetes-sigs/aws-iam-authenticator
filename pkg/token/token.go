@@ -41,6 +41,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication"
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
+
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
@@ -337,6 +338,14 @@ func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, 
 
 	// Set token expiration to 1 minute before the presigned URL expires for some cushion
 	tokenExpiration := time.Now().Local().Add(presignedURLExpiration - 1*time.Minute)
+	// If the STS client is using temporary credentials, use the expiration time of those credentials.
+	// https://github.com/kubernetes-sigs/aws-iam-authenticator/issues/590
+	if realSts, ok := stsAPI.(*sts.STS); ok {
+		// if expiresAt is in the past, it's probably not valid so don't use it
+		if expiresAt, err := realSts.Config.Credentials.ExpiresAt(); err == nil && expiresAt.Before(tokenExpiration) && expiresAt.After(time.Now()) {
+			tokenExpiration = expiresAt
+		}
+	}
 	// TODO: this may need to be a constant-time base64 encoding
 	return Token{v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), tokenExpiration}, nil
 }
