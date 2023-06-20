@@ -110,60 +110,74 @@ func (err ErrParsingMap) Error() string {
 	return fmt.Sprintf("error parsing config map: %v", err.errors)
 }
 
+// ParseMap parses a ConfigMap for mapUsers, mapRoles and mapAccounts.
+// If a configuration is not correctly encoded in YAML, nil will be returned for the corresponding value.
 func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappings []config.RoleMapping, awsAccounts []string, err error) {
 	errs := make([]error, 0)
 	rawUserMappings := make([]config.UserMapping, 0)
 	userMappings = make([]config.UserMapping, 0)
+	var isMapUsersMalformed bool
 	if userData, ok := m["mapUsers"]; ok {
-		userJson, err := utilyaml.ToJSON([]byte(userData))
-		if err != nil {
+		if userJson, err := utilyaml.ToJSON([]byte(userData)); err != nil {
 			errs = append(errs, err)
+			isMapUsersMalformed = true
 		} else {
-			err = json.Unmarshal(userJson, &rawUserMappings)
-			if err != nil {
+			if err := json.Unmarshal(userJson, &rawUserMappings); err != nil {
 				errs = append(errs, err)
-			}
-
-			for _, userMapping := range rawUserMappings {
-				err = userMapping.Validate()
-				if err != nil {
-					errs = append(errs, err)
-				} else {
-					userMappings = append(userMappings, userMapping)
+				isMapUsersMalformed = true
+			} else {
+				for _, userMapping := range rawUserMappings {
+					err = userMapping.Validate()
+					if err != nil {
+						errs = append(errs, err)
+					} else {
+						userMappings = append(userMappings, userMapping)
+					}
 				}
 			}
 		}
+	}
+	if isMapUsersMalformed {
+		userMappings = nil
 	}
 
 	rawRoleMappings := make([]config.RoleMapping, 0)
 	roleMappings = make([]config.RoleMapping, 0)
+	var isMapRolesMalformed bool
 	if roleData, ok := m["mapRoles"]; ok {
-		roleJson, err := utilyaml.ToJSON([]byte(roleData))
-		if err != nil {
+		if roleJson, err := utilyaml.ToJSON([]byte(roleData)); err != nil {
 			errs = append(errs, err)
+			isMapRolesMalformed = true
 		} else {
-			err = json.Unmarshal(roleJson, &rawRoleMappings)
-			if err != nil {
+			if err := json.Unmarshal(roleJson, &rawRoleMappings); err != nil {
 				errs = append(errs, err)
-			}
-
-			for _, roleMapping := range rawRoleMappings {
-				err = roleMapping.Validate()
-				if err != nil {
-					errs = append(errs, err)
-				} else {
-					roleMappings = append(roleMappings, roleMapping)
+				isMapRolesMalformed = true
+			} else {
+				for _, roleMapping := range rawRoleMappings {
+					err = roleMapping.Validate()
+					if err != nil {
+						errs = append(errs, err)
+					} else {
+						roleMappings = append(roleMappings, roleMapping)
+					}
 				}
 			}
 		}
 	}
+	if isMapRolesMalformed {
+		roleMappings = nil
+	}
 
 	awsAccounts = make([]string, 0)
+	var isMapAccountsMalformed bool
 	if accountsData, ok := m["mapAccounts"]; ok {
-		err := yaml.Unmarshal([]byte(accountsData), &awsAccounts)
-		if err != nil {
+		if err := yaml.Unmarshal([]byte(accountsData), &awsAccounts); err != nil {
 			errs = append(errs, err)
+			isMapAccountsMalformed = true
 		}
+	}
+	if isMapAccountsMalformed {
+		awsAccounts = nil
 	}
 
 	if len(errs) > 0 {
@@ -203,6 +217,8 @@ func EncodeMap(userMappings []config.UserMapping, roleMappings []config.RoleMapp
 	return m, nil
 }
 
+// saveMap reset the users, roles and awsAccounts to the newly parsed ones.
+// If a parsed configuration is nil, the original value will be kept.
 func (ms *MapStore) saveMap(
 	userMappings []config.UserMapping,
 	roleMappings []config.RoleMapping,
@@ -210,18 +226,26 @@ func (ms *MapStore) saveMap(
 
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
-	ms.users = make(map[string]config.UserMapping)
-	ms.roles = make(map[string]config.RoleMapping)
-	ms.awsAccounts = make(map[string]interface{})
 
-	for _, user := range userMappings {
-		ms.users[user.Key()] = user
+	if userMappings != nil {
+		ms.users = make(map[string]config.UserMapping, len(userMappings))
+		for _, user := range userMappings {
+			ms.users[user.Key()] = user
+		}
 	}
-	for _, role := range roleMappings {
-		ms.roles[role.Key()] = role
+
+	if roleMappings != nil {
+		ms.roles = make(map[string]config.RoleMapping, len(roleMappings))
+		for _, role := range roleMappings {
+			ms.roles[role.Key()] = role
+		}
 	}
-	for _, awsAccount := range awsAccounts {
-		ms.awsAccounts[awsAccount] = nil
+
+	if awsAccounts != nil {
+		ms.awsAccounts = make(map[string]interface{}, len(awsAccounts))
+		for _, awsAccount := range awsAccounts {
+			ms.awsAccounts[awsAccount] = nil
+		}
 	}
 }
 

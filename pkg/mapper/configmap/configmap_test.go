@@ -2,6 +2,7 @@ package configmap
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -262,8 +263,9 @@ func TestLoadConfigMap(t *testing.T) {
 }
 
 func TestParseMap(t *testing.T) {
-	m1 := map[string]string{
-		"mapRoles": `- rolearn: arn:aws:iam::123456789101:role/test-NodeInstanceRole-1VWRHZ3GKZ1T4
+	t.Run("should parse correctly", func(t *testing.T) {
+		m1 := map[string]string{
+			"mapRoles": `- rolearn: arn:aws:iam::123456789101:role/test-NodeInstanceRole-1VWRHZ3GKZ1T4
   username: system:node:{{EC2PrivateDNSName}}
   groups:
   - system:bootstrappers
@@ -276,7 +278,7 @@ func TestParseMap(t *testing.T) {
   groups:
   - system:basic-users
 `,
-		"mapUsers": `- userarn: arn:aws:iam::123456789101:user/Hello
+			"mapUsers": `- userarn: arn:aws:iam::123456789101:user/Hello
   username: Hello
   groups:
   - system:masters
@@ -285,49 +287,125 @@ func TestParseMap(t *testing.T) {
   groups:
   - system:masters
 `,
-	}
-	userMappings := []config.UserMapping{
-		{UserARN: "arn:aws:iam::123456789101:user/Hello", Username: "Hello", Groups: []string{"system:masters"}},
-		{UserARN: "arn:aws:iam::123456789101:user/World", Username: "World", Groups: []string{"system:masters"}},
-	}
-	roleMappings := []config.RoleMapping{
-		{
+		}
+		userMappings := []config.UserMapping{
+			{UserARN: "arn:aws:iam::123456789101:user/Hello", Username: "Hello", Groups: []string{"system:masters"}},
+			{UserARN: "arn:aws:iam::123456789101:user/World", Username: "World", Groups: []string{"system:masters"}},
+		}
+		roleMappings := []config.RoleMapping{
+			{
+				RoleARN:  "arn:aws:iam::123456789101:role/test-NodeInstanceRole-1VWRHZ3GKZ1T4",
+				Username: "system:node:{{EC2PrivateDNSName}}",
+				Groups:   []string{"system:bootstrappers", "system:nodes"},
+			},
+			{
+				SSO: &config.SSOARNMatcher{
+					PermissionSetName: "ViewOnlyAccess",
+					AccountID:         "012345678912",
+					Partition:         "aws-cn",
+				},
+				Username: "user1",
+				Groups:   []string{"system:basic-users"},
+			},
+		}
+		accounts := []string{}
+
+		u, r, a, err := ParseMap(m1)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(u, userMappings) {
+			t.Fatalf("unexpected userMappings %+v", u)
+		}
+		if !reflect.DeepEqual(r, roleMappings) {
+			t.Fatalf("unexpected roleMappings %+v", r)
+		}
+		if !reflect.DeepEqual(a, accounts) {
+			t.Fatalf("unexpected accounts %+v", a)
+		}
+
+		m2, err := EncodeMap(u, r, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(m1, m2) {
+			t.Fatalf("unexpected %v != %v", m1, m2)
+		}
+	})
+	t.Run("should return nil for malformed YAML", func(t *testing.T) {
+		m := map[string]string{
+			"mapRoles": `- rolearn: arn:aws:iam::123456789101:role/test-NodeInstanceRole-1VWRHZ3GKZ1T4
+  username: system:node:{{EC2PrivateDNSName}}
+  groups:
+- system:bootstrappers
+- system:nodes
+`,
+			"mapUsers": `- userarn: arn:aws:iam::123456789101:user/Hello
+  username: Hello
+  groups:
+  - system:masters
+`,
+		}
+
+		u, r, a, err := ParseMap(m)
+		if err == nil {
+			t.Fatal("malformed data not detected")
+		} else if !strings.Contains(err.Error(), "error parsing config map") {
+			t.Fatalf("unexpected error %+v", err)
+		}
+
+		userMappings := []config.UserMapping{
+			{UserARN: "arn:aws:iam::123456789101:user/Hello", Username: "Hello", Groups: []string{"system:masters"}},
+		}
+		if !reflect.DeepEqual(u, userMappings) {
+			t.Fatalf("unexpected userMappings %+v", u)
+		}
+
+		if r != nil {
+			t.Fatalf("unexpected non-nil roleMappings %+v", r)
+		}
+
+		if a == nil || len(a) != 0 {
+			t.Fatalf("unexpected accounts %+v", a)
+		}
+	})
+}
+
+func TestSaveMap(t *testing.T) {
+	t.Run("should keep original value if new value is nil", func(t *testing.T) {
+		ms := MapStore{
+			users:       make(map[string]config.UserMapping),
+			roles:       make(map[string]config.RoleMapping),
+			awsAccounts: make(map[string]interface{}),
+		}
+
+		userMapping := config.UserMapping{UserARN: "arn:aws:iam::123456789101:user/Hello", Username: "Hello", Groups: []string{"system:masters"}}
+		ms.saveMap([]config.UserMapping{userMapping}, nil, nil)
+		if _, ok := ms.users[userMapping.UserARN]; !ok {
+			t.Fatalf("users not correctly saved %+v", ms.users)
+		}
+		if ms.roles == nil || len(ms.roles) != 0 {
+			t.Fatalf("roles not correctly saved %+v", ms.roles)
+		}
+		if ms.awsAccounts == nil || len(ms.awsAccounts) != 0 {
+			t.Fatalf("awsAccounts not correctly saved %+v", ms.awsAccounts)
+		}
+
+		roleMapping := config.RoleMapping{
 			RoleARN:  "arn:aws:iam::123456789101:role/test-NodeInstanceRole-1VWRHZ3GKZ1T4",
 			Username: "system:node:{{EC2PrivateDNSName}}",
 			Groups:   []string{"system:bootstrappers", "system:nodes"},
-		},
-		{
-			SSO: &config.SSOARNMatcher{
-				PermissionSetName: "ViewOnlyAccess",
-				AccountID:         "012345678912",
-				Partition:         "aws-cn",
-			},
-			Username: "user1",
-			Groups:   []string{"system:basic-users"},
-		},
-	}
-	accounts := []string{}
-
-	u, r, a, err := ParseMap(m1)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(u, userMappings) {
-		t.Fatalf("unexpected userMappings %+v", u)
-	}
-	if !reflect.DeepEqual(r, roleMappings) {
-		t.Fatalf("unexpected roleMappings %+v", r)
-	}
-	if !reflect.DeepEqual(a, accounts) {
-		t.Fatalf("unexpected accounts %+v", a)
-	}
-
-	m2, err := EncodeMap(u, r, a)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(m1, m2) {
-		t.Fatalf("unexpected %v != %v", m1, m2)
-	}
+		}
+		ms.saveMap(nil, []config.RoleMapping{roleMapping}, nil)
+		if _, ok := ms.users[userMapping.Key()]; !ok {
+			t.Fatalf("users configuration lost %+v", ms.users)
+		}
+		if _, ok := ms.roles[roleMapping.Key()]; !ok {
+			t.Fatalf("roles not correctly saved %+v", ms.roles)
+		}
+		if ms.awsAccounts == nil || len(ms.awsAccounts) != 0 {
+			t.Fatalf("awsAccounts not correctly saved %+v", ms.awsAccounts)
+		}
+	})
 }
