@@ -1,6 +1,7 @@
 # Github Action to create a release with goreleaser
 name: Create Release
 on:
+  workflow_dispatch:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
