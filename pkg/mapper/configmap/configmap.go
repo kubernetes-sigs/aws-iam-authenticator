@@ -51,9 +51,11 @@ func New(masterURL, kubeConfig string) (*MapStore, error) {
 // when the values change.
 func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
 	go func() {
+		logrus.Info("startLoadConfigMap in EKSConfigMap")
 		for {
 			select {
 			case <-stopCh:
+				logrus.Info("stopCh is closed in startLoadConfigMap")
 				return
 			default:
 				watcher, err := ms.configMap.Watch(context.TODO(), metav1.ListOptions{

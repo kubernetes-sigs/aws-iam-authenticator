@@ -481,13 +481,16 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 		AccessKeyID:  "ABCDEF",
 	}
 	h := setup(&testVerifier{err: nil, identity: identity})
-	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
-		"arn:aws:iam::0123456789012:role/test": config.RoleMapping{
-			RoleARN:  "arn:aws:iam::0123456789012:role/Test",
-			Username: "TestUser",
-			Groups:   []string{"sys:admin", "listers"},
-		},
-	}, nil, nil)}
+	h.backendMapper = BackendMapper{
+		mappers: []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
+			"arn:aws:iam::0123456789012:role/test": config.RoleMapping{
+				RoleARN:  "arn:aws:iam::0123456789012:role/Test",
+				Username: "TestUser",
+				Groups:   []string{"sys:admin", "listers"},
+			},
+		}, nil, nil)},
+		mapperStopCh: make(chan struct{}),
+	}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -527,7 +530,10 @@ func TestAuthenticateVerifierRoleMappingCRD(t *testing.T) {
 	}})
 	indexer := createIndexer()
 	indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/Test", "arn:aws:iam::0123456789012:role/test", "TestUser", []string{"sys:admin", "listers"}))
-	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)}
+	h.backendMapper = BackendMapper{
+		mappers:      []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)},
+		mapperStopCh: make(chan struct{}),
+	}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -565,13 +571,16 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 		UserID:       "Test",
 		SessionName:  "TestSession",
 	}})
-	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(nil, map[string]config.UserMapping{
-		"arn:aws:iam::0123456789012:user/test": config.UserMapping{
-			UserARN:  "arn:aws:iam::0123456789012:user/Test",
-			Username: "TestUser",
-			Groups:   []string{"sys:admin", "listers"},
-		},
-	}, nil)}
+	h.backendMapper = BackendMapper{
+		mappers: []mapper.Mapper{file.NewFileMapperWithMaps(nil, map[string]config.UserMapping{
+			"arn:aws:iam::0123456789012:user/test": config.UserMapping{
+				UserARN:  "arn:aws:iam::0123456789012:user/Test",
+				Username: "TestUser",
+				Groups:   []string{"sys:admin", "listers"},
+			},
+		}, nil)},
+		mapperStopCh: make(chan struct{}),
+	}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -611,7 +620,10 @@ func TestAuthenticateVerifierUserMappingCRD(t *testing.T) {
 	}})
 	indexer := createIndexer()
 	indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:user/Test", "arn:aws:iam::0123456789012:user/test", "TestUser", []string{"sys:admin", "listers"}))
-	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)}
+	h.backendMapper = BackendMapper{
+		mappers:      []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)},
+		mapperStopCh: make(chan struct{}),
+	}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -649,9 +661,12 @@ func TestAuthenticateVerifierAccountMappingForUser(t *testing.T) {
 		UserID:       "Test",
 		SessionName:  "TestSession",
 	}})
-	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(nil, nil, map[string]bool{
-		"0123456789012": true,
-	})}
+	h.backendMapper = BackendMapper{
+		mappers: []mapper.Mapper{file.NewFileMapperWithMaps(nil, nil, map[string]bool{
+			"0123456789012": true,
+		})},
+		mapperStopCh: make(chan struct{}),
+	}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -689,9 +704,12 @@ func TestAuthenticateVerifierAccountMappingForUserCRD(t *testing.T) {
 		UserID:       "Test",
 		SessionName:  "TestSession",
 	}})
-	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(createIndexer()), file.NewFileMapperWithMaps(nil, nil, map[string]bool{
-		"0123456789012": true,
-	})}
+	h.backendMapper = BackendMapper{
+		mappers: []mapper.Mapper{crd.NewCRDMapperWithIndexer(createIndexer()), file.NewFileMapperWithMaps(nil, nil, map[string]bool{
+			"0123456789012": true,
+		})},
+		mapperStopCh: make(chan struct{}),
+	}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -729,9 +747,12 @@ func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
 		UserID:       "Test",
 		SessionName:  "TestSession",
 	}})
-	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(nil, nil, map[string]bool{
-		"0123456789012": true,
-	})}
+	h.backendMapper = BackendMapper{
+		mappers: []mapper.Mapper{file.NewFileMapperWithMaps(nil, nil, map[string]bool{
+			"0123456789012": true,
+		})},
+		mapperStopCh: make(chan struct{}),
+	}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -769,9 +790,12 @@ func TestAuthenticateVerifierAccountMappingForRoleCRD(t *testing.T) {
 		UserID:       "Test",
 		SessionName:  "TestSession",
 	}})
-	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(createIndexer()), file.NewFileMapperWithMaps(nil, nil, map[string]bool{
-		"0123456789012": true,
-	})}
+	h.backendMapper = BackendMapper{
+		mappers: []mapper.Mapper{crd.NewCRDMapperWithIndexer(createIndexer()), file.NewFileMapperWithMaps(nil, nil, map[string]bool{
+			"0123456789012": true,
+		})},
+		mapperStopCh: make(chan struct{}),
+	}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -810,13 +834,16 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 		SessionName:  "i-0c6f21bf1f24f9708",
 	}})
 	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14", 15, 5)
-	h.mappers = []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
-		"arn:aws:iam::0123456789012:role/testnoderole": config.RoleMapping{
-			RoleARN:  "arn:aws:iam::0123456789012:role/TestNodeRole",
-			Username: "system:node:{{EC2PrivateDNSName}}",
-			Groups:   []string{"system:nodes", "system:bootstrappers"},
-		},
-	}, nil, nil)}
+	h.backendMapper = BackendMapper{
+		mappers: []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
+			"arn:aws:iam::0123456789012:role/testnoderole": config.RoleMapping{
+				RoleARN:  "arn:aws:iam::0123456789012:role/TestNodeRole",
+				Username: "system:node:{{EC2PrivateDNSName}}",
+				Groups:   []string{"system:nodes", "system:bootstrappers"},
+			},
+		}, nil, nil)},
+		mapperStopCh: make(chan struct{}),
+	}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -858,7 +885,10 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14", 15, 5)
 	indexer := createIndexer()
 	indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/TestNodeRole", "arn:aws:iam::0123456789012:role/testnoderole", "system:node:{{EC2PrivateDNSName}}", []string{"system:nodes", "system:bootstrappers"}))
-	h.mappers = []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)}
+	h.backendMapper = BackendMapper{
+		mappers:      []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)},
+		mapperStopCh: make(chan struct{}),
+	}
 	h.authenticateEndpoint(resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
@@ -962,5 +992,29 @@ func TestRenderTemplate(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func TestCallBackForFileLoad(t *testing.T) {
+	fileContent := strings.Split(string("DynamicFile,MountedFile"), ",")
+
+	cfg := config.Config{
+		DynamicFilePath: "/tmp/server_test.txt",
+	}
+	h := &handler{
+		cfg: cfg,
+	}
+	newMapper, err := BuildMapperChain(h.cfg, fileContent)
+	if err != nil {
+		t.Errorf("Fail in TestCallBackForFileLoad: BuildMapperChain")
+	}
+	if len(newMapper.mappers) != len(fileContent) {
+		t.Errorf("Fail in TestCallBackForFileLoad: unpected mapper length")
+	}
+	if newMapper.mappers[0].Name() != "DynamicFile" {
+		t.Errorf("Fail in TestCallBackForFileLoad: unpected mapper mode")
+	}
+	if newMapper.mappers[1].Name() != "MountedFile" {
+		t.Errorf("Fail in TestCallBackForFileLoad: unpected mapper mode")
 	}
 }
