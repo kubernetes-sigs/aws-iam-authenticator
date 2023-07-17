@@ -7,7 +7,6 @@ VERSION ?= $(shell $(shell pwd)/hack/get-version.sh)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 GOPROXY ?= $(shell go env GOPROXY)
-SOURCES := $(shell find . -name '*.go')
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILD_DATE_STRIPPED := $(subst -,,$(subst :,,$(BUILD_DATE)))
@@ -55,7 +54,7 @@ $(CHECKSUM_FILE): build-all-bins
 	@echo $(ALL_BIN_TARGETS)
 	$(foreach target,$(ALL_BIN_TARGETS),$(call checksum,$(target),$(CHECKSUM_FILE)))
 
-$(OUTPUT)/bin/%: $(SOURCES)
+$(OUTPUT)/bin/%:
 	GO111MODULE=on \
 		CGO_ENABLED=0 \
 		GOOS=$(GOOS) \

@@ -63,6 +63,16 @@ func TestLoadDynamicFile(t *testing.T) {
 	defer close(stopCh)
 	time.Sleep(2 * time.Second)
 	os.WriteFile("/tmp/util_test.txt", []byte("test"), 0777)
+	for {
+		time.Sleep(1 * time.Second)
+		testA.mutex.Lock()
+		if testA.expectedContent == "test" {
+			t.Log("read to test")
+			testA.mutex.Unlock()
+			break
+		}
+		testA.mutex.Unlock()
+	}
 	for _, c := range cases {
 		updateFile(testA, c.input, t)
 		testA.mutex.Lock()
@@ -94,7 +104,16 @@ func TestDeleteDynamicFile(t *testing.T) {
 	defer close(stopCh)
 	time.Sleep(2 * time.Second)
 	os.WriteFile("/tmp/delete.txt", []byte("test"), 0777)
-	time.Sleep(2 * time.Second)
+	for {
+		time.Sleep(1 * time.Second)
+		testA.mutex.Lock()
+		if testA.expectedContent == "test" {
+			t.Log("read to test")
+			testA.mutex.Unlock()
+			break
+		}
+		testA.mutex.Unlock()
+	}
 	os.Remove("/tmp/delete.txt")
 	time.Sleep(2 * time.Second)
 	testA.mutex.Lock()
