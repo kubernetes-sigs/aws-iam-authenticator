@@ -7,6 +7,7 @@ server:
   kubeconfig: {{AUTHENTICATOR_KUBECONFIG}}
   backendmode: [ "MountedFile", "DynamicFile" ]
   dynamicfilepath: {{AUTHENTICATOR_DYNAMICFILE_PATH}}
+  dynamicBackendModePath: {{BACKENDMODE_PATH}}
   reservedPrefixConfig:
   - backendmode: DynamicFile
     usernamePrefixReserveList:
