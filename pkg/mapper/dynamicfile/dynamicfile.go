@@ -133,11 +133,8 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 	userMappings := make([]config.UserMapping, 0)
 	roleMappings := make([]config.RoleMapping, 0)
 	var dynamicFileData DynamicFileData
-	err := json.Unmarshal([]byte(dynamicContent), &dynamicFileData)
+	err := json.Unmarshal(dynamicContent, &dynamicFileData)
 	if err != nil {
-		//if len(dynamicContent) == 0 {
-		//	return userMappings, roleMappings, awsAccounts, nil
-		//}
 		logrus.Error("ParseMap: could not unmarshal dynamic file.")
 		return err
 	}

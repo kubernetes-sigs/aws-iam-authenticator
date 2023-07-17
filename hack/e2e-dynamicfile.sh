@@ -58,7 +58,12 @@ function e2e_mountfile() {
 }
 
 function e2e_dynamicfile_username_prefix_enforce(){
-  echo -n "MountedFile,DynamicFile" > "${backend_mode_json}"
+cat << EOF > ${backend_mode_json}
+{
+  "backendMode": "MountedFile DynamicFile"
+}
+EOF
+
   sleep 20
   set +e
   RoleOutput=$(aws iam get-role --role-name ${USERNAME_TEST_ROLE} 2>/dev/null)
@@ -132,7 +137,11 @@ function e2e_dynamicfile_username_prefix_enforce(){
 }
 
 function e2e_dynamicfile(){
-  echo -n "MountedFile,DynamicFile" > "${backend_mode_json}"
+cat << EOF > "${backend_mode_json}"
+{
+  "backendMode": "MountedFile DynamicFile"
+}
+EOF
   sleep 20
   set +e
   RoleOutput=$(aws iam get-role --role-name authenticator-dev-cluster-testrole 2>/dev/null)
@@ -230,7 +239,11 @@ function e2e_dynamic_backend_mode(){
       -e "s|{{USER_ID}}|${USERID}|g" \
             "${access_entry_template}" > "${access_entry_tmp}"
   mv "${access_entry_tmp}"  "${access_entry_json}"
-  echo -n "MountedFile" > "${backend_mode_json}"
+cat << EOF > "${backend_mode_json}"
+{
+  "backendMode": "MountedFile"
+}
+EOF
   sleep 20
 
   set -e
@@ -258,7 +271,11 @@ function e2e_dynamic_backend_mode(){
   fi
 
   # set backend mode to MOUNTEDFILE,DYNAMICFILE
-  echo -n "MountedFile,DynamicFile" > "${backend_mode_json}"
+cat << EOF > "${backend_mode_json}"
+{
+  "backendMode": "MountedFile DynamicFile"
+}
+EOF
   sleep 20
 
   OUT=$(aws sts get-caller-identity)
@@ -290,8 +307,3 @@ echo "starting end to end testing for dynamic backend mode"
 e2e_dynamic_backend_mode
 echo "starting end to end testing for dynamicfile mode with username prefix"
 e2e_dynamicfile_username_prefix_enforce
-
-
-
-
-
