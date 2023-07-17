@@ -56,7 +56,6 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 		defer watcher.Close()
 		content, err := loadDynamicFile(filename, stopCh)
 		if err != nil {
-			logrus.Errorf("StartLoadDynamicFile: error in loadDynamicFile, %v", err)
 			return
 		}
 		err = watcher.Add(filename)

@@ -270,6 +270,11 @@ func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) 
 		if err := m.Start(backendMapper.mapperStopCh); err != nil {
 			logrus.Fatalf("start mapper %q failed", m.Name())
 		}
+		if backendMapper.currentModes != "" {
+			backendMapper.currentModes = backendMapper.currentModes + " " + m.Name()
+		} else {
+			backendMapper.currentModes = m.Name()
+		}
 	}
 	return backendMapper, nil
 }
@@ -481,18 +486,38 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 }
 
 func (h *handler) CallBackForFileLoad(dynamicContent []byte) error {
-	newMapper, err := BuildMapperChain(h.cfg, strings.Split(string(dynamicContent), ","))
-	if err == nil && len(newMapper.mappers) > 0 {
-		// replace the mapper
-		close(h.backendMapper.mapperStopCh)
-		h.backendMapper = newMapper
+	var backendModes BackendModeConfig
+	logrus.Infof("BackendMode dynamic file got changed to %s", string(dynamicContent))
+	err := json.Unmarshal(dynamicContent, &backendModes)
+	if err != nil {
+		logrus.Infof("CallBackForFileLoad: could not unmarshal dynamic file.")
+		return err
+	}
+	if h.backendMapper.currentModes != backendModes.BackendMode {
+		logrus.Infof("BackendMode dynamic file got changed, %s different from current mode %s, rebuild mapper", backendModes.BackendMode, h.backendMapper.currentModes)
+		newMapper, err := BuildMapperChain(h.cfg, strings.Split(backendModes.BackendMode, " "))
+		if err == nil && len(newMapper.mappers) > 0 {
+			// replace the mapper
+			close(h.backendMapper.mapperStopCh)
+			h.backendMapper = newMapper
+		} else {
+			return err
+		}
 	} else {
-		logrus.Errorf("Error CallBackForFileLoad: failed when BuildMapperChain, %v", err)
+		logrus.Infof("BackendMode dynamic file got changed, but same with current mode, skip rebuild mapper")
 	}
 	return nil
 }
 
 func (h *handler) CallBackForFileDeletion() error {
 	logrus.Infof("BackendMode dynamic file got deleted")
+	backendMapper, err := BuildMapperChain(h.cfg, h.cfg.BackendMode)
+	if err == nil && len(backendMapper.mappers) > 0 {
+		// replace the mapper
+		close(h.backendMapper.mapperStopCh)
+		h.backendMapper = backendMapper
+	} else {
+		return err
+	}
 	return nil
 }

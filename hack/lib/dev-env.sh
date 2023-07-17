@@ -202,7 +202,6 @@ function start_authenticator_with_dynamicfile() {
         --publish ${authenticator_healthz_port}:${authenticator_healthz_port} \
         --publish ${AUTHENTICATOR_PORT}:${AUTHENTICATOR_PORT} \
         --env AWS_REGION="us-west-2" \
-        --rm \
         "${AUTHENTICATOR_IMAGE}" \
         server \
         --config "${authenticator_config_dest_dir}/authenticator_dynamicfile_mode.yaml"

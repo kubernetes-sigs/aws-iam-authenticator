@@ -36,4 +36,10 @@ type Server struct {
 type BackendMapper struct {
 	mappers      []mapper.Mapper
 	mapperStopCh chan struct{}
+	currentModes string
+}
+
+// AccessConfig represents the configuration format for cluster access config via backend mode.
+type BackendModeConfig struct {
+	BackendMode string `json:"backendMode"`
 }
