@@ -31,7 +31,9 @@ policies_json="${OUTPUT}/dev/authenticator/policies.json"
 allow_assume_role_policies_template="${REPO_ROOT}/hack/dev/allow_assume_role_policy.template"
 allow_assume_role_policies_json="${OUTPUT}/dev/authenticator/allow_assume_role_policy.json"
 access_entry_tmp="${OUTPUT}/dev/authenticator/access-entry/access-entries.tmp"
+access_entry_user_tmp="${OUTPUT}/dev/authenticator/access-entry/access-entries-user.tmp"
 access_entry_json="${OUTPUT}/dev/authenticator/access-entry/access-entries.json"
+backend_mode_json="${OUTPUT}/dev/authenticator/access-entry/backend-modes.json"
 client_dir="${OUTPUT}/dev/client"
 kubectl_kubeconfig="${client_dir}/kubeconfig.yaml"
 
@@ -56,6 +58,13 @@ function e2e_mountfile() {
 }
 
 function e2e_dynamicfile_username_prefix_enforce(){
+cat << EOF > ${backend_mode_json}
+{
+  "backendMode": "MountedFile DynamicFile"
+}
+EOF
+
+  sleep 20
   set +e
   RoleOutput=$(aws iam get-role --role-name ${USERNAME_TEST_ROLE} 2>/dev/null)
 
@@ -112,8 +121,8 @@ function e2e_dynamicfile_username_prefix_enforce(){
   sed -e "s|{{AWS_ACCOUNT}}|${AWS_ACCOUNT}|g" \
       -e "s|{{USERNAME_TEST_ROLE}}|${USERNAME_TEST_ROLE}|g" \
       -e "s|{{USER_ID}}|${USERID}|g" \
-            "${access_entry_username_prefix_template}" > "${access_entry_tmp}"
-  mv "${access_entry_tmp}"  "${access_entry_json}"
+            "${access_entry_username_prefix_template}" > "${access_entry_user_tmp}"
+  mv "${access_entry_user_tmp}"  "${access_entry_json}"
   #sleep 10 seconds to make access entry effective
   sleep 10
   set +e
@@ -128,6 +137,12 @@ function e2e_dynamicfile_username_prefix_enforce(){
 }
 
 function e2e_dynamicfile(){
+cat << EOF > "${backend_mode_json}"
+{
+  "backendMode": "MountedFile DynamicFile"
+}
+EOF
+  sleep 20
   set +e
   RoleOutput=$(aws iam get-role --role-name authenticator-dev-cluster-testrole 2>/dev/null)
 
@@ -216,14 +231,79 @@ function e2e_dynamicfile(){
   unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
 }
 
+function e2e_dynamic_backend_mode(){
+
+  # set backend mode to MOUNTEDFILE only
+  sed -e "s|{{AWS_ACCOUNT}}|${AWS_ACCOUNT}|g" \
+      -e "s|{{AWS_TEST_ROLE}}|${AWS_TEST_ROLE}|g" \
+      -e "s|{{USER_ID}}|${USERID}|g" \
+            "${access_entry_template}" > "${access_entry_tmp}"
+  mv "${access_entry_tmp}"  "${access_entry_json}"
+cat << EOF > "${backend_mode_json}"
+{
+  "backendMode": "MountedFile"
+}
+EOF
+  sleep 20
+
+  set -e
+  OUT=$(aws sts assume-role --role-arn arn:aws:iam::${AWS_ACCOUNT}:role/${AWS_TEST_ROLE} --role-session-name aaa);\
+  export AWS_ACCESS_KEY_ID=$(echo $OUT | jq -r '.Credentials''.AccessKeyId');\
+  export AWS_SECRET_ACCESS_KEY=$(echo $OUT | jq -r '.Credentials''.SecretAccessKey');\
+  export AWS_SESSION_TOKEN=$(echo $OUT | jq -r '.Credentials''.SessionToken');
+
+  OUT=$(aws sts get-caller-identity)
+  echo "current role: "$OUT
+  if [ -z "$OUT" ]
+      then
+          echo "can't assume-role: ""${AWS_TEST_ROLE}"
+          exit 1
+  fi
+
+  set +e
+  OUT=$(kubectl --kubeconfig=${kubectl_kubeconfig} --context="test-authenticator" get nodes 2>/var/tmp/err.txt)
+  echo $OUT
+  if grep -q "Unauthorized" "/var/tmp/err.txt"; then
+      echo -n ""
+  else
+      echo "end to end testing for dynamic backend mode failed"
+      exit 1
+  fi
+
+  # set backend mode to MOUNTEDFILE,DYNAMICFILE
+cat << EOF > "${backend_mode_json}"
+{
+  "backendMode": "MountedFile DynamicFile"
+}
+EOF
+  sleep 20
+
+  OUT=$(aws sts get-caller-identity)
+  echo "current role: "$OUT
+  if [ -z "$OUT" ]
+      then
+          echo "can't assume-role: ""${AWS_TEST_ROLE}"
+          exit 1
+  fi
+
+  OUT=$(kubectl --kubeconfig=${kubectl_kubeconfig} --context="test-authenticator" get nodes|grep Ready)
+  if [ ! -z "$OUT" ]
+      then
+          echo $OUT
+          echo "end to end testing for dynamic backend mode succeeded"
+
+      else
+          echo "end to end testing for dynamic backend mode failed"
+          exit 1
+  fi
+  unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+}
+
 echo "start end to end testing for mountfile mode"
 e2e_mountfile
 echo "starting end to end testing for dynamicfile mode"
 e2e_dynamicfile
+echo "starting end to end testing for dynamic backend mode"
+e2e_dynamic_backend_mode
 echo "starting end to end testing for dynamicfile mode with username prefix"
 e2e_dynamicfile_username_prefix_enforce
-
-
-
-
-
