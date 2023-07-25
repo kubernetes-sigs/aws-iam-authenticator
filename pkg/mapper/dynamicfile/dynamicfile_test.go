@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
 )
 
 var (
@@ -185,7 +186,7 @@ func TestUserIdStrict(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create a local file /tmp/test.txt")
 	}
-	ms.startLoadDynamicFile(stopCh)
+	fileutil.StartLoadDynamicFile(ms.filename, ms, stopCh)
 	time.Sleep(1 * time.Second)
 	ms.mutex.RLock()
 	for key, _ := range ms.roles {
@@ -216,7 +217,7 @@ func TestWithoutUserIdStrict(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create a local file /tmp/test.txt")
 	}
-	ms.startLoadDynamicFile(stopCh)
+	fileutil.StartLoadDynamicFile(ms.filename, ms, stopCh)
 	time.Sleep(1 * time.Second)
 	ms.mutex.RLock()
 	for key, _ := range ms.roles {
@@ -229,7 +230,7 @@ func TestWithoutUserIdStrict(t *testing.T) {
 	defer os.Remove("/tmp/test.txt")
 }
 
-func TestLoadDynamicFile(t *testing.T) {
+func TestLoadDynamicFileMode(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
@@ -243,7 +244,7 @@ func TestLoadDynamicFile(t *testing.T) {
 		t.Errorf("failed to create a DynamicFileMapper")
 	}
 
-	ms.startLoadDynamicFile(stopCh)
+	fileutil.StartLoadDynamicFile(ms.filename, ms, stopCh)
 	time.Sleep(1 * time.Second)
 	ms.mutex.RLock()
 	if len(ms.roles) != 0 {
@@ -289,11 +290,10 @@ func TestLoadDynamicFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create expected DynamicFileMapper")
 	}
-	expectedUserMappings, expectedRoleMappings, expectedAwsAccounts, err := ParseMap(expectedMapStore)
+	err = expectedMapStore.CallBackForFileLoad([]byte(updatedFileContent))
 	if err != nil {
 		t.Errorf("failed to ParseMap expected DynamicFileMapper")
 	}
-	expectedMapStore.saveMap(expectedUserMappings, expectedRoleMappings, expectedAwsAccounts)
 
 	time.Sleep(1 * time.Second)
 
@@ -358,13 +358,7 @@ func TestLoadDynamicFile(t *testing.T) {
 
 }
 
-func TestParseMap(t *testing.T) {
-
-	data := []byte(origFileContent)
-	err := os.WriteFile("/tmp/test.txt", data, 0600)
-	if err != nil {
-		t.Errorf("failed to create a local file /tmp/test.txt")
-	}
+func TestCallBackForFileDeletion(t *testing.T) {
 	cfg := config.Config{
 		DynamicFileUserIDStrict: true,
 		DynamicFilePath:         "/tmp/test.txt",
@@ -374,7 +368,37 @@ func TestParseMap(t *testing.T) {
 		t.Errorf("failed to create a DynamicFileMapper")
 	}
 
-	u, r, a, err := ParseMap(ms)
+	err = ms.CallBackForFileDeletion()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(ms.users) != 0 {
+		t.Fatalf("unexpected userMappings %+v", ms.users)
+	}
+
+	if len(ms.roles) != 0 {
+		t.Fatalf("unexpected userMappings %+v", ms.roles)
+	}
+
+	if len(ms.awsAccounts) != 0 {
+		t.Fatalf("unexpected userMappings %+v", ms.awsAccounts)
+	}
+}
+
+func TestCallBackForFileLoad(t *testing.T) {
+
+	data := []byte(origFileContent)
+	cfg := config.Config{
+		DynamicFileUserIDStrict: true,
+		DynamicFilePath:         "/tmp/test.txt",
+	}
+	ms, err := NewDynamicFileMapStore(cfg)
+	if err != nil {
+		t.Errorf("failed to create a DynamicFileMapper")
+	}
+
+	err = ms.CallBackForFileLoad(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -393,16 +417,33 @@ func TestParseMap(t *testing.T) {
 	}
 	origAccounts := []string{"012345678901", "456789012345"}
 
-	if !reflect.DeepEqual(u, origUserMappings) {
-		t.Fatalf("unexpected userMappings %+v", u)
+	if len(ms.users) != len(origUserMappings) {
+		t.Fatalf("unexpected userMappings %+v", ms.users)
 	}
-	if !reflect.DeepEqual(r, origRoleMappings) {
-		t.Fatalf("unexpected roleMappings %+v", r)
-	}
-	if !reflect.DeepEqual(a, origAccounts) {
-		t.Fatalf("unexpected accounts %+v", a)
-	}
-	//clean testing files
-	defer os.Remove("/tmp/test.txt")
 
+	for _, user := range origUserMappings {
+		if _, ok := ms.users[user.UserId]; !ok {
+			t.Fatalf("unexpected userMappings %+v", ms.users)
+		}
+	}
+
+	if len(ms.roles) != len(origRoleMappings) {
+		t.Fatalf("unexpected userMappings %+v", ms.roles)
+	}
+
+	for _, role := range origRoleMappings {
+		if _, ok := ms.roles[role.UserId]; !ok {
+			t.Fatalf("unexpected userMappings %+v", ms.roles)
+		}
+	}
+
+	if len(ms.awsAccounts) != len(origAccounts) {
+		t.Fatalf("unexpected userMappings %+v", ms.awsAccounts)
+	}
+
+	for _, account := range origAccounts {
+		if _, ok := ms.awsAccounts[account]; !ok {
+			t.Fatalf("unexpected userMappings %+v", ms.users)
+		}
+	}
 }

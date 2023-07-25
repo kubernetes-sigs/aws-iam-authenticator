@@ -1,10 +1,12 @@
 package dynamicfile
 
 import (
+	"strings"
+
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
-	"strings"
 )
 
 type DynamicFileMapper struct {
@@ -29,7 +31,7 @@ func (m *DynamicFileMapper) Name() string {
 }
 
 func (m *DynamicFileMapper) Start(stopCh <-chan struct{}) error {
-	m.startLoadDynamicFile(stopCh)
+	fileutil.StartLoadDynamicFile(m.filename, m.DynamicFileMapStore, stopCh)
 	return nil
 }
 

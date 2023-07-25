@@ -25,12 +25,14 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd"
@@ -67,11 +69,13 @@ var (
 // server state (internal)
 type handler struct {
 	http.ServeMux
+	mutex            sync.RWMutex
 	verifier         token.Verifier
 	ec2Provider      ec2provider.EC2Provider
 	clusterID        string
-	mappers          []mapper.Mapper
+	backendMapper    BackendMapper
 	scrubbedAccounts []string
+	cfg              config.Config
 }
 
 // New authentication webhook server.
@@ -80,16 +84,9 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 		Config: cfg,
 	}
 
-	mappers, err := BuildMapperChain(cfg)
+	backendMapper, err := BuildMapperChain(cfg, cfg.BackendMode)
 	if err != nil {
 		logrus.Fatalf("failed to build mapper chain: %v", err)
-	}
-
-	for _, m := range mappers {
-		logrus.Infof("starting mapper %q", m.Name())
-		if err := m.Start(stopCh); err != nil {
-			logrus.Fatalf("start mapper %q failed", m.Name())
-		}
 	}
 
 	for _, mapping := range c.RoleMappings {
@@ -145,11 +142,13 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 
 	logrus.Infof("listening on %s", listener.Addr())
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
+	internalHandler := c.getHandler(backendMapper, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst, stopCh)
 	c.httpServer = http.Server{
 		ErrorLog: log.New(errLog, "", 0),
-		Handler:  c.getHandler(mappers, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst),
+		Handler:  internalHandler,
 	}
 	c.listener = listener
+	c.internalHandler = internalHandler
 	return c
 }
 
@@ -160,6 +159,16 @@ func (c *Server) Run(stopCh <-chan struct{}) {
 
 	go func() {
 		http.ListenAndServe(":21363", &healthzHandler{})
+	}()
+	go func() {
+		for {
+			select {
+			case <-stopCh:
+				logrus.Info("shut down mapper before return from Run")
+				close(c.internalHandler.backendMapper.mapperStopCh)
+				return
+			}
+		}
 	}()
 	if err := c.httpServer.Serve(c.listener); err != nil {
 		logrus.WithError(err).Warning("http server exited")
@@ -180,7 +189,7 @@ type healthzHandler struct{}
 func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
-func (c *Server) getHandler(mappers []mapper.Mapper, ec2DescribeQps int, ec2DescribeBurst int) *handler {
+func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int, stopCh <-chan struct{}) *handler {
 	if c.ServerEC2DescribeInstancesRoleARN != "" {
 		_, err := awsarn.Parse(c.ServerEC2DescribeInstancesRoleARN)
 		if err != nil {
@@ -198,8 +207,9 @@ func (c *Server) getHandler(mappers []mapper.Mapper, ec2DescribeQps int, ec2Desc
 		verifier:         token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
 		ec2Provider:      ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
 		clusterID:        c.ClusterID,
-		mappers:          mappers,
+		backendMapper:    backendMapper,
 		scrubbedAccounts: c.Config.ScrubbedAWSAccounts,
+		cfg:              c.Config,
 	}
 
 	h.HandleFunc("/authenticate", h.authenticateEndpoint)
@@ -209,12 +219,18 @@ func (c *Server) getHandler(mappers []mapper.Mapper, ec2DescribeQps int, ec2Desc
 	})
 	logrus.Infof("Starting the h.ec2Provider.startEc2DescribeBatchProcessing ")
 	go h.ec2Provider.StartEc2DescribeBatchProcessing()
+	if strings.TrimSpace(c.DynamicBackendModePath) != "" {
+		fileutil.StartLoadDynamicFile(c.DynamicBackendModePath, h, stopCh)
+	}
+
 	return h
 }
 
-func BuildMapperChain(cfg config.Config) ([]mapper.Mapper, error) {
-	modes := cfg.BackendMode
-	mappers := []mapper.Mapper{}
+func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) {
+	backendMapper := BackendMapper{
+		mappers:      []mapper.Mapper{},
+		mapperStopCh: make(chan struct{}),
+	}
 	for _, mode := range modes {
 		switch mode {
 		case mapper.ModeFile:
@@ -222,34 +238,45 @@ func BuildMapperChain(cfg config.Config) ([]mapper.Mapper, error) {
 		case mapper.ModeMountedFile:
 			fileMapper, err := file.NewFileMapper(cfg)
 			if err != nil {
-				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
+				return BackendMapper{}, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
-			mappers = append(mappers, fileMapper)
+			backendMapper.mappers = append(backendMapper.mappers, fileMapper)
 		case mapper.ModeConfigMap:
 			fallthrough
 		case mapper.ModeEKSConfigMap:
 			configMapMapper, err := configmap.NewConfigMapMapper(cfg)
 			if err != nil {
-				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
+				return BackendMapper{}, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
-			mappers = append(mappers, configMapMapper)
+			backendMapper.mappers = append(backendMapper.mappers, configMapMapper)
 		case mapper.ModeCRD:
 			crdMapper, err := crd.NewCRDMapper(cfg)
 			if err != nil {
-				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
+				return BackendMapper{}, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
-			mappers = append(mappers, crdMapper)
+			backendMapper.mappers = append(backendMapper.mappers, crdMapper)
 		case mapper.ModeDynamicFile:
 			dynamicFileMapper, err := dynamicfile.NewDynamicFileMapper(cfg)
 			if err != nil {
-				return nil, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
+				return BackendMapper{}, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
-			mappers = append(mappers, dynamicFileMapper)
+			backendMapper.mappers = append(backendMapper.mappers, dynamicFileMapper)
 		default:
-			return nil, fmt.Errorf("backend-mode %q is not a valid mode", mode)
+			return BackendMapper{}, fmt.Errorf("backend-mode %q is not a valid mode", mode)
 		}
 	}
-	return mappers, nil
+	for _, m := range backendMapper.mappers {
+		logrus.Infof("starting mapper %q", m.Name())
+		if err := m.Start(backendMapper.mapperStopCh); err != nil {
+			logrus.Fatalf("start mapper %q failed", m.Name())
+		}
+		if backendMapper.currentModes != "" {
+			backendMapper.currentModes = backendMapper.currentModes + " " + m.Name()
+		} else {
+			backendMapper.currentModes = m.Name()
+		}
+	}
+	return backendMapper, nil
 }
 
 func duration(start time.Time) float64 {
@@ -385,7 +412,7 @@ func ReservedPrefixExists(username string, reservedList []string) bool {
 func (h *handler) doMapping(identity *token.Identity) (string, []string, error) {
 	var errs []error
 
-	for _, m := range h.mappers {
+	for _, m := range h.backendMapper.mappers {
 		mapping, err := m.Map(identity)
 		if err == nil {
 			// Mapping found, try to render any templates like {{EC2PrivateDNSName}}
@@ -456,4 +483,41 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 	template = strings.Replace(template, "{{AccessKeyID}}", identity.AccessKeyID, -1)
 
 	return template, nil
+}
+
+func (h *handler) CallBackForFileLoad(dynamicContent []byte) error {
+	var backendModes BackendModeConfig
+	logrus.Infof("BackendMode dynamic file got changed to %s", string(dynamicContent))
+	err := json.Unmarshal(dynamicContent, &backendModes)
+	if err != nil {
+		logrus.Infof("CallBackForFileLoad: could not unmarshal dynamic file.")
+		return err
+	}
+	if h.backendMapper.currentModes != backendModes.BackendMode {
+		logrus.Infof("BackendMode dynamic file got changed, %s different from current mode %s, rebuild mapper", backendModes.BackendMode, h.backendMapper.currentModes)
+		newMapper, err := BuildMapperChain(h.cfg, strings.Split(backendModes.BackendMode, " "))
+		if err == nil && len(newMapper.mappers) > 0 {
+			// replace the mapper
+			close(h.backendMapper.mapperStopCh)
+			h.backendMapper = newMapper
+		} else {
+			return err
+		}
+	} else {
+		logrus.Infof("BackendMode dynamic file got changed, but same with current mode, skip rebuild mapper")
+	}
+	return nil
+}
+
+func (h *handler) CallBackForFileDeletion() error {
+	logrus.Infof("BackendMode dynamic file got deleted")
+	backendMapper, err := BuildMapperChain(h.cfg, h.cfg.BackendMode)
+	if err == nil && len(backendMapper.mappers) > 0 {
+		// replace the mapper
+		close(h.backendMapper.mapperStopCh)
+		h.backendMapper = backendMapper
+	} else {
+		return err
+	}
+	return nil
 }

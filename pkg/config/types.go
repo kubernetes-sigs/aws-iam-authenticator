@@ -181,6 +181,8 @@ type Config struct {
 	DynamicFileUserIDStrict bool
 	// ReservedPrefixConfig defines reserved username prefixes for each backend
 	ReservedPrefixConfig map[string]ReservedPrefixConfig
+	// Dynamic File Path for BackendMode
+	DynamicBackendModePath string
 }
 
 type ReservedPrefixConfig struct {
