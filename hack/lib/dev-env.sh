@@ -67,6 +67,7 @@ authenticator_dynamicfile_host_path="${OUTPUT}/dev/authenticator/access-entry"
 authenticator_access_entry_host_file="${authenticator_dynamicfile_host_path}/access-entries.json"
 authenticator_dynamicfile_dest_path="/var/authenticator/access-entry"
 authenticator_access_entry_dest_file="${authenticator_dynamicfile_dest_path}/access-entries.json"
+authenticator_backend_mode_dest_file="${authenticator_dynamicfile_dest_path}/backend-modes.json"
 authenticator_config_dest_dir="/etc/authenticator"
 authenticator_export_dest_dir="/var/authenticator/export"
 authenticator_state_dest_dir="/var/authenticator/state"
@@ -145,6 +146,7 @@ function write_authenticator_with_dynamicfile_mode_config() {
         -e "s|{{AUTHENTICATOR_IP}}|${AUTHENTICATOR_IP}|g" \
         -e "s|{{CLUSTER_NAME}}|${CLUSTER_NAME}|g" \
         -e "s|{{AUTHENTICATOR_DYNAMICFILE_PATH}}|${authenticator_access_entry_dest_file}|g" \
+        -e "s|{{BACKENDMODE_PATH}}|${authenticator_backend_mode_dest_file}|g" \
         "${authenticator_dynamicfile_mode_config_template}" > "${authenticator_dynamicfile_mode_config}"
     cat "${authenticator_dynamicfile_mode_config}"
     cp "${authenticator_access_entry_template}" "${authenticator_access_entry_host_file}"
@@ -200,7 +202,6 @@ function start_authenticator_with_dynamicfile() {
         --publish ${authenticator_healthz_port}:${authenticator_healthz_port} \
         --publish ${AUTHENTICATOR_PORT}:${AUTHENTICATOR_PORT} \
         --env AWS_REGION="us-west-2" \
-        --rm \
         "${AUTHENTICATOR_IMAGE}" \
         server \
         --config "${authenticator_config_dest_dir}/authenticator_dynamicfile_mode.yaml"

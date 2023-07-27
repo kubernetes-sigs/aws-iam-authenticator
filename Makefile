@@ -7,7 +7,6 @@ VERSION ?= $(shell $(shell pwd)/hack/get-version.sh)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 GOPROXY ?= $(shell go env GOPROXY)
-SOURCES := $(shell find . -name '*.go')
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILD_DATE_STRIPPED := $(subst -,,$(subst :,,$(BUILD_DATE)))
@@ -55,7 +54,7 @@ $(CHECKSUM_FILE): build-all-bins
 	@echo $(ALL_BIN_TARGETS)
 	$(foreach target,$(ALL_BIN_TARGETS),$(call checksum,$(target),$(CHECKSUM_FILE)))
 
-$(OUTPUT)/bin/%: $(SOURCES)
+$(OUTPUT)/bin/%:
 	GO111MODULE=on \
 		CGO_ENABLED=0 \
 		GOOS=$(GOOS) \
@@ -77,16 +76,31 @@ $(MAKE) $(OUTPUT)/bin/aws-iam-authenticator_$(VERSION)_$(1)_$(2)$(3) GOOS=$(1) G
 
 endef
 
+# Function build-image
+# Parameters:
+# 1: Target architecture
+define build-image
+$(MAKE) .image-linux-$(1)
+
+endef
+
 .PHONY: build-all-bins
 build-all-bins:
 	$(foreach arch,$(BIN_ARCH_LINUX),$(call build-bin,linux,$(arch),))
 	$(foreach arch,$(BIN_ARCH_WINDOWS),$(call build-bin,windows,$(arch),.exe))
 	$(foreach arch,$(BIN_ARCH_DARWIN),$(call build-bin,darwin,$(arch),))
 
+.PHONY: build-all-images
+build-all-images:
+	$(foreach arch,$(BIN_ARCH_LINUX),$(call build-image,$(arch)))
+
 .PHONY: image
-image:
-	docker buildx build --output=type=docker --platform linux/amd64 \
-		--tag aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(BUILD_DATE_STRIPPED) .
+image: .image-linux-$(GOARCH)
+
+.PHONY: .image-linux-%
+.image-linux-%:
+	docker buildx build --output=type=docker --platform linux/$* \
+		--tag aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(BUILD_DATE_STRIPPED)-linux_$* .
 
 .PHONY: goreleaser
 goreleaser:

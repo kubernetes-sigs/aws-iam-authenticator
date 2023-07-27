@@ -108,6 +108,8 @@ func getConfig() (config.Config, error) {
 		DynamicFilePath: viper.GetString("server.dynamicfilepath"),
 		//DynamicFileUserIDStrict: if true, then aws UserId from sts will be used to look up the roleMapping/userMapping; or aws IdentityArn is used
 		DynamicFileUserIDStrict: viper.GetBool("server.dynamicfileUserIDStrict"),
+		//DynamicBackendModePath: the file path containing the backend mode
+		DynamicBackendModePath: viper.GetString("server.dynamicBackendModePath"),
 	}
 	if err := viper.UnmarshalKey("server.mapRoles", &cfg.RoleMappings); err != nil {
 		return cfg, fmt.Errorf("invalid server role mappings: %v", err)
