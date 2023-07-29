@@ -16,7 +16,7 @@ CHECKSUM_FILE ?= $(OUTPUT)/bin/authenticator_$(VERSION)_checksums.txt
 # Architectures for binary builds
 BIN_ARCH_LINUX ?= amd64 arm64
 BIN_ARCH_WINDOWS ?= amd64
-BIN_ARCH_DARWIN ?= amd64
+BIN_ARCH_DARWIN ?= amd64 arm64
 
 #CI is defined in test-infra https://github.com/kubernetes/test-infra/blob/2e3dd84399745eb49cef69afc3ed5bded8a6580c/prow/pod-utils/downwardapi/jobspec.go#L89
 # and passed in when running on github prow
