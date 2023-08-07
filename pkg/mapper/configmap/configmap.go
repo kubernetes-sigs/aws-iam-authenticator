@@ -3,7 +3,6 @@ package configmap
 import (
 	"context"
 	"errors"
-	"strings"
 	"sync"
 
 	"fmt"
@@ -119,23 +118,9 @@ func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappi
 	userMappings = make([]config.UserMapping, 0)
 	if userData, ok := m["mapUsers"]; ok {
 		if !isSkippable(userData) {
-			userJson, err := utilyaml.ToJSON([]byte(userData))
+			err := yaml.Unmarshal([]byte(userData), &userMappings)
 			if err != nil {
 				errs = append(errs, err)
-			} else {
-				err = json.Unmarshal(userJson, &rawUserMappings)
-				if err != nil {
-					errs = append(errs, err)
-				}
-
-				for _, userMapping := range rawUserMappings {
-					err = userMapping.Validate()
-					if err != nil {
-						errs = append(errs, err)
-					} else {
-						userMappings = append(userMappings, userMapping)
-					}
-				}
 			}
 		}
 	}
@@ -143,23 +128,9 @@ func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappi
 	roleMappings = make([]config.RoleMapping, 0)
 	if roleData, ok := m["mapRoles"]; ok {
 		if !isSkippable(roleData) {
-			roleJson, err := utilyaml.ToJSON([]byte(roleData))
+			err := yaml.Unmarshal([]byte(roleData), &roleMappings)
 			if err != nil {
 				errs = append(errs, err)
-			} else {
-				err = json.Unmarshal(roleJson, &rawRoleMappings)
-				if err != nil {
-					errs = append(errs, err)
-				}
-
-				for _, roleMapping := range rawRoleMappings {
-					err = roleMapping.Validate()
-					if err != nil {
-						errs = append(errs, err)
-					} else {
-						roleMappings = append(roleMappings, roleMapping)
-					}
-				}
 			}
 		}
 	}
