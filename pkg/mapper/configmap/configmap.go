@@ -164,7 +164,7 @@ func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappi
 
 func isSkippable(data string) bool {
 	trimmed := strings.TrimSpace(data)
-	return trimmed == "" || trimmed == "``" || trimmed == "\"\""
+	return trimmed == "" || trimmed == "``" || trimmed == "\"\"" || trimmed == "''"
 }
 
 func EncodeMap(userMappings []config.UserMapping, roleMappings []config.RoleMapping, awsAccounts []string) (m map[string]string, err error) {
