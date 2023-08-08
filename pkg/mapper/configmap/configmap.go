@@ -117,35 +117,41 @@ func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappi
 	errs := make([]error, 0)
 	userMappings = make([]config.UserMapping, 0)
 	if userData, ok := m["mapUsers"]; ok {
-		userJson, err := utilyaml.ToJSON([]byte(userData))
-		if err != nil {
-			errs = append(errs, err)
-		} else {
-			err = json.Unmarshal(userJson, &userMappings)
+		if !isSkippable(userData) {
+			userJson, err := utilyaml.ToJSON([]byte(userData))
 			if err != nil {
 				errs = append(errs, err)
+			} else {
+				err = json.Unmarshal(userJson, &userMappings)
+				if err != nil {
+					errs = append(errs, err)
+				}
 			}
 		}
 	}
 
 	roleMappings = make([]config.RoleMapping, 0)
 	if roleData, ok := m["mapRoles"]; ok {
-		roleJson, err := utilyaml.ToJSON([]byte(roleData))
-		if err != nil {
-			errs = append(errs, err)
-		} else {
-			err = json.Unmarshal(roleJson, &roleMappings)
+		if !isSkippable(roleData) {
+			roleJson, err := utilyaml.ToJSON([]byte(roleData))
 			if err != nil {
 				errs = append(errs, err)
+			} else {
+				err = json.Unmarshal(roleJson, &roleMappings)
+				if err != nil {
+					errs = append(errs, err)
+				}
 			}
 		}
 	}
 
 	awsAccounts = make([]string, 0)
 	if accountsData, ok := m["mapAccounts"]; ok {
-		err := yaml.Unmarshal([]byte(accountsData), &awsAccounts)
-		if err != nil {
-			errs = append(errs, err)
+		if !isSkippable(accountsData) {
+			err := yaml.Unmarshal([]byte(accountsData), &awsAccounts)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
 
@@ -154,6 +160,11 @@ func ParseMap(m map[string]string) (userMappings []config.UserMapping, roleMappi
 		err = ErrParsingMap{errors: errs}
 	}
 	return userMappings, roleMappings, awsAccounts, err
+}
+
+func isSkippable(data string) bool {
+	trimmed := strings.TrimSpace(data)
+	return trimmed == "" || trimmed == "``" || trimmed == "\"\"" || trimmed == "''"
 }
 
 func EncodeMap(userMappings []config.UserMapping, roleMappings []config.RoleMapping, awsAccounts []string) (m map[string]string, err error) {
