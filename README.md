@@ -183,7 +183,7 @@ about how to configure the reserved prefix.
 
 Finally, once the server is set up you'll want to authenticate.
 You will still need a `kubeconfig` that has the public data about your cluster (cluster CA certificate, endpoint address).
-The `users` section of your configuration, however, should include an exec section ([refer to the v1.10 docs](https://kubernetes.io/docs/admin/authentication/#client-go-credential-plugins))::
+The `users` section of your configuration, however, should include an exec section ([refer to the v1.22 docs](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins))::
 ```yaml
 # [...]
 users:
