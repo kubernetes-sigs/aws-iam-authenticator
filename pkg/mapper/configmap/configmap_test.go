@@ -307,3 +307,25 @@ func TestBadParseMap(t *testing.T) {
 		t.Fatalf("unexpected %v != %v", emptyMap, m2)
 	}
 }
+
+func TestBadParseMapSingleQuote(t *testing.T) {
+	m1 := map[string]string{
+		"mapAccounts": `''`,
+		"mapRoles":    `''`,
+		"mapUsers":    `''`,
+	}
+
+	u, r, a, err := ParseMap(m1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m2, err := EncodeMap(u, r, a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	emptyMap := map[string]string{}
+	if !reflect.DeepEqual(emptyMap, m2) {
+		t.Fatalf("unexpected %v != %v", emptyMap, m2)
+	}
+}
