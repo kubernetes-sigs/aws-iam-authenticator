@@ -25,7 +25,7 @@ KOPS_USERID=$(whoami)
 if [ $CI = true ]
 then
   REPO_NAME=${REPO_NAME:-aws-iam-authenticator-e2e}
-  KOPS_STATE_BUCKET=${KOPS_STATE_BUCKET:-k8s-kops-auth-e2e}
+  KOPS_STATE_BUCKET=${KOPS_STATE_BUCKET:-k8s-kops-auth-shared-e2e}
 else
   REPO_NAME=${REPO_NAME:-aws-iam-authenticator}
   KOPS_STATE_BUCKET=${KOPS_STATE_BUCKET:-k8s-kops-auth-${KOPS_USERID}}
