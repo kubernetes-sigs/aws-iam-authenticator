@@ -6,12 +6,13 @@ import (
 )
 
 const (
-	Namespace = "aws_iam_authenticator"
-	Malformed = "malformed_request"
-	Invalid   = "invalid_token"
-	STSError  = "sts_error"
-	Unknown   = "uknown_user"
-	Success   = "success"
+	Namespace     = "aws_iam_authenticator"
+	Malformed     = "malformed_request"
+	Invalid       = "invalid_token"
+	STSError      = "sts_error"
+	STSThrottling = "sts_throttling"
+	Unknown       = "uknown_user"
+	Success       = "success"
 )
 
 var authenticatorMetrics Metrics
@@ -69,6 +70,13 @@ func createMetrics(reg prometheus.Registerer) Metrics {
 				Namespace: Namespace,
 				Name:      "sts_connection_failures_total",
 				Help:      "Sts call could not succeed or timedout",
+			},
+		),
+		StsThrottling: factory.NewCounter(
+			prometheus.CounterOpts{
+				Namespace: Namespace,
+				Name:      "sts_throttling_total",
+				Help:      "Sts call got throttled",
 			},
 		),
 		StsResponses: factory.NewCounterVec(

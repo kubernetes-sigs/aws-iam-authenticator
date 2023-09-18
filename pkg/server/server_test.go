@@ -117,7 +117,7 @@ func createIndexer() cache.Indexer {
 // Count of expected metrics
 type validateOpts struct {
 	// The expected number of latency entries for each label.
-	malformed, invalidToken, unknownUser, success, stsError uint64
+	malformed, invalidToken, unknownUser, success, stsError, stsThrottling uint64
 }
 
 func checkHistogramSampleCount(t *testing.T, name string, actual, expected uint64) {
@@ -135,7 +135,7 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 	}
 	for _, m := range metricFamilies {
 		if strings.HasPrefix(m.GetName(), "aws_iam_authenticator_authenticate_latency_seconds") {
-			var actualSuccess, actualMalformed, actualInvalid, actualUnknown, actualSTSError uint64
+			var actualSuccess, actualMalformed, actualInvalid, actualUnknown, actualSTSError, actualSTSThrottling uint64
 			for _, metric := range m.GetMetric() {
 				if len(metric.Label) != 1 {
 					t.Fatalf("Expected 1 label for metric.  Got %+v", metric.Label)
@@ -155,6 +155,8 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 					actualUnknown = metric.GetHistogram().GetSampleCount()
 				case metrics.STSError:
 					actualSTSError = metric.GetHistogram().GetSampleCount()
+				case metrics.STSThrottling:
+					actualSTSThrottling = metric.GetHistogram().GetSampleCount()
 				default:
 					t.Errorf("Unknown result for latency label: %s", *label.Value)
 
@@ -165,6 +167,7 @@ func validateMetrics(t *testing.T, opts validateOpts) {
 			checkHistogramSampleCount(t, metrics.Invalid, actualInvalid, opts.invalidToken)
 			checkHistogramSampleCount(t, metrics.Unknown, actualUnknown, opts.unknownUser)
 			checkHistogramSampleCount(t, metrics.STSError, actualSTSError, opts.stsError)
+			checkHistogramSampleCount(t, metrics.STSThrottling, actualSTSThrottling, opts.stsThrottling)
 		}
 	}
 }
@@ -362,6 +365,27 @@ func TestAuthenticateVerifierErrorCRD(t *testing.T) {
 	}
 	verifyBodyContains(t, resp, string(tokenReviewDenyJSON))
 	validateMetrics(t, validateOpts{invalidToken: 1})
+}
+
+func TestAuthenticateVerifierSTSThrottling(t *testing.T) {
+	resp := httptest.NewRecorder()
+
+	data, err := json.Marshal(authenticationv1beta1.TokenReview{
+		Spec: authenticationv1beta1.TokenReviewSpec{
+			Token: "token",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Could not marshal in put data: %v", err)
+	}
+	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
+	h := setup(&testVerifier{err: token.STSThrottling{}})
+	h.authenticateEndpoint(resp, req)
+	if resp.Code != http.StatusTooManyRequests {
+		t.Errorf("Expected status code %d, was %d", http.StatusTooManyRequests, resp.Code)
+	}
+	verifyBodyContains(t, resp, string(tokenReviewDenyJSON))
+	validateMetrics(t, validateOpts{stsThrottling: 1})
 }
 
 func TestAuthenticateVerifierSTSError(t *testing.T) {

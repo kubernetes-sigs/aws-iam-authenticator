@@ -325,7 +325,13 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 	// if the token is invalid, reject with a 403
 	identity, err := h.verifier.Verify(tokenReview.Spec.Token)
 	if err != nil {
-		if _, ok := err.(token.STSError); ok {
+		if _, ok := err.(token.STSThrottling); ok {
+			metrics.Get().Latency.WithLabelValues(metrics.STSThrottling).Observe(duration(start))
+			log.WithError(err).Warn("access denied")
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write(tokenReviewDenyJSON)
+			return
+		} else if _, ok := err.(token.STSError); ok {
 			metrics.Get().Latency.WithLabelValues(metrics.STSError).Observe(duration(start))
 		} else {
 			metrics.Get().Latency.WithLabelValues(metrics.Invalid).Observe(duration(start))
