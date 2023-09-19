@@ -61,6 +61,8 @@ $(OUTPUT)/bin/%:
 		GOARCH=$(GOARCH) \
 		GOPROXY=$(GOPROXY) \
 		go build \
+		-trimpath \
+		--tags "$(GOTAGS)" \
 		-o=$@ \
 		-ldflags="-w -s -X $(PKG)/pkg.Version=$(VERSION) -X $(PKG)/pkg.BuildDate=$(BUILD_DATE) -X $(PKG)/pkg.CommitID=$(GIT_COMMIT)" \
 		./cmd/aws-iam-authenticator/
