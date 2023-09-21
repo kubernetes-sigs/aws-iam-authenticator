@@ -60,6 +60,13 @@ func assertSTSError(t *testing.T, err error) {
 	}
 }
 
+func assertSTSThrottling(t *testing.T, err error) {
+	t.Helper()
+	if _, ok := err.(STSThrottling); !ok {
+		t.Errorf("Expected err %v to be an STSThrottling but was not", err)
+	}
+}
+
 var (
 	now        = time.Now()
 	timeStr    = now.UTC().Format("20060102T150405Z")
@@ -192,6 +199,13 @@ func TestVerifyTokenPreSTSValidations(t *testing.T) {
 	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.eu-west-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
 	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.sa-east-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
 	validationErrorTest(t, "aws", toToken(fmt.Sprintf("https://sts.us-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAAAAAAAAAAAAAAAAA%%2F20220601%%2Fus-west-2%%2Fsts%%2Faws4_request&X-Amz-Date=%s&X-Amz-Expires=900&X-Amz-Security-Token=XXXXXXXXXXXXX&X-Amz-SignedHeaders=host%%3Bx-k8s-aws-id&x-amz-credential=eve&X-Amz-Signature=999999999999999999", timeStr)), "input token was not properly formatted: duplicate query parameter found:")
+}
+
+func TestVerifyHTTPThrottling(t *testing.T) {
+	testVerifier := newVerifier("aws", 400, "{\\\"Error\\\":{\\\"Code\\\":\\\"Throttling\\\",\\\"Message\\\":\\\"Rate exceeded\\\",\\\"Type\\\":\\\"Sender\\\"},\\\"RequestId\\\":\\\"8c2d3520-24e1-4d5c-ac55-7e226335f447\\\"}", nil)
+	_, err := testVerifier.Verify(validToken)
+	errorContains(t, err, "sts getCallerIdentity was throttled")
+	assertSTSThrottling(t, err)
 }
 
 func TestVerifyHTTPError(t *testing.T) {

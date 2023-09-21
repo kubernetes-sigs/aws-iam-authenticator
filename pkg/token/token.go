@@ -139,6 +139,20 @@ func NewSTSError(m string) STSError {
 	return STSError{message: m}
 }
 
+// STSThrottling is returned when there was STS Throttling.
+type STSThrottling struct {
+	message string
+}
+
+func (e STSThrottling) Error() string {
+	return "sts getCallerIdentity was throttled: " + e.message
+}
+
+// NewSTSError creates a error of type STS.
+func NewSTSThrottling(m string) STSThrottling {
+	return STSThrottling{message: m}
+}
+
 var parameterWhitelist = map[string]bool{
 	"action":               true,
 	"version":              true,
@@ -570,7 +584,14 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 
 	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode)).Inc()
 	if response.StatusCode != 200 {
-		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d). Body: %s", response.StatusCode, string(responseBody[:])))
+		responseStr := string(responseBody[:])
+		// refer to https://docs.aws.amazon.com/STS/latest/APIReference/CommonErrors.html and log
+		// response body for STS Throttling is {"Error":{"Code":"Throttling","Message":"Rate exceeded","Type":"Sender"},"RequestId":"xxx"}
+		if strings.Contains(responseStr, "Throttling") {
+			metrics.Get().StsThrottling.Inc()
+			return nil, NewSTSThrottling(responseStr)
+		}
+		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d). Body: %s", response.StatusCode, responseStr))
 	}
 
 	var callerIdentity getCallerIdentityWrapper
