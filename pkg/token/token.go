@@ -390,6 +390,7 @@ type tokenVerifier struct {
 	client            *http.Client
 	clusterID         string
 	validSTShostnames map[string]bool
+	roleCache         *RoleCache
 }
 
 func stsHostsForPartition(partitionID, region string) map[string]bool {
@@ -462,6 +463,7 @@ func NewVerifier(clusterID, partitionID, region string) Verifier {
 		},
 		clusterID:         clusterID,
 		validSTShostnames: stsHostsForPartition(partitionID, region),
+		roleCache:         NewRoleCache(),
 	}
 }
 
@@ -623,6 +625,13 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, STSError{fmt.Sprintf(
 			"malformed UserID %q",
 			callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.UserID)}
+	}
+
+	// STS get-caller-identity can return an assume-role ARN which does not include the IAM role path
+	if strings.HasPrefix(id.UserID, "AROA") {
+		if roleARN, exists := v.roleCache.CheckRoleID(id.UserID); exists {
+			id.CanonicalARN = roleARN
+		}
 	}
 
 	return id, nil
