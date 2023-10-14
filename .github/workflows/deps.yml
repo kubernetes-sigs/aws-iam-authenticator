@@ -1,0 +1,36 @@
+name: "Dependency Review"
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+        with:
+          show-progress: false
+      - name: "Dependency Review"
+        uses: actions/dependency-review-action@v3
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+        with:
+          show-progress: false
+      - id: govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: 1.21.3
+          go-version-file: go.mod
+      - id: govulncheck-tests-integration
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: 1.21.3
+          go-version-file: tests/integration/go.mod
+      - id: govulncheck-tests-e2e
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: 1.21.3
+          go-version-file: tests/e2e/go.mod
