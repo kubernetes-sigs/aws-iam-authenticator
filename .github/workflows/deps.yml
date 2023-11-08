@@ -22,15 +22,15 @@ jobs:
       - id: govulncheck
         uses: golang/govulncheck-action@v1
         with:
-          go-version-input: 1.21.3
+          go-version-input: 1.21.4
           go-version-file: go.mod
       - id: govulncheck-tests-integration
         uses: golang/govulncheck-action@v1
         with:
-          go-version-input: 1.21.3
+          go-version-input: 1.21.4
           go-version-file: tests/integration/go.mod
       - id: govulncheck-tests-e2e
         uses: golang/govulncheck-action@v1
         with:
-          go-version-input: 1.21.3
+          go-version-input: 1.21.4
           go-version-file: tests/e2e/go.mod
