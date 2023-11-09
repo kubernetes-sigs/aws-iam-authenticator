@@ -1,6 +1,7 @@
 package configmap
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -182,9 +183,9 @@ func TestLoadConfigMap(t *testing.T) {
 			return true, watcher, nil
 		})
 
-	stopCh := make(chan struct{})
-	ms.startLoadConfigMap(stopCh)
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ms.startLoadConfigMap(ctx)
 
 	time.Sleep(2 * time.Second)
 

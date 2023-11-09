@@ -1,8 +1,10 @@
 package configmap
 
 import (
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
+	"context"
 	"strings"
+
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
@@ -26,8 +28,8 @@ func (m *ConfigMapMapper) Name() string {
 	return mapper.ModeEKSConfigMap
 }
 
-func (m *ConfigMapMapper) Start(stopCh <-chan struct{}) error {
-	m.startLoadConfigMap(stopCh)
+func (m *ConfigMapMapper) Start(ctx context.Context) error {
+	m.startLoadConfigMap(ctx)
 	return nil
 }
 

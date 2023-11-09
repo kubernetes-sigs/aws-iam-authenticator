@@ -1,10 +1,12 @@
 package crd
 
 import (
+	"context"
 	"fmt"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strings"
 	"time"
+
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -75,11 +77,11 @@ func (m *CRDMapper) Name() string {
 	return mapper.ModeCRD
 }
 
-func (m *CRDMapper) Start(stopCh <-chan struct{}) error {
-	m.iamInformerFactory.Start(stopCh)
+func (m *CRDMapper) Start(ctx context.Context) error {
+	m.iamInformerFactory.Start(ctx)
 	go func() {
 		// Run starts worker goroutines and blocks
-		if err := m.Controller.Run(2, stopCh); err != nil {
+		if err := m.Controller.Run(ctx, 2); err != nil {
 			panic(err)
 		}
 	}()

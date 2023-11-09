@@ -1,6 +1,7 @@
 package dynamicfile
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -82,10 +83,10 @@ func (ms *DynamicFileMapStore) saveMap(
 }
 
 // UserNotFound is the error returned when the user is not found in the config map.
-var UserNotFound = errors.New("User not found in dynamic file")
+var UserNotFound = errors.New("user not found in dynamic file")
 
 // RoleNotFound is the error returned when the role is not found in the config map.
-var RoleNotFound = errors.New("Role not found in dynamic file")
+var RoleNotFound = errors.New("role not found in dynamic file")
 
 func (ms *DynamicFileMapStore) UserMapping(arn string) (config.UserMapping, error) {
 	ms.mutex.RLock()
@@ -128,7 +129,7 @@ func (ms *DynamicFileMapStore) LogMapping() {
 	}
 }
 
-func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error {
+func (ms *DynamicFileMapStore) CallBackForFileLoad(ctx context.Context, dynamicContent []byte) error {
 	errs := make([]error, 0)
 	userMappings := make([]config.UserMapping, 0)
 	roleMappings := make([]config.RoleMapping, 0)
@@ -145,7 +146,7 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 			key = userMapping.UserId
 		}
 		if key == "" {
-			errs = append(errs, fmt.Errorf("Value for userarn or userid(if dynamicfileUserIDStrict = true) must be supplied"))
+			errs = append(errs, fmt.Errorf("value for userarn or userid(if dynamicfileUserIDStrict = true) must be supplied"))
 		} else {
 			userMappings = append(userMappings, userMapping)
 		}
@@ -157,7 +158,7 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 			key = roleMapping.UserId
 		}
 		if key == "" {
-			errs = append(errs, fmt.Errorf("Value for rolearn or userid(if dynamicfileUserIDStrict = true) must be supplied"))
+			errs = append(errs, fmt.Errorf("value for rolearn or userid(if dynamicfileUserIDStrict = true) must be supplied"))
 		} else {
 			roleMappings = append(roleMappings, roleMapping)
 		}
@@ -174,7 +175,7 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 	return nil
 }
 
-func (ms *DynamicFileMapStore) CallBackForFileDeletion() error {
+func (ms *DynamicFileMapStore) CallBackForFileDeletion(ctx context.Context) error {
 	userMappings := make([]config.UserMapping, 0)
 	roleMappings := make([]config.RoleMapping, 0)
 	awsAccounts := make([]string, 0)

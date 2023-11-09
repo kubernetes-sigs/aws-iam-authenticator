@@ -57,7 +57,7 @@ EOF
 CREATE_TEST_ROLE="${CREATE_TEST_ROLE:-true}"
 GENERATED_TEST_ROLE_NAME="aws-iam-authenticator-test-role-${RANDOM}"
 GENERATED_TEST_ROLE_POLICY_FILE=/tmp/role-policy.json
-KUBERNETES_TAG="v1.22.1"
+KUBERNETES_TAG="v1.28.3"
 REPO_ROOT="$(cd "$( dirname "${BASH_SOURCE[0]}" )"/.. &> /dev/null && pwd)"
 TEST_ARTIFACTS="${TEST_ARTIFACTS:-"${REPO_ROOT}/test-artifacts"}"
 TEST_ROLE_ARN="${TEST_ROLE_ARN:-$(role_arn_from_default_credentials)}"
