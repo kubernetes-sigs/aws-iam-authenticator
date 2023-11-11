@@ -17,6 +17,7 @@ ARG golang_image=public.ecr.aws/docker/library/golang:1.21.5
 FROM --platform=$BUILDPLATFORM $golang_image AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-iam-authenticator
 COPY . .
+RUN go version
 RUN go mod download
 ARG TARGETOS TARGETARCH
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make bin
