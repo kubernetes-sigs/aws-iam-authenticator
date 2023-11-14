@@ -17,7 +17,7 @@
 # MUST BE RUN FROM THE REPO ROOT DIRECTORY
 
 # read go-version file unless GO_VERSION is set
-GO_VERSION="${GO_VERSION:-"$(cat .go-version)"}"
+GO_VERSION="${GO_VERSION:-"$(cat .go-image-tag | cut -d'-' -f1)"}"
 GO_IMAGE=public.ecr.aws/docker/library/golang:$GO_VERSION
 
 # we don't actually care where the .env files are
