@@ -118,6 +118,7 @@ test:
 
 .PHONY: integration
 integration:
+	go version
 	./hack/test-integration.sh
 
 .PHONY: e2e

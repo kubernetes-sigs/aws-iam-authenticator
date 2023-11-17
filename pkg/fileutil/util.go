@@ -1,6 +1,7 @@
 package fileutil
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -11,11 +12,11 @@ import (
 )
 
 type FileChangeCallBack interface {
-	CallBackForFileLoad(dynamicContent []byte) error
-	CallBackForFileDeletion() error
+	CallBackForFileLoad(ctx context.Context, dynamicContent []byte) error
+	CallBackForFileDeletion(context.Context) error
 }
 
-func waitUntilFileAvailable(filename string, stopCh <-chan struct{}) {
+func waitUntilFileAvailable(ctx context.Context, filename string) {
 	if _, err := os.Stat(filename); err == nil {
 		return
 	}
@@ -23,8 +24,8 @@ func waitUntilFileAvailable(filename string, stopCh <-chan struct{}) {
 	defer ticker.Stop()
 	for {
 		select {
-		case <-stopCh:
-			logrus.Infof("startLoadDynamicFile: waitUntilFileAvailable exit because get stopCh, filename is %s", filename)
+		case <-ctx.Done():
+			logrus.Infof("startLoadDynamicFile: waitUntilFileAvailable exit because context completed, filename is %s", filename)
 			return
 		case <-ticker.C:
 			if _, err := os.Stat(filename); err == nil {
@@ -34,8 +35,8 @@ func waitUntilFileAvailable(filename string, stopCh <-chan struct{}) {
 	}
 }
 
-func loadDynamicFile(filename string, stopCh <-chan struct{}) ([]byte, error) {
-	waitUntilFileAvailable(filename, stopCh)
+func loadDynamicFile(ctx context.Context, filename string) ([]byte, error) {
+	waitUntilFileAvailable(ctx, filename)
 	if content, err := os.ReadFile(filename); err == nil {
 		logrus.Infof("LoadDynamicFile: %v is available. content is %s", filename, string(content))
 		return content, nil
@@ -44,7 +45,7 @@ func loadDynamicFile(filename string, stopCh <-chan struct{}) ([]byte, error) {
 	}
 }
 
-func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <-chan struct{}) {
+func StartLoadDynamicFile(ctx context.Context, filename string, callBack FileChangeCallBack) {
 	go wait.Until(func() {
 		// start to watch the file change
 		watcher, err := fsnotify.NewWatcher()
@@ -54,7 +55,7 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 			return
 		}
 		defer watcher.Close()
-		content, err := loadDynamicFile(filename, stopCh)
+		content, err := loadDynamicFile(ctx, filename)
 		if err != nil {
 			return
 		}
@@ -64,25 +65,25 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 			metrics.Get().DynamicFileFailures.Inc()
 			return
 		}
-		if err := callBack.CallBackForFileLoad(content); err != nil {
+		if err := callBack.CallBackForFileLoad(ctx, content); err != nil {
 			logrus.Errorf("StartLoadDynamicFile: error in callBackForFileLoad, %v", err)
 		}
 		for {
 			select {
-			case <-stopCh:
-				logrus.Infof("startLoadDynamicFile: watching exit because stopCh closed, filename is %s", filename)
+			case <-ctx.Done():
+				logrus.Infof("startLoadDynamicFile: watching exit because context completed, filename is %s", filename)
 				return
 			case event := <-watcher.Events:
 				switch {
 				case event.Op&fsnotify.Write == fsnotify.Write, event.Op&fsnotify.Create == fsnotify.Create:
 					// reload the access entry file
 					logrus.Info("startLoadDynamicFile: got WRITE/CREATE event reload it the memory")
-					content, err := loadDynamicFile(filename, stopCh)
+					content, err := loadDynamicFile(ctx, filename)
 					if err != nil {
 						logrus.Errorf("StartLoadDynamicFile: error in loadDynamicFile, %v", err)
 						return
 					}
-					if err := callBack.CallBackForFileLoad(content); err != nil {
+					if err := callBack.CallBackForFileLoad(ctx, content); err != nil {
 						logrus.Errorf("StartLoadDynamicFile: error in callBackForFileLoad, %v", err)
 					}
 				case event.Op&fsnotify.Rename == fsnotify.Rename, event.Op&fsnotify.Remove == fsnotify.Remove:
@@ -90,7 +91,7 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 					// test if the "REMOVE" is triggered by vi or cp cmd
 					_, err := os.Stat(filename)
 					if os.IsNotExist(err) {
-						if err := callBack.CallBackForFileDeletion(); err != nil {
+						if err := callBack.CallBackForFileDeletion(ctx); err != nil {
 							logrus.Errorf("StartLoadDynamicFile: error in callBackForFileDeletion, %v", err)
 						}
 					}
@@ -102,5 +103,5 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 				return
 			}
 		}
-	}, time.Second, stopCh)
+	}, time.Second, ctx.Done())
 }

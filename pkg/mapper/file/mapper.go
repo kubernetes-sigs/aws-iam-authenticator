@@ -1,9 +1,11 @@
 package file
 
 import (
+	"context"
 	"fmt"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strings"
+
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
@@ -79,7 +81,7 @@ func (m *FileMapper) Name() string {
 	return mapper.ModeMountedFile
 }
 
-func (m *FileMapper) Start(_ <-chan struct{}) error {
+func (m *FileMapper) Start(_ context.Context) error {
 	return nil
 }
 

@@ -18,6 +18,7 @@ limitations under the License.
 package externalversions
 
 import (
+	"context"
 	reflect "reflect"
 	sync "sync"
 	time "time"
@@ -107,13 +108,13 @@ func NewSharedInformerFactoryWithOptions(client versioned.Interface, defaultResy
 }
 
 // Start initializes all requested informers.
-func (f *sharedInformerFactory) Start(stopCh <-chan struct{}) {
+func (f *sharedInformerFactory) Start(ctx context.Context) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
 	for informerType, informer := range f.informers {
 		if !f.startedInformers[informerType] {
-			go informer.Run(stopCh)
+			go informer.Run(ctx.Done())
 			f.startedInformers[informerType] = true
 		}
 	}

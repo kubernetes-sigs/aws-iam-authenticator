@@ -1,6 +1,7 @@
 package fileutil
 
 import (
+	"context"
 	"os"
 	"sync"
 	"testing"
@@ -21,14 +22,14 @@ type testStruct struct {
 	mutex           sync.Mutex
 }
 
-func (a *testStruct) CallBackForFileLoad(dynamicContent []byte) error {
+func (a *testStruct) CallBackForFileLoad(ctx context.Context, dynamicContent []byte) error {
 	a.mutex.Lock()
 	a.expectedContent = string(dynamicContent)
 	defer a.mutex.Unlock()
 	return nil
 }
 
-func (a *testStruct) CallBackForFileDeletion() error {
+func (a *testStruct) CallBackForFileDeletion(ctx context.Context) error {
 	a.mutex.Lock()
 	a.expectedContent = ""
 	defer a.mutex.Unlock()
@@ -57,10 +58,11 @@ func TestLoadDynamicFile(t *testing.T) {
 			"eks:test",
 		},
 	}
-	stopCh := make(chan struct{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	testA := &testStruct{}
-	StartLoadDynamicFile("/tmp/util_test.txt", testA, stopCh)
-	defer close(stopCh)
+	StartLoadDynamicFile(ctx, "/tmp/util_test.txt", testA)
 	time.Sleep(2 * time.Second)
 	os.WriteFile("/tmp/util_test.txt", []byte("test"), 0777)
 	for {
@@ -98,10 +100,10 @@ func updateFile(testA *testStruct, origFileContent string, t *testing.T) {
 }
 
 func TestDeleteDynamicFile(t *testing.T) {
-	stopCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	testA := &testStruct{}
-	StartLoadDynamicFile("/tmp/delete.txt", testA, stopCh)
-	defer close(stopCh)
+	StartLoadDynamicFile(ctx, "/tmp/delete.txt", testA)
 	time.Sleep(2 * time.Second)
 	os.WriteFile("/tmp/delete.txt", []byte("test"), 0777)
 	for {

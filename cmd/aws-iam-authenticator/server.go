@@ -52,15 +52,16 @@ var serverCmd = &cobra.Command{
 		var err error
 		fmt.Printf("Authenticator Version: %q, %q\n", pkg.Version, pkg.CommitID)
 		metrics.InitMetrics(prometheus.DefaultRegisterer)
-		stopCh := signals.SetupSignalHandler()
+		cmd.Context()
+		ctx := signals.SetupSignalHandler()
 
 		cfg, err := getConfig()
 		if err != nil {
 			logrus.Fatalf("%s", err)
 		}
 
-		httpServer := server.New(cfg, stopCh)
-		httpServer.Run(stopCh)
+		httpServer := server.New(ctx, cfg, )
+		httpServer.Run(ctx)
 	},
 }
 

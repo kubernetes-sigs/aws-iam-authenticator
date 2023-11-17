@@ -1,6 +1,23 @@
+/*
+Copyright 2017 by the contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package testutils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -56,7 +73,9 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 		t.Fatal(err)
 	}
 
-	adminClient, kubeAPIServerClientConfig, tearDownFn := framework.StartTestServer(t, framework.TestServerSetup{
+	ctx := context.Background()
+
+	adminClient, kubeAPIServerClientConfig, tearDownFn := framework.StartTestServer(ctx, t, framework.TestServerSetup{
 		ModifyServerRunOptions: func(opts *options.ServerRunOptions) {
 			opts.Authentication.WebHook.ConfigFile = cfg.GenerateKubeconfigPath
 		},
@@ -74,12 +93,14 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 	}
 
 	stopCh := make(chan struct{})
-	httpServer := server.New(cfg, stopCh)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	httpServer := server.New(ctx, cfg)
 	go func() {
-		httpServer.Run(stopCh)
+		httpServer.Run(ctx)
 	}()
 
-	err = wait.PollImmediate(100*time.Millisecond, 10*time.Second, func() (done bool, err error) {
+	err = wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (done bool, err error) {
 		t.Log("Checking authenticator server health...")
 		done, err = checkHealth(cfg)
 		if err != nil {
