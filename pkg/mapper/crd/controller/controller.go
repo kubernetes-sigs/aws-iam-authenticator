@@ -207,7 +207,7 @@ func (c *Controller) syncHandler(key string) (err error) {
 	if iamIdentityMapping.Spec.ARN != "" {
 		iamIdentityMappingCopy := iamIdentityMapping.DeepCopy()
 
-		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(iamIdentityMapping.Spec.ARN))
+		_, canonicalizedARN, err := arn.Canonicalize(strings.ToLower(iamIdentityMapping.Spec.ARN))
 		if err != nil {
 			return err
 		}
