@@ -35,6 +35,7 @@ func TestServer(t *testing.T) {
 		t.Fatalf("error creating aws-auth configmap: %v\n", err)
 	}
 
+	t.Log("Creating ClusterRoleBinding")
 	_, err = adminClient.RbacV1().ClusterRoleBindings().Create(context.TODO(), &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-user-binding"},
 		Subjects: []rbacv1.Subject{

@@ -67,6 +67,7 @@ function cleanup {
         echo "Cleaning up test role ${GENERATED_TEST_ROLE_NAME}"
         aws iam delete-role --role-name "${GENERATED_TEST_ROLE_NAME}" || echo "Failed to clean up test role ${GENERATED_TEST_ROLE_NAME}"
     fi
+    chmod -R +w "${TEST_ARTIFACTS}"
 }
 trap cleanup EXIT
 
@@ -89,7 +90,7 @@ mkdir -p ${TEST_ARTIFACTS}/k8s.io/kubernetes
 git clone --branch ${KUBERNETES_TAG} --depth 1 https://github.com/kubernetes/kubernetes.git ${TEST_ARTIFACTS}/k8s.io/kubernetes --depth 1
 
 pushd ${TEST_ARTIFACTS}/k8s.io/kubernetes
-make generated_files
+./hack/update-codegen.sh
 ./hack/install-etcd.sh
 export PATH="${TEST_ARTIFACTS}/k8s.io/kubernetes/third_party/etcd:${PATH}"
 popd

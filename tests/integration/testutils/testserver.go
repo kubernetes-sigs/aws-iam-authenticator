@@ -45,6 +45,7 @@ import (
 const (
 	hardcodedHealthcheckPort         = 21363
 	hardcodedAuthenticatorServerPort = 21362
+	timeout                          = 30 * time.Second
 )
 
 // AuthenticatorTestFrameworkSetup holds configuration information for a kube-apiserver test server.
@@ -78,10 +79,12 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 	adminClient, kubeAPIServerClientConfig, tearDownFn := framework.StartTestServer(ctx, t, framework.TestServerSetup{
 		ModifyServerRunOptions: func(opts *options.ServerRunOptions) {
 			opts.Authentication.WebHook.ConfigFile = cfg.GenerateKubeconfigPath
+			opts.Logs.Verbosity = 9
 		},
 		ModifyServerConfig: func(config *controlplane.Config) {},
 	})
 
+	t.Log("Creating certificates")
 	cert, err := LoadX509Certificate(kubeAPIServerClientConfig.TLSClientConfig.CAFile)
 	if err != nil {
 		t.Fatal(err)
@@ -91,20 +94,23 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 	if err := CreateAPIServerClientKubeconfig(cert, kubeAPIServerClientConfig.BearerToken, cfg.Kubeconfig, kubeAPIServerClientConfig.Host); err != nil {
 		t.Fatal(err)
 	}
+	t.Log("Running server")
 
-	stopCh := make(chan struct{})
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	httpServer := server.New(ctx, cfg)
 	go func() {
 		httpServer.Run(ctx)
 	}()
+	t.Log("Ran Authenticator Server.  Sleeping for 5 seconds before checking health...")
 
-	err = wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (done bool, err error) {
+	time.Sleep(5 * time.Second)
+
+	err = wait.PollUntilContextCancel(ctx, 100*time.Millisecond, true, func(ctx context.Context) (done bool, err error) {
 		t.Log("Checking authenticator server health...")
 		done, err = checkHealth(cfg)
 		if err != nil {
-			t.Log(err)
+			t.Log("Error checking authenticator health.", err)
 			return false, nil
 		}
 		if !done {
@@ -114,7 +120,7 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 		return true, nil
 	})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("Error waiting for authenticator to become healthy.", err)
 	}
 
 	args := []string{"token", "-i", setup.ClusterID}
@@ -122,6 +128,7 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 		args = append(args, "--role", setup.RoleArn)
 	}
 
+	t.Log("Creating exec client")
 	// Create aws-iam-authenticator client
 	kubeAPIServerClientConfig.ExecProvider = &clientcmdapi.ExecConfig{
 		Command:         setup.AuthenticatorClientBinaryPath,
@@ -133,11 +140,11 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 
 	clientWithExecAuthenticator, err := client.NewForConfig(kubeAPIServerClientConfig)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("Error creating exec client", err)
 	}
 
 	return adminClient, clientWithExecAuthenticator, func() {
-		close(stopCh)
+		t.Log("Cleaning up")
 		httpServer.Close()
 		tearDownFn()
 	}

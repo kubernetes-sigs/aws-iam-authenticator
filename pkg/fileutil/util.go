@@ -46,6 +46,7 @@ func loadDynamicFile(ctx context.Context, filename string) ([]byte, error) {
 }
 
 func StartLoadDynamicFile(ctx context.Context, filename string, callBack FileChangeCallBack) {
+	logrus.Infof("Starting Dynamic File Loader")
 	go wait.Until(func() {
 		// start to watch the file change
 		watcher, err := fsnotify.NewWatcher()

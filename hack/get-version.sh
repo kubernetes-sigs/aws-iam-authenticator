@@ -18,7 +18,7 @@ VERSION=$(cat version.txt)
 
 printerr() { echo "$@" 1>&2; }
 
-if [[ ! "${VERSION}" =~ ^([0-9]+[.][0-9]+)[.]([0-9]+)(-(alpha|beta)[.]([0-9]+))?$ ]]; then
+if [[ ! "${VERSION}" =~ ^([0-9]+[.][0-9]+)[.]([0-9]+)(-(alpha|beta|dev)[.]([0-9]+))?$ ]]; then
   printerr "Version ${VERSION} must be 'X.Y.Z', 'X.Y.Z-alpha.N', or 'X.Y.Z-beta.N'"
   exit 1
 fi

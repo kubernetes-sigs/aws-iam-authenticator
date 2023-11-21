@@ -154,7 +154,6 @@ func New(ctx context.Context, cfg config.Config) *Server {
 
 // Run will run the server closing the connection if there is a struct on the channel
 func (c *Server) Run(ctx context.Context) {
-
 	defer c.listener.Close()
 
 	go func() {
@@ -165,7 +164,7 @@ func (c *Server) Run(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				logrus.Info("shut down mapper before return from Run")
-				close(c.internalHandler.backendMapper.mapperStopCh)
+				//close(c.internalHandler.backendMapper.mapperStopCh)
 				return
 			}
 		}
@@ -227,9 +226,9 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 }
 
 func BuildMapperChain(ctx context.Context, cfg config.Config, modes []string) (BackendMapper, error) {
+	logrus.Infof("Building mapper chain")
 	backendMapper := BackendMapper{
 		mappers: []mapper.Mapper{},
-		// mapperStopCh: make(chan struct{}),
 	}
 	for _, mode := range modes {
 		switch mode {
@@ -504,7 +503,6 @@ func (h *handler) CallBackForFileLoad(ctx context.Context, dynamicContent []byte
 		newMapper, err := BuildMapperChain(ctx, h.cfg, strings.Split(backendModes.BackendMode, " "))
 		if err == nil && len(newMapper.mappers) > 0 {
 			// replace the mapper
-			close(h.backendMapper.mapperStopCh)
 			h.backendMapper = newMapper
 		} else {
 			return err
@@ -520,7 +518,6 @@ func (h *handler) CallBackForFileDeletion(ctx context.Context) error {
 	backendMapper, err := BuildMapperChain(ctx, h.cfg, h.cfg.BackendMode)
 	if err == nil && len(backendMapper.mappers) > 0 {
 		// replace the mapper
-		close(h.backendMapper.mapperStopCh)
 		h.backendMapper = backendMapper
 	} else {
 		return err

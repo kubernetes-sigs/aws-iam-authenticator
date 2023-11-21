@@ -59,7 +59,7 @@ func (ms *MapStore) startLoadConfigMap(ctx context.Context) {
 				logrus.Info("Context is complete in startLoadConfigMap")
 				return
 			default:
-				watcher, err := ms.configMap.Watch(ctx, metav1.ListOptions{
+				watcher, err := ms.configMap.Watch(context.Background(), metav1.ListOptions{
 					Watch:         true,
 					FieldSelector: fields.OneTermEqualSelector("metadata.name", "aws-auth").String(),
 				})

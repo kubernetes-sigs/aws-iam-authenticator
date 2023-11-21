@@ -11,7 +11,7 @@ jobs:
         with:
           show-progress: false
       - name: "Dependency Review"
-        uses: actions/dependency-review-action@v3.1.2
+        uses: actions/dependency-review-action@v3.1.3
   govulncheck:
     runs-on: ubuntu-latest
     steps:
