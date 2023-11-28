@@ -600,29 +600,42 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, NewSTSError(err.Error())
 	}
 
-	// parse the response into an Identity
 	id := &Identity{
-		ARN:         callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.Arn,
-		AccountID:   callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.Account,
 		AccessKeyID: accessKeyID,
 	}
-	id.CanonicalARN, err = arn.Canonicalize(id.ARN)
+	return getIdentityFromSTSResponse(id, callerIdentity)
+}
+
+func getIdentityFromSTSResponse(id *Identity, wrapper getCallerIdentityWrapper) (*Identity, error) {
+	var err error
+	result := wrapper.GetCallerIdentityResponse.GetCallerIdentityResult
+
+	id.ARN = result.Arn
+	id.AccountID = result.Account
+
+	var principalType arn.PrincipalType
+	principalType, id.CanonicalARN, err = arn.Canonicalize(id.ARN)
 	if err != nil {
 		return nil, NewSTSError(err.Error())
 	}
 
-	// The user ID is either UserID:SessionName (for assumed roles) or just
-	// UserID (for IAM User principals).
-	userIDParts := strings.Split(callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.UserID, ":")
-	if len(userIDParts) == 2 {
-		id.UserID = userIDParts[0]
-		id.SessionName = userIDParts[1]
-	} else if len(userIDParts) == 1 {
-		id.UserID = userIDParts[0]
+	// The user ID is one of:
+	// 1. UserID:SessionName (for assumed roles)
+	// 2. UserID (for IAM User principals).
+	// 3. AWSAccount:CallerSpecifiedName (for federated users)
+	// We want the entire UserID for federated users because otherwise,
+	// its just the account ID and is indistinguishable from the UserID
+	// of the root user.
+	if principalType == arn.FEDERATED_USER || principalType == arn.USER || principalType == arn.ROOT {
+		id.UserID = result.UserID
 	} else {
-		return nil, STSError{fmt.Sprintf(
-			"malformed UserID %q",
-			callerIdentity.GetCallerIdentityResponse.GetCallerIdentityResult.UserID)}
+		userIDParts := strings.Split(result.UserID, ":")
+		if len(userIDParts) == 2 {
+			id.UserID = userIDParts[0]
+			id.SessionName = userIDParts[1]
+		} else {
+			return nil, NewSTSError(fmt.Sprintf("malformed UserID %q", result.UserID))
+		}
 	}
 
 	return id, nil

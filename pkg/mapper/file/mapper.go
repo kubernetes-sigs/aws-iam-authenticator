@@ -2,8 +2,9 @@ package file
 
 import (
 	"fmt"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strings"
+
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
@@ -32,7 +33,7 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 			return nil, err
 		}
 		if m.RoleARN != "" {
-			canonicalizedARN, err := arn.Canonicalize(m.RoleARN)
+			_, canonicalizedARN, err := arn.Canonicalize(m.RoleARN)
 			if err != nil {
 				return nil, err
 			}
@@ -47,7 +48,7 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 		}
 		var key string
 		if m.UserARN != "" {
-			canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
+			_, canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
 			if err != nil {
 				return nil, fmt.Errorf("error canonicalizing ARN: %v", err)
 			}

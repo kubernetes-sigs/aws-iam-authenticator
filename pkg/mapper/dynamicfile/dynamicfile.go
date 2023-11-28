@@ -63,14 +63,14 @@ func (ms *DynamicFileMapStore) saveMap(
 	ms.awsAccounts = make(map[string]interface{})
 
 	for _, user := range userMappings {
-		key, _ := arn.Canonicalize(strings.ToLower(user.UserARN))
+		_, key, _ := arn.Canonicalize(strings.ToLower(user.UserARN))
 		if ms.userIDStrict {
 			key = user.UserId
 		}
 		ms.users[key] = user
 	}
 	for _, role := range roleMappings {
-		key, _ := arn.Canonicalize(strings.ToLower(role.RoleARN))
+		_, key, _ := arn.Canonicalize(strings.ToLower(role.RoleARN))
 		if ms.userIDStrict {
 			key = role.UserId
 		}

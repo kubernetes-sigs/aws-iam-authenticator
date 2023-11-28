@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication"
@@ -278,7 +279,7 @@ func TestVerifyInvalidCanonicalARNError(t *testing.T) {
 }
 
 func TestVerifyInvalidUserIDError(t *testing.T) {
-	_, err := newVerifier("aws", 200, jsonResponse("arn:aws:iam::123456789012:user/Alice", "123456789012", "not:vailid:userid"), nil).Verify(validToken)
+	_, err := newVerifier("aws", 200, jsonResponse("arn:aws:iam::123456789012:role/Alice", "123456789012", "not:vailid:userid"), nil).Verify(validToken)
 	errorContains(t, err, "malformed UserID")
 	assertSTSError(t, err)
 }
@@ -307,7 +308,7 @@ func TestVerifyNoSession(t *testing.T) {
 }
 
 func TestVerifySessionName(t *testing.T) {
-	arn := "arn:aws:iam::123456789012:user/Alice"
+	arn := "arn:aws:iam::123456789012:role/Alice"
 	account := "123456789012"
 	userID := "Alice"
 	session := "session-name"
@@ -412,4 +413,105 @@ func TestFormatJson(t *testing.T) {
 			os.Unsetenv(c.EnvKey)
 		})
 	}
+}
+
+func TestGetIdentityFromSTSResponse(t *testing.T) {
+	var (
+		accessKeyID = "AKIAVVVVVVVVVVVAGAVA"
+		defaultID   = Identity{
+			AccessKeyID: accessKeyID,
+		}
+		defaultAccount = "123456789012"
+		rootUserARN    = "arn:aws:iam::123456789012:root"
+		userARN        = "arn:aws:iam::123456789012:user/Alice"
+		userID         = "AIDAIYCCCMMMMMMMMGGDA"
+		fedUserID      = "123456789012:Alice"
+		fedUserARN     = "arn:aws:sts::123456789012:federated-user/Alice"
+		roleARN        = "arn:aws:iam::123456789012:role/Alice"
+		roleID         = "AROAZZCCCNNNNNNNNFFFA"
+	)
+
+	cases := []struct {
+		name          string
+		inputID       Identity
+		inputResponse getCallerIdentityWrapper
+		expectedErr   bool
+		want          Identity
+	}{
+		{
+			name:          "Root User",
+			inputID:       defaultID,
+			inputResponse: response(defaultAccount, defaultAccount, rootUserARN),
+			expectedErr:   false,
+			want: Identity{
+				ARN:          rootUserARN,
+				CanonicalARN: rootUserARN,
+				AccountID:    defaultAccount,
+				UserID:       defaultAccount,
+				AccessKeyID:  accessKeyID,
+			},
+		},
+		{
+			name:          "User",
+			inputID:       defaultID,
+			inputResponse: response(defaultAccount, userID, userARN),
+			expectedErr:   false,
+			want: Identity{
+				ARN:          userARN,
+				CanonicalARN: userARN,
+				AccountID:    defaultAccount,
+				UserID:       userID,
+				AccessKeyID:  accessKeyID,
+			},
+		},
+		{
+			name:          "Role",
+			inputID:       defaultID,
+			inputResponse: response(defaultAccount, roleID, roleARN),
+			expectedErr:   false,
+			want: Identity{
+				ARN:          roleARN,
+				CanonicalARN: roleARN,
+				AccountID:    defaultAccount,
+				UserID:       roleID,
+				AccessKeyID:  accessKeyID,
+			},
+		},
+		{
+			name:          "Federated User",
+			inputID:       defaultID,
+			inputResponse: response(defaultAccount, fedUserID, fedUserARN),
+			expectedErr:   false,
+			want: Identity{
+				ARN:          fedUserARN,
+				CanonicalARN: fedUserARN,
+				AccountID:    defaultAccount,
+				UserID:       fedUserID,
+				AccessKeyID:  accessKeyID,
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+
+			if got, err := getIdentityFromSTSResponse(&c.inputID, c.inputResponse); err == nil {
+				if c.expectedErr {
+					t.Errorf("expected err to be nil but was %s", err)
+				}
+
+				if diff := cmp.Diff(c.want, *got); diff != "" {
+					t.Errorf("getIdentityFromSTSResponse() mismatch (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
+}
+
+func response(account, userID, arn string) getCallerIdentityWrapper {
+	wrapper := getCallerIdentityWrapper{}
+	wrapper.GetCallerIdentityResponse.GetCallerIdentityResult.Account = account
+	wrapper.GetCallerIdentityResponse.GetCallerIdentityResult.Arn = arn
+	wrapper.GetCallerIdentityResponse.GetCallerIdentityResult.UserID = userID
+	wrapper.GetCallerIdentityResponse.ResponseMetadata.RequestID = "id1234"
+	return wrapper
 }
