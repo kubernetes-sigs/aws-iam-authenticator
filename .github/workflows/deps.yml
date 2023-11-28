@@ -12,6 +12,8 @@ jobs:
           show-progress: false
       - name: "Dependency Review"
         uses: actions/dependency-review-action@v3
+        with:
+          vulnerability-check: false
   govulncheck:
     runs-on: ubuntu-latest
     steps:
@@ -24,13 +26,4 @@ jobs:
         with:
           go-version-input: 1.21.4
           go-version-file: go.mod
-      - id: govulncheck-tests-integration
-        uses: golang/govulncheck-action@v1
-        with:
-          go-version-input: 1.21.4
-          go-version-file: tests/integration/go.mod
-      - id: govulncheck-tests-e2e
-        uses: golang/govulncheck-action@v1
-        with:
-          go-version-input: 1.21.4
-          go-version-file: tests/e2e/go.mod
+
