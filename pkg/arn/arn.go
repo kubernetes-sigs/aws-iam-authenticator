@@ -8,23 +8,35 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
+type PrincipalType int
+
+const (
+	// Supported principals
+	NONE PrincipalType = iota
+	ROLE
+	USER
+	ROOT
+	FEDERATED_USER
+	ASSUMED_ROLE
+)
+
 // Canonicalize validates IAM resources are appropriate for the authenticator
 // and converts STS assumed roles into the IAM role resource.
 //
 // Supported IAM resources are:
-//   * AWS account: arn:aws:iam::123456789012:root
-//   * IAM user: arn:aws:iam::123456789012:user/Bob
-//   * IAM role: arn:aws:iam::123456789012:role/S3Access
-//   * IAM Assumed role: arn:aws:sts::123456789012:assumed-role/Accounting-Role/Mary (converted to IAM role)
-//   * Federated user: arn:aws:sts::123456789012:federated-user/Bob
-func Canonicalize(arn string) (string, error) {
+//   - AWS root user: arn:aws:iam::123456789012:root
+//   - IAM user: arn:aws:iam::123456789012:user/Bob
+//   - IAM role: arn:aws:iam::123456789012:role/S3Access
+//   - IAM Assumed role: arn:aws:sts::123456789012:assumed-role/Accounting-Role/Mary (converted to IAM role)
+//   - Federated user: arn:aws:sts::123456789012:federated-user/Bob
+func Canonicalize(arn string) (PrincipalType, string, error) {
 	parsed, err := awsarn.Parse(arn)
 	if err != nil {
-		return "", fmt.Errorf("arn '%s' is invalid: '%v'", arn, err)
+		return NONE, "", fmt.Errorf("arn '%s' is invalid: '%v'", arn, err)
 	}
 
 	if err := checkPartition(parsed.Partition); err != nil {
-		return "", fmt.Errorf("arn '%s' does not have a recognized partition", arn)
+		return NONE, "", fmt.Errorf("arn '%s' does not have a recognized partition", arn)
 	}
 
 	parts := strings.Split(parsed.Resource, "/")
@@ -34,27 +46,31 @@ func Canonicalize(arn string) (string, error) {
 	case "sts":
 		switch resource {
 		case "federated-user":
-			return arn, nil
+			return FEDERATED_USER, arn, nil
 		case "assumed-role":
 			if len(parts) < 3 {
-				return "", fmt.Errorf("assumed-role arn '%s' does not have a role", arn)
+				return NONE, "", fmt.Errorf("assumed-role arn '%s' does not have a role", arn)
 			}
 			// IAM ARNs can contain paths, part[0] is resource, parts[len(parts)] is the SessionName.
 			role := strings.Join(parts[1:len(parts)-1], "/")
-			return fmt.Sprintf("arn:%s:iam::%s:role/%s", parsed.Partition, parsed.AccountID, role), nil
+			return ASSUMED_ROLE, fmt.Sprintf("arn:%s:iam::%s:role/%s", parsed.Partition, parsed.AccountID, role), nil
 		default:
-			return "", fmt.Errorf("unrecognized resource %s for service sts", parsed.Resource)
+			return NONE, "", fmt.Errorf("unrecognized resource %s for service sts", parsed.Resource)
 		}
 	case "iam":
 		switch resource {
-		case "role", "user", "root":
-			return arn, nil
+		case "role":
+			return ROLE, arn, nil
+		case "user":
+			return USER, arn, nil
+		case "root":
+			return ROOT, arn, nil
 		default:
-			return "", fmt.Errorf("unrecognized resource %s for service iam", parsed.Resource)
+			return NONE, "", fmt.Errorf("unrecognized resource %s for service iam", parsed.Resource)
 		}
 	}
 
-	return "", fmt.Errorf("service %s in arn %s is not a valid service for identities", parsed.Service, arn)
+	return NONE, "", fmt.Errorf("service %s in arn %s is not a valid service for identities", parsed.Service, arn)
 }
 
 func checkPartition(partition string) error {
