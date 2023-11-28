@@ -23,7 +23,7 @@ var arnTests = []struct {
 
 func TestUserARN(t *testing.T) {
 	for _, tc := range arnTests {
-		actual, err := Canonicalize(tc.arn)
+		_, actual, err := Canonicalize(tc.arn)
 		if err != nil && tc.err == nil || err == nil && tc.err != nil {
 			t.Errorf("Canoncialize(%s) expected err: %v, actual err: %v", tc.arn, tc.err, err)
 			continue
