@@ -27,14 +27,14 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 	}
 
 	for _, m := range cfg.RoleMappings {
-		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
+		_, canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
 		if err != nil {
 			return nil, fmt.Errorf("error canonicalizing ARN: %v", err)
 		}
 		fileMapper.lowercaseRoleMap[canonicalizedARN] = m
 	}
 	for _, m := range cfg.UserMappings {
-		canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
+		_, canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
 		if err != nil {
 			return nil, fmt.Errorf("error canonicalizing ARN: %v", err)
 		}
