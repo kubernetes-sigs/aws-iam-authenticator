@@ -2,7 +2,6 @@ package dynamicfile
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -10,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
 )
 
 type DynamicFileMapStore struct {
@@ -81,27 +81,21 @@ func (ms *DynamicFileMapStore) saveMap(
 	}
 }
 
-// UserNotFound is the error returned when the user is not found in the config map.
-var UserNotFound = errors.New("User not found in dynamic file")
-
-// RoleNotFound is the error returned when the role is not found in the config map.
-var RoleNotFound = errors.New("Role not found in dynamic file")
-
-func (ms *DynamicFileMapStore) UserMapping(arn string) (config.UserMapping, error) {
+func (ms *DynamicFileMapStore) UserMapping(key string) (config.UserMapping, error) {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
-	if user, ok := ms.users[arn]; !ok {
-		return config.UserMapping{}, UserNotFound
+	if user, ok := ms.users[key]; !ok {
+		return config.UserMapping{}, errutil.ErrNotMapped
 	} else {
 		return user, nil
 	}
 }
 
-func (ms *DynamicFileMapStore) RoleMapping(arn string) (config.RoleMapping, error) {
+func (ms *DynamicFileMapStore) RoleMapping(key string) (config.RoleMapping, error) {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
-	if role, ok := ms.roles[arn]; !ok {
-		return config.RoleMapping{}, RoleNotFound
+	if role, ok := ms.roles[key]; !ok {
+		return config.RoleMapping{}, errutil.ErrNotMapped
 	} else {
 		return role, nil
 	}

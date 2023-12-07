@@ -2,9 +2,11 @@ package crd
 
 import (
 	"fmt"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strings"
 	"time"
+
+	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -114,7 +116,7 @@ func (m *CRDMapper) Map(identity *token.Identity) (*config.IdentityMapping, erro
 		}
 	}
 
-	return nil, mapper.ErrNotMapped
+	return nil, errutil.ErrNotMapped
 }
 
 func (m *CRDMapper) IsAccountAllowed(accountID string) bool {
