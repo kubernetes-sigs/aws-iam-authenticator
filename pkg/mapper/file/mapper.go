@@ -6,6 +6,7 @@ import (
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
@@ -86,8 +87,7 @@ func (m *FileMapper) Map(identity *token.Identity) (*config.IdentityMapping, err
 			Groups:      userMapping.Groups,
 		}, nil
 	}
-
-	return nil, mapper.ErrNotMapped
+	return nil, errutil.ErrNotMapped
 }
 
 func (m *FileMapper) IsAccountAllowed(accountID string) bool {
