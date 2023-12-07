@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"errors"
 	"fmt"
+
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/sirupsen/logrus"
@@ -33,8 +33,6 @@ var (
 	}
 	BackendModeChoices = []string{ModeMountedFile, ModeEKSConfigMap, ModeCRD, ModeDynamicFile}
 )
-
-var ErrNotMapped = errors.New("ARN is not mapped")
 
 type Mapper interface {
 	Name() string

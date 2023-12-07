@@ -1,8 +1,10 @@
 package configmap
 
 import (
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strings"
+
+	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
@@ -53,7 +55,7 @@ func (m *ConfigMapMapper) Map(identity *token.Identity) (*config.IdentityMapping
 		}, nil
 	}
 
-	return nil, mapper.ErrNotMapped
+	return nil, errutil.ErrNotMapped
 }
 
 func (m *ConfigMapMapper) IsAccountAllowed(accountID string) bool {
