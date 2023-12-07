@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/sirupsen/logrus"
 )
@@ -100,6 +101,15 @@ func (m *RoleMapping) Key() string {
 	return m.SSOArnLike()
 }
 
+// IdentityMapping converts the RoleMapping into a generic IdentityMapping object
+func (m *RoleMapping) IdentityMapping(identity *token.Identity) *IdentityMapping {
+	return &IdentityMapping{
+		IdentityARN: strings.ToLower(identity.CanonicalARN),
+		Username:    m.Username,
+		Groups:      m.Groups,
+	}
+}
+
 // Validate returns an error if the UserMapping is not valid after being unmarshaled
 func (m *UserMapping) Validate() error {
 	if m == nil {
@@ -122,4 +132,13 @@ func (m *UserMapping) Matches(subject string) bool {
 // Used to get a Key name for map[string]UserMapping
 func (m *UserMapping) Key() string {
 	return m.UserARN
+}
+
+// IdentityMapping converts the UserMapping into a generic IdentityMapping object
+func (m *UserMapping) IdentityMapping(identity *token.Identity) *IdentityMapping {
+	return &IdentityMapping{
+		IdentityARN: strings.ToLower(identity.CanonicalARN),
+		Username:    m.Username,
+		Groups:      m.Groups,
+	}
 }

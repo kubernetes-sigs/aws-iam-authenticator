@@ -32,6 +32,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap"
@@ -431,7 +432,7 @@ func (h *handler) doMapping(identity *token.Identity) (string, []string, error) 
 			}
 			return username, groups, nil
 		} else {
-			if err != mapper.ErrNotMapped {
+			if err != errutil.ErrNotMapped {
 				errs = append(errs, fmt.Errorf("mapper %s Map error: %v", m.Name(), err))
 			}
 
@@ -444,7 +445,7 @@ func (h *handler) doMapping(identity *token.Identity) (string, []string, error) 
 	if len(errs) > 0 {
 		return "", nil, utilerrors.NewAggregate(errs)
 	}
-	return "", nil, mapper.ErrNotMapped
+	return "", nil, errutil.ErrNotMapped
 }
 
 func (h *handler) renderTemplates(mapping config.IdentityMapping, identity *token.Identity) (string, []string, error) {

@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
@@ -37,31 +38,39 @@ func (m *DynamicFileMapper) Start(stopCh <-chan struct{}) error {
 
 func (m *DynamicFileMapper) Map(identity *token.Identity) (*config.IdentityMapping, error) {
 	canonicalARN := strings.ToLower(identity.CanonicalARN)
+
 	key := canonicalARN
 	if m.userIDStrict {
 		key = identity.UserID
 	}
 
-	rm, err := m.RoleMapping(key)
-	// TODO: Check for non Role/UserNotFound errors
-	if err == nil {
-		return &config.IdentityMapping{
-			IdentityARN: canonicalARN,
-			Username:    rm.Username,
-			Groups:      rm.Groups,
-		}, nil
+	if roleMapping, err := m.RoleMapping(key); err == nil {
+		if err := m.match(identity, roleMapping.RoleARN, roleMapping.UserId); err != nil {
+			return nil, err
+		}
+		return roleMapping.IdentityMapping(identity), nil
 	}
 
-	um, err := m.UserMapping(key)
-	if err == nil {
-		return &config.IdentityMapping{
-			IdentityARN: canonicalARN,
-			Username:    um.Username,
-			Groups:      um.Groups,
-		}, nil
+	if userMapping, err := m.UserMapping(key); err == nil {
+		if err := m.match(identity, userMapping.UserARN, userMapping.UserId); err != nil {
+			return nil, err
+		}
+		return userMapping.IdentityMapping(identity), nil
 	}
 
-	return nil, mapper.ErrNotMapped
+	return nil, errutil.ErrNotMapped
+}
+
+func (m *DynamicFileMapper) match(token *token.Identity, mappedARN, mappedUserID string) error {
+	if m.userIDStrict {
+		// If ARN is provided, ARN must be validated along with UserID.  This avoids having to
+		// support IAM user name/ARN changes. Without preventing this the mapping would look
+		// invalid but still work and auditing would be difficult/impossible.
+		if mappedARN != "" && token.ARN != mappedARN {
+			return errutil.ErrIDAndARNMismatch
+		}
+	}
+	return nil
 }
 
 func (m *DynamicFileMapper) IsAccountAllowed(accountID string) bool {
