@@ -6,8 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
 var (
@@ -15,21 +18,36 @@ var (
 	testRole = config.RoleMapping{RoleARN: "arn:aws:iam::012345678912:role/computer", Username: "computer", Groups: []string{"system:nodes"}}
 )
 
-func makeStore() DynamicFileMapStore {
+func makeStore(users map[string]config.UserMapping, roles map[string]config.RoleMapping, filename string, userIDStrict bool) DynamicFileMapStore {
 	ms := DynamicFileMapStore{
-		users:       make(map[string]config.UserMapping),
-		roles:       make(map[string]config.RoleMapping),
-		awsAccounts: make(map[string]interface{}),
-		filename:    "test.txt",
+		users:        users,
+		roles:        roles,
+		awsAccounts:  make(map[string]interface{}),
+		filename:     filename,
+		userIDStrict: userIDStrict,
 	}
-	ms.users["arn:aws:iam::012345678912:user/matt"] = testUser
-	ms.roles["UserId001"] = testRole
+
 	ms.awsAccounts["123"] = nil
 	return ms
 }
 
+func makeDefaultStore() DynamicFileMapStore {
+	users := make(map[string]config.UserMapping)
+	roles := make(map[string]config.RoleMapping)
+	users["arn:aws:iam::012345678912:user/matt"] = testUser
+	roles["UserId001"] = testRole
+	return makeStore(users, roles, "test.txt", false)
+}
+
+func makeMapper(users map[string]config.UserMapping, roles map[string]config.RoleMapping, filename string, userIDStrict bool) *DynamicFileMapper {
+	store := makeStore(users, roles, filename, userIDStrict)
+	return &DynamicFileMapper{
+		DynamicFileMapStore: &store,
+	}
+}
+
 func TestUserMapping(t *testing.T) {
-	ms := makeStore()
+	ms := makeDefaultStore()
 	user, err := ms.UserMapping("arn:aws:iam::012345678912:user/matt")
 	if err != nil {
 		t.Errorf("Could not find user 'matt' in map")
@@ -39,7 +57,7 @@ func TestUserMapping(t *testing.T) {
 	}
 
 	user, err = ms.UserMapping("nic")
-	if err != UserNotFound {
+	if err != errutil.ErrNotMapped {
 		t.Errorf("UserNotFound error was not returned for user 'nic'")
 	}
 	if !reflect.DeepEqual(user, config.UserMapping{}) {
@@ -48,7 +66,7 @@ func TestUserMapping(t *testing.T) {
 }
 
 func TestRoleMapping(t *testing.T) {
-	ms := makeStore()
+	ms := makeDefaultStore()
 	role, err := ms.RoleMapping("UserId001")
 	if err != nil {
 		t.Errorf("Could not find user 'instance in map")
@@ -58,7 +76,7 @@ func TestRoleMapping(t *testing.T) {
 	}
 
 	role, err = ms.RoleMapping("borg")
-	if err != RoleNotFound {
+	if err != errutil.ErrNotMapped {
 		t.Errorf("RoleNotFound error was not returend for role 'borg'")
 	}
 	if !reflect.DeepEqual(role, config.RoleMapping{}) {
@@ -67,7 +85,7 @@ func TestRoleMapping(t *testing.T) {
 }
 
 func TestAWSAccount(t *testing.T) {
-	ms := makeStore()
+	ms := makeDefaultStore()
 	if !ms.AWSAccount("123") {
 		t.Errorf("Expected aws account '123' to be in accounts list: %v", ms.awsAccounts)
 	}
@@ -445,5 +463,96 @@ func TestCallBackForFileLoad(t *testing.T) {
 		if _, ok := ms.awsAccounts[account]; !ok {
 			t.Fatalf("unexpected userMappings %+v", ms.users)
 		}
+	}
+}
+
+func TestMap(t *testing.T) {
+
+	tests := []struct {
+		description       string
+		identity          *token.Identity
+		users             map[string]config.UserMapping
+		expectedIDMapping *config.IdentityMapping
+		expectedError     error
+	}{
+		{
+			description: "UserID strict: ARNs match.",
+			identity: &token.Identity{
+				ARN:          "arn:aws:iam::012345678912:user/matt",
+				CanonicalARN: "arn:aws:iam::012345678912:user/matt",
+				UserID:       "1234",
+			},
+			users: map[string]config.UserMapping{
+				"1234": {
+					UserARN:  "arn:aws:iam::012345678912:user/matt",
+					UserId:   "1234",
+					Username: "asdf",
+					Groups:   []string{"asdf"},
+				},
+			},
+			expectedIDMapping: &config.IdentityMapping{
+				IdentityARN: "arn:aws:iam::012345678912:user/matt",
+				Username:    "asdf",
+				Groups:      []string{"asdf"},
+			},
+			expectedError: nil,
+		},
+		{
+			description: "UserID strict: ARNs do not match but UserIDs do.",
+			identity: &token.Identity{
+				ARN:          "arn:aws:iam::012345678912:user/alice",
+				CanonicalARN: "arn:aws:iam::012345678912:user/alice",
+				UserID:       "1234",
+			},
+			users: map[string]config.UserMapping{
+				"1234": {
+					UserARN: "arn:aws:iam::012345678912:user/bob",
+					UserId:  "1234",
+				},
+			},
+			expectedIDMapping: nil,
+			expectedError:     errutil.ErrIDAndARNMismatch,
+		},
+		{
+			description: "UserID strict: No ARN provided.",
+			identity: &token.Identity{
+				ARN:          "arn:aws:iam::012345678912:user/matt",
+				CanonicalARN: "arn:aws:iam::012345678912:user/matt",
+				UserID:       "1234",
+			},
+			users: map[string]config.UserMapping{
+				"1234": {
+					UserId:   "1234",
+					Username: "asdf",
+					Groups:   []string{"asdf"},
+				},
+			},
+			expectedIDMapping: &config.IdentityMapping{
+				IdentityARN: "arn:aws:iam::012345678912:user/matt",
+				Username:    "asdf",
+				Groups:      []string{"asdf"},
+			},
+			expectedError: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+
+			mapper := makeMapper(tc.users, map[string]config.RoleMapping{}, "test.txt", true)
+			identityMapping, err := mapper.Map(tc.identity)
+
+			if tc.expectedError != nil {
+				if err == nil {
+					t.Errorf("expected error %v but didn't get one", tc.expectedError)
+				} else if err != tc.expectedError {
+					t.Errorf("expected error %v but got %v", tc.expectedError, err)
+				}
+			}
+
+			if diff := cmp.Diff(tc.expectedIDMapping, identityMapping); diff != "" {
+				t.Errorf("Result mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
