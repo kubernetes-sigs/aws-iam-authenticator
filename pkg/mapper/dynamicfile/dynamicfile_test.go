@@ -472,11 +472,12 @@ func TestMap(t *testing.T) {
 		description       string
 		identity          *token.Identity
 		users             map[string]config.UserMapping
+		roles             map[string]config.RoleMapping
 		expectedIDMapping *config.IdentityMapping
 		expectedError     error
 	}{
 		{
-			description: "UserID strict: ARNs match.",
+			description: "UserID strict: ARNs match for user.",
 			identity: &token.Identity{
 				ARN:          "arn:aws:iam::012345678912:user/matt",
 				CanonicalARN: "arn:aws:iam::012345678912:user/matt",
@@ -490,8 +491,55 @@ func TestMap(t *testing.T) {
 					Groups:   []string{"asdf"},
 				},
 			},
+			roles: map[string]config.RoleMapping{},
 			expectedIDMapping: &config.IdentityMapping{
 				IdentityARN: "arn:aws:iam::012345678912:user/matt",
+				Username:    "asdf",
+				Groups:      []string{"asdf"},
+			},
+			expectedError: nil,
+		},
+		{
+			description: "UserID strict: ARNs match for role.",
+			identity: &token.Identity{
+				ARN:          "arn:aws:sts::012345678912:assumed-role/matt/extra",
+				CanonicalARN: "arn:aws:iam::012345678912:role/matt",
+				UserID:       "1234",
+			},
+			users: map[string]config.UserMapping{},
+			roles: map[string]config.RoleMapping{
+				"1234": {
+					RoleARN:  "arn:aws:iam::012345678912:role/matt",
+					UserId:   "1234",
+					Username: "asdf",
+					Groups:   []string{"asdf"},
+				},
+			},
+			expectedIDMapping: &config.IdentityMapping{
+				IdentityARN: "arn:aws:iam::012345678912:role/matt",
+				Username:    "asdf",
+				Groups:      []string{"asdf"},
+			},
+			expectedError: nil,
+		},
+		{
+			description: "UserID strict: ARNs match for role with path.",
+			identity: &token.Identity{
+				ARN:          "arn:aws:sts::012345678912:assumed-role/matt/extra",
+				CanonicalARN: "arn:aws:iam::012345678912:role/matt",
+				UserID:       "1234",
+			},
+			users: map[string]config.UserMapping{},
+			roles: map[string]config.RoleMapping{
+				"1234": {
+					RoleARN:  "arn:aws:iam::012345678912:role/path/for/this-role/matt",
+					UserId:   "1234",
+					Username: "asdf",
+					Groups:   []string{"asdf"},
+				},
+			},
+			expectedIDMapping: &config.IdentityMapping{
+				IdentityARN: "arn:aws:iam::012345678912:role/matt",
 				Username:    "asdf",
 				Groups:      []string{"asdf"},
 			},
@@ -510,6 +558,7 @@ func TestMap(t *testing.T) {
 					UserId:  "1234",
 				},
 			},
+			roles:             map[string]config.RoleMapping{},
 			expectedIDMapping: nil,
 			expectedError:     errutil.ErrIDAndARNMismatch,
 		},
@@ -527,6 +576,7 @@ func TestMap(t *testing.T) {
 					Groups:   []string{"asdf"},
 				},
 			},
+			roles: map[string]config.RoleMapping{},
 			expectedIDMapping: &config.IdentityMapping{
 				IdentityARN: "arn:aws:iam::012345678912:user/matt",
 				Username:    "asdf",
@@ -539,7 +589,7 @@ func TestMap(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
 
-			mapper := makeMapper(tc.users, map[string]config.RoleMapping{}, "test.txt", true)
+			mapper := makeMapper(tc.users, tc.roles, "test.txt", true)
 			identityMapping, err := mapper.Map(tc.identity)
 
 			if tc.expectedError != nil {
@@ -548,6 +598,10 @@ func TestMap(t *testing.T) {
 				} else if err != tc.expectedError {
 					t.Errorf("expected error %v but got %v", tc.expectedError, err)
 				}
+			}
+
+			if tc.expectedError == nil && err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 
 			if diff := cmp.Diff(tc.expectedIDMapping, identityMapping); diff != "" {

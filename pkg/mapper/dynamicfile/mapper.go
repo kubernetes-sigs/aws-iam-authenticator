@@ -3,6 +3,7 @@ package dynamicfile
 import (
 	"strings"
 
+	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
@@ -66,7 +67,8 @@ func (m *DynamicFileMapper) match(token *token.Identity, mappedARN, mappedUserID
 		// If ARN is provided, ARN must be validated along with UserID.  This avoids having to
 		// support IAM user name/ARN changes. Without preventing this the mapping would look
 		// invalid but still work and auditing would be difficult/impossible.
-		if mappedARN != "" && token.ARN != mappedARN {
+		strippedArn, _ := arn.StripPath(mappedARN)
+		if strippedArn != "" && token.CanonicalARN != strings.ToLower(strippedArn) {
 			return errutil.ErrIDAndARNMismatch
 		}
 	}
