@@ -73,6 +73,33 @@ func Canonicalize(arn string) (PrincipalType, string, error) {
 	return NONE, "", fmt.Errorf("service %s in arn %s is not a valid service for identities", parsed.Service, arn)
 }
 
+// TODO: add strip path functionality Canonicalize after testing it in all mappers - this can be used to support role paths in the configmap
+func StripPath(arn string) (string, error) {
+	parsed, err := awsarn.Parse(arn)
+	if err != nil {
+		return "", fmt.Errorf("arn '%s' is invalid: '%v'", arn, err)
+	}
+
+	if err := checkPartition(parsed.Partition); err != nil {
+		return "", fmt.Errorf("arn '%s' does not have a recognized partition", arn)
+	}
+
+	parts := strings.Split(parsed.Resource, "/")
+	resource := parts[0]
+
+	if resource != "role" {
+		return arn, nil
+	}
+
+	if len(parts) > 2 {
+		// Stripping off the path means we just need to keep the first and last part of the arn resource
+		// role/path/for/this-role/matt -> role/matt
+		role := parts[len(parts)-1]
+		return fmt.Sprintf("arn:%s:iam::%s:role/%s", parsed.Partition, parsed.AccountID, role), nil
+	}
+	return arn, nil
+}
+
 func checkPartition(partition string) error {
 	for _, p := range endpoints.DefaultPartitions() {
 		if partition == p.ID() {
