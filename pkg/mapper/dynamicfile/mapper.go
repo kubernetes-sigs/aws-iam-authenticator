@@ -3,6 +3,7 @@ package dynamicfile
 import (
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
@@ -46,31 +47,34 @@ func (m *DynamicFileMapper) Map(identity *token.Identity) (*config.IdentityMappi
 	}
 
 	if roleMapping, err := m.RoleMapping(key); err == nil {
-		if err := m.match(identity, roleMapping.RoleARN, roleMapping.UserId); err != nil {
+		if err := m.match(canonicalARN, roleMapping.RoleARN); err != nil {
 			return nil, err
 		}
 		return roleMapping.IdentityMapping(identity), nil
 	}
 
 	if userMapping, err := m.UserMapping(key); err == nil {
-		if err := m.match(identity, userMapping.UserARN, userMapping.UserId); err != nil {
+		if err := m.match(canonicalARN, userMapping.UserARN); err != nil {
 			return nil, err
 		}
 		return userMapping.IdentityMapping(identity), nil
-	}
 
+	}
 	return nil, errutil.ErrNotMapped
 }
 
-func (m *DynamicFileMapper) match(token *token.Identity, mappedARN, mappedUserID string) error {
+func (m *DynamicFileMapper) match(canonicalARN string, mappingARN string) error {
 	if m.userIDStrict {
 		// If ARN is provided, ARN must be validated along with UserID.  This avoids having to
 		// support IAM user name/ARN changes. Without preventing this the mapping would look
 		// invalid but still work and auditing would be difficult/impossible.
-		strippedArn, _ := arn.StripPath(mappedARN)
-		if strippedArn != "" && token.CanonicalARN != strings.ToLower(strippedArn) {
+		strippedArn, _ := arn.StripPath(mappingARN)
+		logrus.Infof("additional arn comparison for IAM arn. arn from STS response is %s, arn in mapper is %s",
+			canonicalARN, strings.ToLower(strippedArn))
+		if strippedArn != "" && canonicalARN != strings.ToLower(strippedArn) {
 			return errutil.ErrIDAndARNMismatch
 		}
+		return nil
 	}
 	return nil
 }
