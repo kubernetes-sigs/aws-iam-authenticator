@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -87,7 +86,7 @@ func toToken(url string) string {
 func newVerifier(partition string, statusCode int, body string, err error) Verifier {
 	var rc io.ReadCloser
 	if body != "" {
-		rc = ioutil.NopCloser(bytes.NewReader([]byte(body)))
+		rc = io.NopCloser(bytes.NewReader([]byte(body)))
 	}
 	return tokenVerifier{
 		client: &http.Client{
@@ -246,7 +245,7 @@ func TestVerifyNoRedirectsFollowed(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	if resp.Header.Get("Location") != ts2.URL && resp.StatusCode != http.StatusFound {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		fmt.Printf("%#v\n", resp)
 		fmt.Println(string(body))
 		t.Error("Unexpectedly followed redirect")

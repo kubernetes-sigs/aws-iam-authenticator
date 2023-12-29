@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"bytes"
-	"io/ioutil"
+
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -47,7 +47,7 @@ var _ = SIGDescribe("apiserver", framework.WithDisruptive(), func() {
 		BeforeEach(func() {
 			jobPath := filepath.Join(os.Getenv("BASE_DIR"), "apiserver-restart.yaml")
 
-			b, _ := ioutil.ReadFile(jobPath)
+			b, _ := os.ReadFile(jobPath)
 			decoder := yamlutil.NewYAMLOrJSONDecoder(bytes.NewReader(b), 100)
 			jobSpec := &batchv1.Job{}
 			_ = decoder.Decode(&jobSpec)
