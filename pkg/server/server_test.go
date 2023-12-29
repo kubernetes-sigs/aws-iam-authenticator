@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -27,7 +27,7 @@ import (
 
 func verifyBodyContains(t *testing.T, resp *httptest.ResponseRecorder, s string) {
 	t.Helper()
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read body from ResponseRecorder, this should not happen")
 	}
@@ -38,7 +38,7 @@ func verifyBodyContains(t *testing.T, resp *httptest.ResponseRecorder, s string)
 
 func verifyAuthResult(t *testing.T, resp *httptest.ResponseRecorder, expected authenticationv1beta1.TokenReview) {
 	t.Helper()
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read body from ResponseRecorder, this should not happen.")
 	}
