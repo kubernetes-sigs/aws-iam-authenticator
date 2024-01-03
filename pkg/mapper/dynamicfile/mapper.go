@@ -1,6 +1,7 @@
 package dynamicfile
 
 import (
+	"context"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -33,8 +34,8 @@ func (m *DynamicFileMapper) Name() string {
 	return mapper.ModeDynamicFile
 }
 
-func (m *DynamicFileMapper) Start(stopCh <-chan struct{}) error {
-	fileutil.StartLoadDynamicFile(m.filename, m.DynamicFileMapStore, stopCh)
+func (m *DynamicFileMapper) Start(ctx context.Context) error {
+	fileutil.StartLoadDynamicFile(ctx, m.filename, m.DynamicFileMapStore)
 	return nil
 }
 

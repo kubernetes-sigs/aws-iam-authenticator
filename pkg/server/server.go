@@ -32,7 +32,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/configmap"
@@ -80,12 +79,12 @@ type handler struct {
 }
 
 // New authentication webhook server.
-func New(cfg config.Config, stopCh <-chan struct{}) *Server {
+func New(ctx context.Context, cfg config.Config) *Server {
 	c := &Server{
 		Config: cfg,
 	}
 
-	backendMapper, err := BuildMapperChain(cfg, cfg.BackendMode)
+	backendMapper, err := BuildMapperChain(ctx, cfg, cfg.BackendMode)
 	if err != nil {
 		logrus.Fatalf("failed to build mapper chain: %v", err)
 	}
@@ -143,7 +142,7 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 
 	logrus.Infof("listening on %s", listener.Addr())
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
-	internalHandler := c.getHandler(backendMapper, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst, stopCh)
+	internalHandler := c.getHandler(ctx, backendMapper, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst)
 	c.httpServer = http.Server{
 		ErrorLog: log.New(errLog, "", 0),
 		Handler:  internalHandler,
@@ -154,7 +153,7 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 }
 
 // Run will run the server closing the connection if there is a struct on the channel
-func (c *Server) Run(stopCh <-chan struct{}) {
+func (c *Server) Run(ctx context.Context) {
 
 	defer c.listener.Close()
 
@@ -164,7 +163,7 @@ func (c *Server) Run(stopCh <-chan struct{}) {
 	go func() {
 		for {
 			select {
-			case <-stopCh:
+			case <-ctx.Done():
 				logrus.Info("shut down mapper before return from Run")
 				close(c.internalHandler.backendMapper.mapperStopCh)
 				return
@@ -190,7 +189,7 @@ type healthzHandler struct{}
 func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
-func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int, stopCh <-chan struct{}) *handler {
+func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int) *handler {
 	if c.ServerEC2DescribeInstancesRoleARN != "" {
 		_, err := awsarn.Parse(c.ServerEC2DescribeInstancesRoleARN)
 		if err != nil {
@@ -221,16 +220,15 @@ func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2
 	logrus.Infof("Starting the h.ec2Provider.startEc2DescribeBatchProcessing ")
 	go h.ec2Provider.StartEc2DescribeBatchProcessing()
 	if strings.TrimSpace(c.DynamicBackendModePath) != "" {
-		fileutil.StartLoadDynamicFile(c.DynamicBackendModePath, h, stopCh)
+		fileutil.StartLoadDynamicFile(ctx, c.DynamicBackendModePath, h)
 	}
 
 	return h
 }
 
-func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) {
+func BuildMapperChain(ctx context.Context, cfg config.Config, modes []string) (BackendMapper, error) {
 	backendMapper := BackendMapper{
-		mappers:      []mapper.Mapper{},
-		mapperStopCh: make(chan struct{}),
+		mappers: []mapper.Mapper{},
 	}
 	for _, mode := range modes {
 		switch mode {
@@ -268,7 +266,7 @@ func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) 
 	}
 	for _, m := range backendMapper.mappers {
 		logrus.Infof("starting mapper %q", m.Name())
-		if err := m.Start(backendMapper.mapperStopCh); err != nil {
+		if err := m.Start(ctx); err != nil {
 			logrus.Fatalf("start mapper %q failed", m.Name())
 		}
 		if backendMapper.currentModes != "" {
@@ -432,7 +430,7 @@ func (h *handler) doMapping(identity *token.Identity) (string, []string, error) 
 			}
 			return username, groups, nil
 		} else {
-			if err != errutil.ErrNotMapped {
+			if err != mapper.ErrNotMapped {
 				errs = append(errs, fmt.Errorf("mapper %s Map error: %v", m.Name(), err))
 			}
 
@@ -445,7 +443,7 @@ func (h *handler) doMapping(identity *token.Identity) (string, []string, error) 
 	if len(errs) > 0 {
 		return "", nil, utilerrors.NewAggregate(errs)
 	}
-	return "", nil, errutil.ErrNotMapped
+	return "", nil, mapper.ErrNotMapped
 }
 
 func (h *handler) renderTemplates(mapping config.IdentityMapping, identity *token.Identity) (string, []string, error) {
@@ -492,7 +490,7 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 	return template, nil
 }
 
-func (h *handler) CallBackForFileLoad(dynamicContent []byte) error {
+func (h *handler) CallBackForFileLoad(ctx context.Context, dynamicContent []byte) error {
 	var backendModes BackendModeConfig
 	logrus.Infof("BackendMode dynamic file got changed to %s", string(dynamicContent))
 	err := json.Unmarshal(dynamicContent, &backendModes)
@@ -502,7 +500,7 @@ func (h *handler) CallBackForFileLoad(dynamicContent []byte) error {
 	}
 	if h.backendMapper.currentModes != backendModes.BackendMode {
 		logrus.Infof("BackendMode dynamic file got changed, %s different from current mode %s, rebuild mapper", backendModes.BackendMode, h.backendMapper.currentModes)
-		newMapper, err := BuildMapperChain(h.cfg, strings.Split(backendModes.BackendMode, " "))
+		newMapper, err := BuildMapperChain(ctx, h.cfg, strings.Split(backendModes.BackendMode, " "))
 		if err == nil && len(newMapper.mappers) > 0 {
 			// replace the mapper
 			close(h.backendMapper.mapperStopCh)
@@ -516,9 +514,9 @@ func (h *handler) CallBackForFileLoad(dynamicContent []byte) error {
 	return nil
 }
 
-func (h *handler) CallBackForFileDeletion() error {
+func (h *handler) CallBackForFileDeletion(ctx context.Context) error {
 	logrus.Infof("BackendMode dynamic file got deleted")
-	backendMapper, err := BuildMapperChain(h.cfg, h.cfg.BackendMode)
+	backendMapper, err := BuildMapperChain(ctx, h.cfg, h.cfg.BackendMode)
 	if err == nil && len(backendMapper.mappers) > 0 {
 		// replace the mapper
 		close(h.backendMapper.mapperStopCh)

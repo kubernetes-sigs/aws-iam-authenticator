@@ -1,13 +1,14 @@
 package mapper
 
 import (
+	"context"
+	"errors"
 	"fmt"
-
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
 const (
@@ -34,10 +35,12 @@ var (
 	BackendModeChoices = []string{ModeMountedFile, ModeEKSConfigMap, ModeCRD, ModeDynamicFile}
 )
 
+var ErrNotMapped = errors.New("ARN is not mapped")
+
 type Mapper interface {
 	Name() string
 	// Start must be non-blocking
-	Start(stopCh <-chan struct{}) error
+	Start(context.Context) error
 	Map(identity *token.Identity) (*config.IdentityMapping, error)
 	IsAccountAllowed(accountID string) bool
 	UsernamePrefixReserveList() []string

@@ -19,6 +19,7 @@ package internalinterfaces
 
 import (
 	time "time"
+	context "context"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -31,7 +32,7 @@ type NewInformerFunc func(versioned.Interface, time.Duration) cache.SharedIndexI
 
 // SharedInformerFactory a small interface to allow for adding an informer without an import cycle
 type SharedInformerFactory interface {
-	Start(stopCh <-chan struct{})
+	Start(context.Context)
 	InformerFor(obj runtime.Object, newFunc NewInformerFunc) cache.SharedIndexInformer
 }
 

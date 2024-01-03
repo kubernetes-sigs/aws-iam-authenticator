@@ -1,6 +1,7 @@
 package dynamicfile
 
 import (
+	"context"
 	"os"
 	"reflect"
 	"testing"
@@ -187,8 +188,8 @@ var updatedFileContent = `
 `
 
 func TestUserIdStrict(t *testing.T) {
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	//When the file doesn't exist, expect mapping should be empty map
 	cfg := config.Config{
@@ -204,7 +205,7 @@ func TestUserIdStrict(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create a local file /tmp/test.txt")
 	}
-	fileutil.StartLoadDynamicFile(ms.filename, ms, stopCh)
+	fileutil.StartLoadDynamicFile(ctx, ms.filename, ms)
 	time.Sleep(1 * time.Second)
 	ms.mutex.RLock()
 	for key, _ := range ms.roles {
@@ -218,8 +219,8 @@ func TestUserIdStrict(t *testing.T) {
 }
 
 func TestWithoutUserIdStrict(t *testing.T) {
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	//When the file doesn't exist, expect mapping should be empty map
 	cfg := config.Config{
@@ -235,7 +236,7 @@ func TestWithoutUserIdStrict(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create a local file /tmp/test.txt")
 	}
-	fileutil.StartLoadDynamicFile(ms.filename, ms, stopCh)
+	fileutil.StartLoadDynamicFile(ctx, ms.filename, ms)
 	time.Sleep(1 * time.Second)
 	ms.mutex.RLock()
 	for key, _ := range ms.roles {
@@ -249,8 +250,8 @@ func TestWithoutUserIdStrict(t *testing.T) {
 }
 
 func TestLoadDynamicFileMode(t *testing.T) {
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	//When the file doesn't exist, expect mapping should be empty map
 	cfg := config.Config{
@@ -262,7 +263,7 @@ func TestLoadDynamicFileMode(t *testing.T) {
 		t.Errorf("failed to create a DynamicFileMapper")
 	}
 
-	fileutil.StartLoadDynamicFile(ms.filename, ms, stopCh)
+	fileutil.StartLoadDynamicFile(ctx, ms.filename, ms)
 	time.Sleep(1 * time.Second)
 	ms.mutex.RLock()
 	if len(ms.roles) != 0 {
@@ -299,6 +300,9 @@ func TestLoadDynamicFileMode(t *testing.T) {
 	//user update the dynamic file,expect mapping should be equal to expectedMapStore
 	expectedData := []byte(updatedFileContent)
 	err = os.WriteFile("/tmp/expected.txt", expectedData, 0600)
+	if err != nil {
+		t.Errorf("failed to create a local file /tmp/expected.txt")
+	}
 
 	cfg = config.Config{
 		DynamicFileUserIDStrict: true,
@@ -308,7 +312,7 @@ func TestLoadDynamicFileMode(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create expected DynamicFileMapper")
 	}
-	err = expectedMapStore.CallBackForFileLoad([]byte(updatedFileContent))
+	err = expectedMapStore.CallBackForFileLoad(context.Background(), []byte(updatedFileContent))
 	if err != nil {
 		t.Errorf("failed to ParseMap expected DynamicFileMapper")
 	}
@@ -373,7 +377,6 @@ func TestLoadDynamicFileMode(t *testing.T) {
 	//clean test files
 	defer os.Remove("/tmp/test.txt")
 	defer os.Remove("/tmp/expected.txt")
-
 }
 
 func TestCallBackForFileDeletion(t *testing.T) {
@@ -386,7 +389,9 @@ func TestCallBackForFileDeletion(t *testing.T) {
 		t.Errorf("failed to create a DynamicFileMapper")
 	}
 
-	err = ms.CallBackForFileDeletion()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err = ms.CallBackForFileDeletion(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -405,7 +410,6 @@ func TestCallBackForFileDeletion(t *testing.T) {
 }
 
 func TestCallBackForFileLoad(t *testing.T) {
-
 	data := []byte(origFileContent)
 	cfg := config.Config{
 		DynamicFileUserIDStrict: true,
@@ -416,7 +420,7 @@ func TestCallBackForFileLoad(t *testing.T) {
 		t.Errorf("failed to create a DynamicFileMapper")
 	}
 
-	err = ms.CallBackForFileLoad(data)
+	err = ms.CallBackForFileLoad(context.Background(), data)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -50,16 +50,16 @@ func New(masterURL, kubeConfig string) (*MapStore, error) {
 
 // Starts a go routine which will watch the configmap and update the in memory data
 // when the values change.
-func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
+func (ms *MapStore) startLoadConfigMap(ctx context.Context) {
 	go func() {
 		logrus.Info("startLoadConfigMap in EKSConfigMap")
 		for {
 			select {
-			case <-stopCh:
-				logrus.Info("stopCh is closed in startLoadConfigMap")
+			case <-ctx.Done():
+				logrus.Info("Context is complete in startLoadConfigMap")
 				return
 			default:
-				watcher, err := ms.configMap.Watch(context.TODO(), metav1.ListOptions{
+				watcher, err := ms.configMap.Watch(ctx, metav1.ListOptions{
 					Watch:         true,
 					FieldSelector: fields.OneTermEqualSelector("metadata.name", "aws-auth").String(),
 				})

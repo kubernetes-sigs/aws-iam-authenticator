@@ -1,13 +1,12 @@
 package configmap
 
 import (
+	"context"
 	"strings"
-
-	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
 type ConfigMapMapper struct {
@@ -28,8 +27,8 @@ func (m *ConfigMapMapper) Name() string {
 	return mapper.ModeEKSConfigMap
 }
 
-func (m *ConfigMapMapper) Start(stopCh <-chan struct{}) error {
-	m.startLoadConfigMap(stopCh)
+func (m *ConfigMapMapper) Start(ctx context.Context) error {
+	m.startLoadConfigMap(ctx)
 	return nil
 }
 
@@ -55,7 +54,7 @@ func (m *ConfigMapMapper) Map(identity *token.Identity) (*config.IdentityMapping
 		}, nil
 	}
 
-	return nil, errutil.ErrNotMapped
+	return nil, mapper.ErrNotMapped
 }
 
 func (m *ConfigMapMapper) IsAccountAllowed(accountID string) bool {

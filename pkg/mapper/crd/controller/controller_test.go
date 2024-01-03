@@ -10,9 +10,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package controller
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -102,9 +104,9 @@ func (f *fixture) runExpectError(iamIdentityName string) {
 func (f *fixture) runController(iamIdentityName string, startInformers bool, expectError bool) {
 	c, i := f.newController()
 	if startInformers {
-		stopCh := make(chan struct{})
-		defer close(stopCh)
-		i.Start(stopCh)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		i.Start(ctx)
 	}
 
 	err := c.syncHandler(iamIdentityName)

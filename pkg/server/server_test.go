@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -1028,7 +1029,9 @@ func TestCallBackForFileLoad(t *testing.T) {
 	h := &handler{
 		cfg: cfg,
 	}
-	newMapper, err := BuildMapperChain(h.cfg, fileContent)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	newMapper, err := BuildMapperChain(ctx, h.cfg, fileContent)
 	if err != nil {
 		t.Errorf("Fail in TestCallBackForFileLoad: BuildMapperChain")
 	}

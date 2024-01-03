@@ -122,24 +122,24 @@ func New(
 }
 
 // Run will implement the loop for processing items
-func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
+func (c *Controller) Run(ctx context.Context, threadiness int) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
 
 	logrus.Info("starting aws iam authenticator controller")
 
 	logrus.Info("waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.iamMappingsSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.iamMappingsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
 	logrus.Info("starting workers")
 	for i := 0; i < threadiness; i++ {
-		go wait.Until(c.runWorker, time.Second, stopCh)
+		go wait.Until(c.runWorker, time.Second, ctx.Done())
 	}
 
 	logrus.Info("started workers")
-	<-stopCh
+	<-ctx.Done()
 	logrus.Info("shutting down workers")
 
 	return nil

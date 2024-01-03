@@ -1,12 +1,10 @@
 package crd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
-
-	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -18,6 +16,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/controller"
 	clientset "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/clientset/versioned"
 	informers "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/informers/externalversions"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
 type CRDMapper struct {
@@ -77,11 +76,11 @@ func (m *CRDMapper) Name() string {
 	return mapper.ModeCRD
 }
 
-func (m *CRDMapper) Start(stopCh <-chan struct{}) error {
-	m.iamInformerFactory.Start(stopCh)
+func (m *CRDMapper) Start(ctx context.Context) error {
+	m.iamInformerFactory.Start(ctx)
 	go func() {
 		// Run starts worker goroutines and blocks
-		if err := m.Controller.Run(2, stopCh); err != nil {
+		if err := m.Controller.Run(ctx, 2); err != nil {
 			panic(err)
 		}
 	}()
@@ -116,7 +115,7 @@ func (m *CRDMapper) Map(identity *token.Identity) (*config.IdentityMapping, erro
 		}
 	}
 
-	return nil, errutil.ErrNotMapped
+	return nil, mapper.ErrNotMapped
 }
 
 func (m *CRDMapper) IsAccountAllowed(accountID string) bool {
