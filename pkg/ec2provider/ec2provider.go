@@ -55,17 +55,17 @@ type ec2Requests struct {
 
 type ec2ProviderImpl struct {
 	ec2                ec2iface.EC2API
-	privateDNSCache    ec2PrivateDNSCache
-	ec2Requests        ec2Requests
+	privateDNSCache    *ec2PrivateDNSCache
+	ec2Requests        *ec2Requests
 	instanceIdsChannel chan string
 }
 
 func New(roleARN, region string, qps int, burst int) EC2Provider {
-	dnsCache := ec2PrivateDNSCache{
+	dnsCache := &ec2PrivateDNSCache{
 		cache: make(map[string]string),
 		lock:  sync.RWMutex{},
 	}
-	ec2Requests := ec2Requests{
+	ec2Requests := &ec2Requests{
 		set:  make(map[string]bool),
 		lock: sync.RWMutex{},
 	}

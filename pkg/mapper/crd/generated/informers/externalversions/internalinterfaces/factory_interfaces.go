@@ -18,8 +18,8 @@ limitations under the License.
 package internalinterfaces
 
 import (
-	time "time"
 	context "context"
+	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"

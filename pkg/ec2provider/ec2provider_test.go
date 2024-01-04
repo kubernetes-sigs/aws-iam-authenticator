@@ -45,11 +45,11 @@ func (c *mockEc2Client) DescribeInstances(in *ec2.DescribeInstancesInput) (*ec2.
 }
 
 func newMockedEC2ProviderImpl() *ec2ProviderImpl {
-	dnsCache := ec2PrivateDNSCache{
+	dnsCache := &ec2PrivateDNSCache{
 		cache: make(map[string]string),
 		lock:  sync.RWMutex{},
 	}
-	ec2Requests := ec2Requests{
+	ec2Requests := &ec2Requests{
 		set:  make(map[string]bool),
 		lock: sync.RWMutex{},
 	}
@@ -81,7 +81,7 @@ func prepareSingleInstanceOutput() []*ec2.Reservation {
 		{
 			Groups: nil,
 			Instances: []*ec2.Instance{
-				&ec2.Instance{
+				{
 					InstanceId:     aws.String("ec2-1"),
 					PrivateDnsName: aws.String("ec2-dns-1"),
 				},

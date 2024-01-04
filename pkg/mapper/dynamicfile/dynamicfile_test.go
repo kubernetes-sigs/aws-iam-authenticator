@@ -19,8 +19,8 @@ var (
 	testRole = config.RoleMapping{RoleARN: "arn:aws:iam::012345678912:role/computer", Username: "computer", Groups: []string{"system:nodes"}}
 )
 
-func makeStore(users map[string]config.UserMapping, roles map[string]config.RoleMapping, filename string, userIDStrict bool) DynamicFileMapStore {
-	ms := DynamicFileMapStore{
+func makeStore(users map[string]config.UserMapping, roles map[string]config.RoleMapping, filename string, userIDStrict bool) *DynamicFileMapStore {
+	ms := &DynamicFileMapStore{
 		users:        users,
 		roles:        roles,
 		awsAccounts:  make(map[string]interface{}),
@@ -37,13 +37,13 @@ func makeDefaultStore() DynamicFileMapStore {
 	roles := make(map[string]config.RoleMapping)
 	users["arn:aws:iam::012345678912:user/matt"] = testUser
 	roles["UserId001"] = testRole
-	return makeStore(users, roles, "test.txt", false)
+	return *makeStore(users, roles, "test.txt", false)
 }
 
 func makeMapper(users map[string]config.UserMapping, roles map[string]config.RoleMapping, filename string, userIDStrict bool) *DynamicFileMapper {
 	store := makeStore(users, roles, filename, userIDStrict)
 	return &DynamicFileMapper{
-		DynamicFileMapStore: &store,
+		DynamicFileMapStore: store,
 	}
 }
 
@@ -208,7 +208,7 @@ func TestUserIdStrict(t *testing.T) {
 	fileutil.StartLoadDynamicFile(ctx, ms.filename, ms)
 	time.Sleep(1 * time.Second)
 	ms.mutex.RLock()
-	for key, _ := range ms.roles {
+	for key := range ms.roles {
 		if key[0:6] != "userid" {
 			t.Errorf("failed to generate key for userIDStrict")
 		}
@@ -239,7 +239,7 @@ func TestWithoutUserIdStrict(t *testing.T) {
 	fileutil.StartLoadDynamicFile(ctx, ms.filename, ms)
 	time.Sleep(1 * time.Second)
 	ms.mutex.RLock()
-	for key, _ := range ms.roles {
+	for key := range ms.roles {
 		if key[0:3] != "arn" {
 			t.Errorf("failed to generate key for userIDStrict")
 		}

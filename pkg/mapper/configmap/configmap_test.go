@@ -33,8 +33,8 @@ var (
 	}
 )
 
-func makeStore() MapStore {
-	ms := MapStore{
+func makeStore() *MapStore {
+	ms := &MapStore{
 		users:       make(map[string]config.UserMapping),
 		roles:       make(map[string]config.RoleMapping),
 		awsAccounts: make(map[string]interface{}),
@@ -46,11 +46,11 @@ func makeStore() MapStore {
 	return ms
 }
 
-func makeStoreWClient() (MapStore, *fake.FakeConfigMaps) {
+func makeStoreWClient() (*MapStore, *fake.FakeConfigMaps) {
 	fakeConfigMaps := &fake.FakeConfigMaps{}
 	fakeConfigMaps.Fake = &fake.FakeCoreV1{}
 	fakeConfigMaps.Fake.Fake = &k8stesting.Fake{}
-	ms := MapStore{
+	ms := &MapStore{
 		users:     make(map[string]config.UserMapping),
 		roles:     make(map[string]config.RoleMapping),
 		configMap: v1.ConfigMapInterface(fakeConfigMaps),

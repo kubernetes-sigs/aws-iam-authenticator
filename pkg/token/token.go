@@ -643,7 +643,7 @@ func getIdentityFromSTSResponse(id *Identity, wrapper getCallerIdentityWrapper) 
 
 func validateDuplicateParameters(queryParams url.Values) error {
 	duplicateCheck := make(map[string]bool)
-	for key, _ := range queryParams {
+	for key := range queryParams {
 		if _, found := duplicateCheck[strings.ToLower(key)]; found {
 			return FormatError{fmt.Sprintf("duplicate query parameter found: %q", key)}
 		}

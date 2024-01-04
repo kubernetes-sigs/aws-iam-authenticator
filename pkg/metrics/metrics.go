@@ -11,7 +11,7 @@ const (
 	Invalid       = "invalid_token"
 	STSError      = "sts_error"
 	STSThrottling = "sts_throttling"
-	Unknown       = "uknown_user"
+	Unknown       = "unknown_user"
 	Success       = "success"
 )
 

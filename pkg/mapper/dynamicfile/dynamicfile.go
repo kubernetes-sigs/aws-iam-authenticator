@@ -124,7 +124,7 @@ func (ms *DynamicFileMapStore) LogMapping() {
 	for _, role := range ms.roles {
 		logrus.Info(role)
 	}
-	for awsAccount, _ := range ms.awsAccounts {
+	for awsAccount := range ms.awsAccounts {
 		logrus.Info(awsAccount)
 	}
 }
