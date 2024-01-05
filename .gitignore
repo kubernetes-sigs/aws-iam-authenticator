@@ -69,3 +69,6 @@ cscope.*
 # coverage.out file
 coverage.out
 coverage.html
+
+# multi-module workspaces
+go.work*
