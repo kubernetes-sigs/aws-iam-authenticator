@@ -41,7 +41,7 @@ const (
 	testTimeout  = 300 * time.Second
 )
 
-var _ = Describe("[apiserver] [Disruptive] the apiserver", func() {
+var _ = Describe("[apiserver] the apiserver", framework.WithDisruptive(), func() {
 	var (
 		cs  clientset.Interface
 		cfg *restclientset.Config
