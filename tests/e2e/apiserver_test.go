@@ -29,9 +29,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	clientset "k8s.io/client-go/kubernetes"
-	restclientset "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubernetes/test/e2e/framework"
 )
 
@@ -41,17 +38,11 @@ const (
 	testTimeout  = 300 * time.Second
 )
 
-var _ = Describe("[apiserver] the apiserver", framework.WithDisruptive(), func() {
-	var (
-		cs  clientset.Interface
-		cfg *restclientset.Config
-	)
+var _ = Describe("the apiserver", framework.WithDisruptive(), func() {
+	f := framework.NewDefaultFramework("apiserver")
 
-	When("the manifest changes", func() {
+	When("the manifest changes", func(ctx context.Context) {
 		BeforeEach(func() {
-			cfg, _ = clientcmd.BuildConfigFromFlags("", framework.TestContext.KubeConfig)
-			cs, _ = clientset.NewForConfig(cfg)
-
 			jobPath := filepath.Join(os.Getenv("BASE_DIR"), "apiserver-restart.yaml")
 
 			b, _ := ioutil.ReadFile(jobPath)
@@ -59,15 +50,15 @@ var _ = Describe("[apiserver] the apiserver", framework.WithDisruptive(), func()
 			jobSpec := &batchv1.Job{}
 			_ = decoder.Decode(&jobSpec)
 
-			_, _ = cs.BatchV1().
+			_, _ = f.ClientSet.BatchV1().
 				Jobs(kubeSystemNs).
-				Create(context.TODO(), jobSpec, metav1.CreateOptions{})
+				Create(ctx, jobSpec, metav1.CreateOptions{})
 
 			fmt.Printf("Waiting for apiserver to go down...\n")
 			err := wait.PollImmediate(restartDelay, restartWait, func() (bool, error) {
-				_, pingErr := cs.CoreV1().
+				_, pingErr := f.ClientSet.CoreV1().
 					Nodes().
-					List(context.TODO(), metav1.ListOptions{})
+					List(ctx, metav1.ListOptions{})
 
 				if pingErr == nil {
 					return false, nil
@@ -81,16 +72,16 @@ var _ = Describe("[apiserver] the apiserver", framework.WithDisruptive(), func()
 			}
 		})
 
-		AfterEach(func() {
-			cs.BatchV1().Jobs(kubeSystemNs).Delete(context.TODO(), "apiserver-restarter", metav1.DeleteOptions{})
+		AfterEach(func(ctx context.Context) {
+			f.ClientSet.BatchV1().Jobs(kubeSystemNs).Delete(ctx, "apiserver-restarter", metav1.DeleteOptions{})
 		})
 
-		It("restarts successfully", func() {
+		It("restarts successfully", func(ctx context.Context) {
 			startTime := time.Now()
 			err := wait.PollImmediate(1, testTimeout, func() (bool, error) {
-				res, pingErr := cs.CoreV1().
+				res, pingErr := f.ClientSet.CoreV1().
 					Nodes().
-					List(context.TODO(), metav1.ListOptions{})
+					List(ctx, metav1.ListOptions{})
 
 				if pingErr == nil {
 					fmt.Printf("after %ds: apiserver back up: %v nodes\n", int(time.Since(startTime).Seconds()), len(res.Items))
