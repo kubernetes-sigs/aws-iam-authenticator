@@ -38,10 +38,12 @@ const (
 	testTimeout  = 300 * time.Second
 )
 
-var _ = Describe("the apiserver", framework.WithDisruptive(), func() {
+var SIGDescribe = framework.SIGDescribe("api-machinery")
+
+var _ = SIGDescribe("apiserver", framework.WithDisruptive(), func() {
 	f := framework.NewDefaultFramework("apiserver")
 
-	When("the manifest changes", func(ctx context.Context) {
+	When("the manifest changes", func() {
 		BeforeEach(func() {
 			jobPath := filepath.Join(os.Getenv("BASE_DIR"), "apiserver-restart.yaml")
 
@@ -52,13 +54,13 @@ var _ = Describe("the apiserver", framework.WithDisruptive(), func() {
 
 			_, _ = f.ClientSet.BatchV1().
 				Jobs(kubeSystemNs).
-				Create(ctx, jobSpec, metav1.CreateOptions{})
+				Create(context.TODO(), jobSpec, metav1.CreateOptions{})
 
 			fmt.Printf("Waiting for apiserver to go down...\n")
 			err := wait.PollImmediate(restartDelay, restartWait, func() (bool, error) {
 				_, pingErr := f.ClientSet.CoreV1().
 					Nodes().
-					List(ctx, metav1.ListOptions{})
+					List(context.TODO(), metav1.ListOptions{})
 
 				if pingErr == nil {
 					return false, nil
@@ -72,16 +74,16 @@ var _ = Describe("the apiserver", framework.WithDisruptive(), func() {
 			}
 		})
 
-		AfterEach(func(ctx context.Context) {
-			f.ClientSet.BatchV1().Jobs(kubeSystemNs).Delete(ctx, "apiserver-restarter", metav1.DeleteOptions{})
+		AfterEach(func() {
+			f.ClientSet.BatchV1().Jobs(kubeSystemNs).Delete(context.TODO(), "apiserver-restarter", metav1.DeleteOptions{})
 		})
 
-		It("restarts successfully", func(ctx context.Context) {
+		It("restarts successfully", func() {
 			startTime := time.Now()
 			err := wait.PollImmediate(1, testTimeout, func() (bool, error) {
 				res, pingErr := f.ClientSet.CoreV1().
 					Nodes().
-					List(ctx, metav1.ListOptions{})
+					List(context.TODO(), metav1.ListOptions{})
 
 				if pingErr == nil {
 					fmt.Printf("after %ds: apiserver back up: %v nodes\n", int(time.Since(startTime).Seconds()), len(res.Items))
