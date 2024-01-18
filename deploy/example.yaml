@@ -221,6 +221,13 @@ spec:
       # mark pod as critical to the cluster
       priorityClassName: system-cluster-critical
 
+      # explicitly reduce permissions. Already done in container but worth being explicit
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+
       # run `aws-iam-authenticator server` with three volumes
       # - config (mounted from the ConfigMap at /etc/aws-iam-authenticator/config.yaml)
       # - state (persisted TLS certificate and keys, mounted from the host)
