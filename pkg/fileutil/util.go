@@ -2,6 +2,7 @@ package fileutil
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -103,4 +104,21 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 			}
 		}
 	}, time.Second, stopCh)
+}
+
+func CalculateTimeDeltaFromUnixInSeconds(from, to string) (float64, error) {
+	parsedFrom, err := strconv.ParseInt(from, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	parsedTo, err := strconv.ParseInt(to, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	timeFrom := time.Unix(parsedFrom, 0).UTC()
+	timeTo := time.Unix(parsedTo, 0).UTC()
+
+	return timeTo.Sub(timeFrom).Seconds(), nil
 }
