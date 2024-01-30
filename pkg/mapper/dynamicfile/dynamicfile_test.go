@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
@@ -17,6 +19,11 @@ var (
 	testUser = config.UserMapping{UserARN: "arn:aws:iam::012345678912:user/matt", Username: "matlan", Groups: []string{"system:master", "dev"}}
 	testRole = config.RoleMapping{RoleARN: "arn:aws:iam::012345678912:role/computer", Username: "computer", Groups: []string{"system:nodes"}}
 )
+
+func TestMain(m *testing.M) {
+	metrics.InitMetrics(prometheus.NewRegistry())
+	m.Run()
+}
 
 func makeStore(users map[string]config.UserMapping, roles map[string]config.RoleMapping, filename string, userIDStrict bool) DynamicFileMapStore {
 	ms := DynamicFileMapStore{
@@ -96,6 +103,10 @@ func TestAWSAccount(t *testing.T) {
 
 var origFileContent = `
 {
+  "ApiVersion": "1",
+  "Version": "1",
+  "LastUpdatedDateTime": "12345678",
+  "ClusterId": "000000000098",
   "mapRoles": [
     {
       "rolearn": "arn:aws:iam::000000000098:role/KubernetesAdmin",
@@ -133,6 +144,10 @@ var origFileContent = `
 
 var updatedFileContent = `
 {
+  "ApiVersion": "1",
+  "Version": "1",
+  "LastUpdatedDateTime": "12345678",
+  "ClusterId": "000000000098",
   "mapRoles": [
     {
       "rolearn": "arn:aws:iam::000000000098:role/KubernetesAdmin",

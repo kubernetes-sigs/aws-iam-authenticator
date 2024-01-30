@@ -42,6 +42,7 @@ type Metrics struct {
 	StsResponses                 *prometheus.CounterVec
 	DynamicFileFailures          prometheus.Counter
 	StsThrottling                prometheus.Counter
+	E2ELatency                   *prometheus.HistogramVec
 }
 
 func createMetrics(reg prometheus.Registerer) Metrics {
@@ -97,6 +98,15 @@ func createMetrics(reg prometheus.Registerer) Metrics {
 				Name:      "ec2_describe_instances_calls_total",
 				Help:      "Number of EC2 describe instances calls.",
 			},
+		),
+		E2ELatency: factory.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:      "dynamic_e2e_latency_seconds",
+				Namespace: Namespace,
+				Help:      "End to end latency in seconds partitioned by type.",
+				Buckets:   []float64{1, 3, 5, 10, 15, 20, 30, 60},
+			},
+			[]string{"type"},
 		),
 	}
 }
