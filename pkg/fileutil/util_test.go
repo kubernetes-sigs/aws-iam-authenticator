@@ -122,3 +122,34 @@ func TestDeleteDynamicFile(t *testing.T) {
 	}
 	testA.mutex.Unlock()
 }
+
+func TestCalculateTimeDeltaFromUnixInSeconds(t *testing.T) {
+	type args struct {
+		from string
+		to   string
+	}
+	cases := []struct {
+		input args
+		want  float64
+	}{
+		{
+			args{"1706648530", "1706648539"},
+			9.0,
+		},
+		{
+			args{"1706648520", "1706648539"},
+			19.0,
+		},
+	}
+
+	for _, c := range cases {
+		out, err := CalculateTimeDeltaFromUnixInSeconds(c.input.from, c.input.to)
+		if err != nil {
+			t.Errorf("error is not expected")
+		}
+
+		if out != c.want {
+			t.Errorf("unexpected result: got %v but expected %v", out, c.want)
+		}
+	}
+}

@@ -3,13 +3,17 @@ package dynamicfile
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
 type DynamicFileMapStore struct {
@@ -21,9 +25,25 @@ type DynamicFileMapStore struct {
 	filename                  string
 	userIDStrict              bool
 	usernamePrefixReserveList []string
+
+	skipFirstTimeMetric bool
+}
+
+// Meta is the collection of fields which should be included in all top-level
+// objects which are propagated for dynamic file mode
+type Meta struct {
+	APIVersion string `json:"ApiVersion"`
+	// Time that the object takes from update time to load time
+	LastUpdatedDateTime string `json:"LastUpdatedDateTime"`
+	// Version is the version number of the update
+	Version string `json:"Version"`
+	// ClusterID is the id of the cluster
+	ClusterID string `json:"ClusterId"`
 }
 
 type DynamicFileData struct {
+	Meta
+
 	// RoleMappings is a list of mappings from AWS IAM Role to
 	// Kubernetes username + groups.
 	RoleMappings []config.RoleMapping `json:"mapRoles"`
@@ -48,6 +68,7 @@ func NewDynamicFileMapStore(cfg config.Config) (*DynamicFileMapStore, error) {
 	ms := DynamicFileMapStore{}
 	ms.filename = cfg.DynamicFilePath
 	ms.userIDStrict = cfg.DynamicFileUserIDStrict
+	ms.skipFirstTimeMetric = true
 	return &ms, nil
 }
 
@@ -165,6 +186,27 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 		return err
 	}
 	ms.saveMap(userMappings, roleMappings, awsAccounts)
+
+	// when instance or container restarts, the dynamic file is (re)loaded and the latency metric is calculated
+	// regardless if there was a change upstream, and thus can emit an incorrect latency value
+	// so a workaround is to skip the first time the metric is calculated, and only emit metris after
+	// as we know any subsequent calculations are from a valid change upstream
+	if ms.skipFirstTimeMetric {
+		ms.skipFirstTimeMetric = false
+	} else {
+		latency, err := fileutil.CalculateTimeDeltaFromUnixInSeconds(dynamicFileData.LastUpdatedDateTime, strconv.FormatInt(time.Now().Unix(), 10))
+		if err != nil {
+			return fmt.Errorf("error parsing latency for dynamic file: %v", err)
+		}
+		metrics.Get().E2ELatency.WithLabelValues("dynamic_file").Observe(latency)
+		logrus.WithFields(logrus.Fields{
+			"ClusterId": dynamicFileData.ClusterID,
+			"Version":   dynamicFileData.Version,
+			"Type":      "dynamic_file",
+			"Latency":   latency,
+		}).Infof("logging latency metric")
+	}
+
 	return nil
 }
 
