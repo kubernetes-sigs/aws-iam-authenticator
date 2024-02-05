@@ -100,6 +100,7 @@ image: .image-linux-$(GOARCH)
 .PHONY: .image-linux-%
 .image-linux-%:
 	docker buildx build --output=type=docker --platform linux/$* \
+		--build-arg golang_image=$(shell hack/setup-go.sh) \
 		--tag aws-iam-authenticator:$(VERSION)_$(GIT_COMMIT)_$(BUILD_DATE_STRIPPED)-linux_$* .
 
 .PHONY: goreleaser
@@ -111,8 +112,7 @@ endif
 
 .PHONY: test
 test:
-	go test -v -coverprofile=coverage.out -race $(PKG)/pkg/...
-	go tool cover -html=coverage.out -o coverage.html
+	./hack/test-unit.sh
 
 .PHONY: integration
 integration:
