@@ -623,6 +623,7 @@ func getIdentityFromSTSResponse(id *Identity, wrapper getCallerIdentityWrapper) 
 	// 1. UserID:SessionName (for assumed roles)
 	// 2. UserID (for IAM User principals).
 	// 3. AWSAccount:CallerSpecifiedName (for federated users)
+	// 4. AWSAccount:aws:ec2-instance:instance-id (for EC2 instance identity roles)
 	// We want the entire UserID for federated users because otherwise,
 	// its just the account ID and is indistinguishable from the UserID
 	// of the root user.
@@ -634,7 +635,12 @@ func getIdentityFromSTSResponse(id *Identity, wrapper getCallerIdentityWrapper) 
 			id.UserID = userIDParts[0]
 			id.SessionName = userIDParts[1]
 		} else {
-			return nil, NewSTSError(fmt.Sprintf("malformed UserID %q", result.UserID))
+			if len(userIDParts) == 4 && userIDParts[1] == "aws" && userIDParts[2] == "ec2-instance" {
+				id.UserID = userIDParts[1] + ":" + userIDParts[2]
+				id.SessionName = userIDParts[3]
+			} else {
+				return nil, NewSTSError(fmt.Sprintf("malformed UserID %q", result.UserID))
+			}
 		}
 	}
 
