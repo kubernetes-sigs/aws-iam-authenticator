@@ -34,6 +34,8 @@ type Metrics struct {
 	DynamicFileFailures          prometheus.Counter
 	StsThrottling                prometheus.Counter
 	E2ELatency                   *prometheus.HistogramVec
+	DynamicFileEnabled           prometheus.Gauge
+	DynamicFileOnly              prometheus.Gauge
 }
 
 func createMetrics(reg prometheus.Registerer) Metrics {
@@ -91,6 +93,20 @@ func createMetrics(reg prometheus.Registerer) Metrics {
 				Buckets:   []float64{1, 3, 5, 10, 15, 20, 30, 60},
 			},
 			[]string{"type"},
+		),
+		DynamicFileEnabled: factory.NewGauge(
+			prometheus.GaugeOpts{
+				Name:      "dynamic_file_enabled",
+				Namespace: Namespace,
+				Help:      "Dynamic file in backend mode is enabled",
+			},
+		),
+		DynamicFileOnly: factory.NewGauge(
+			prometheus.GaugeOpts{
+				Name:      "dynamic_file_only",
+				Namespace: Namespace,
+				Help:      "Only dynamic file in backend mode is enabled",
+			},
 		),
 	}
 }

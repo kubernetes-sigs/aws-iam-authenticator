@@ -1,6 +1,7 @@
 package fileutil
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -129,23 +130,44 @@ func TestCalculateTimeDeltaFromUnixInSeconds(t *testing.T) {
 		to   string
 	}
 	cases := []struct {
-		input args
-		want  float64
+		input  args
+		want   float64
+		errexp bool
 	}{
 		{
 			args{"1706648530", "1706648539"},
 			9.0,
+			false,
 		},
 		{
 			args{"1706648520", "1706648539"},
 			19.0,
+			false,
+		},
+		{
+			args{"1906648520", "1806648539"},
+			0,
+			true,
+		},
+		{
+			args{"foo", "1806648539"},
+			0,
+			true,
+		},
+		{
+			args{"1706648520", "bar"},
+			0,
+			true,
 		},
 	}
 
 	for _, c := range cases {
+		fmt.Println(c.input.from, c.input.to)
 		out, err := CalculateTimeDeltaFromUnixInSeconds(c.input.from, c.input.to)
-		if err != nil {
-			t.Errorf("error is not expected")
+		if !c.errexp && err != nil {
+			t.Errorf("Did not expect error but got err: %v", err)
+		} else if c.errexp && err == nil {
+			t.Error("Expected error but got nil")
 		}
 
 		if out != c.want {
