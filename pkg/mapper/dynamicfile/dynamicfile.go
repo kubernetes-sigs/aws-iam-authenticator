@@ -196,15 +196,16 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 	} else {
 		latency, err := fileutil.CalculateTimeDeltaFromUnixInSeconds(dynamicFileData.LastUpdatedDateTime, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil {
-			return fmt.Errorf("error parsing latency for dynamic file: %v", err)
+			logrus.Errorf("error parsing latency for dynamic file: %v", err)
+		} else {
+			metrics.Get().E2ELatency.WithLabelValues("dynamic_file").Observe(latency)
+			logrus.WithFields(logrus.Fields{
+				"ClusterId": dynamicFileData.ClusterID,
+				"Version":   dynamicFileData.Version,
+				"Type":      "dynamic_file",
+				"Latency":   latency,
+			}).Infof("logging latency metric")
 		}
-		metrics.Get().E2ELatency.WithLabelValues("dynamic_file").Observe(latency)
-		logrus.WithFields(logrus.Fields{
-			"ClusterId": dynamicFileData.ClusterID,
-			"Version":   dynamicFileData.Version,
-			"Type":      "dynamic_file",
-			"Latency":   latency,
-		}).Infof("logging latency metric")
 	}
 
 	return nil
