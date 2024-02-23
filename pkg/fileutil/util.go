@@ -1,6 +1,7 @@
 package fileutil
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -109,16 +110,20 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 func CalculateTimeDeltaFromUnixInSeconds(from, to string) (float64, error) {
 	parsedFrom, err := strconv.ParseInt(from, 10, 64)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to parse 'from' string: %v", err)
 	}
 
 	parsedTo, err := strconv.ParseInt(to, 10, 64)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to parse 'to' string: %v", err)
 	}
 
 	timeFrom := time.Unix(parsedFrom, 0).UTC()
 	timeTo := time.Unix(parsedTo, 0).UTC()
+
+	if timeFrom.After(timeTo) {
+		return 0, fmt.Errorf("start timestamp is after end timestamp")
+	}
 
 	return timeTo.Sub(timeFrom).Seconds(), nil
 }
