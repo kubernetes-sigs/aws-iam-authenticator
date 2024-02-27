@@ -26,28 +26,17 @@ type DynamicFileMapStore struct {
 	userIDStrict              bool
 	usernamePrefixReserveList []string
 
-	skipFirstTimeMetric bool
+	dynamicFileInitDone bool
 }
 
-// Meta is the collection of fields which should be included in all top-level
-// objects which are propagated for dynamic file mode
-type Meta struct {
-	APIVersion string `json:"ApiVersion"`
+type DynamicFileData struct {
 	// Time that the object takes from update time to load time
 	LastUpdatedDateTime string `json:"LastUpdatedDateTime"`
 	// Version is the version number of the update
 	Version string `json:"Version"`
-	// ClusterID is the id of the cluster
-	ClusterID string `json:"ClusterId"`
-}
-
-type DynamicFileData struct {
-	Meta
-
 	// RoleMappings is a list of mappings from AWS IAM Role to
 	// Kubernetes username + groups.
 	RoleMappings []config.RoleMapping `json:"mapRoles"`
-
 	// UserMappings is a list of mappings from AWS IAM User to
 	// Kubernetes username + groups.
 	UserMappings []config.UserMapping `json:"mapUsers"`
@@ -68,7 +57,7 @@ func NewDynamicFileMapStore(cfg config.Config) (*DynamicFileMapStore, error) {
 	ms := DynamicFileMapStore{}
 	ms.filename = cfg.DynamicFilePath
 	ms.userIDStrict = cfg.DynamicFileUserIDStrict
-	ms.skipFirstTimeMetric = true
+	ms.dynamicFileInitDone = false
 	return &ms, nil
 }
 
@@ -191,22 +180,20 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 	// regardless if there was a change upstream, and thus can emit an incorrect latency value
 	// so a workaround is to skip the first time the metric is calculated, and only emit metris after
 	// as we know any subsequent calculations are from a valid change upstream
-	if ms.skipFirstTimeMetric {
-		ms.skipFirstTimeMetric = false
-	} else {
+	if ms.dynamicFileInitDone {
 		latency, err := fileutil.CalculateTimeDeltaFromUnixInSeconds(dynamicFileData.LastUpdatedDateTime, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil {
 			logrus.Errorf("error parsing latency for dynamic file: %v", err)
 		} else {
 			metrics.Get().E2ELatency.WithLabelValues("dynamic_file").Observe(latency)
 			logrus.WithFields(logrus.Fields{
-				"ClusterId": dynamicFileData.ClusterID,
-				"Version":   dynamicFileData.Version,
-				"Type":      "dynamic_file",
-				"Latency":   latency,
+				"Version": dynamicFileData.Version,
+				"Type":    "dynamic_file",
+				"Latency": latency,
 			}).Infof("logging latency metric")
 		}
 	}
+	ms.dynamicFileInitDone = true
 
 	return nil
 }
