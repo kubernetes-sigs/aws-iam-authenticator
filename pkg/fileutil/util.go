@@ -107,23 +107,17 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 	}, time.Second, stopCh)
 }
 
-func CalculateTimeDeltaFromUnixInSeconds(from, to string) (float64, error) {
-	parsedFrom, err := strconv.ParseInt(from, 10, 64)
+func CalculateTimeDeltaFromUnixInSeconds(from string) (int64, error) {
+	startTime, err := strconv.ParseInt(from, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse 'from' string: %v", err)
+		return 0, fmt.Errorf("failed to parse 'startTime' string: %v", err)
 	}
 
-	parsedTo, err := strconv.ParseInt(to, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse 'to' string: %v", err)
-	}
+	endTime := time.Now().Unix()
 
-	timeFrom := time.Unix(parsedFrom, 0).UTC()
-	timeTo := time.Unix(parsedTo, 0).UTC()
-
-	if timeFrom.After(timeTo) {
+	if startTime > endTime {
 		return 0, fmt.Errorf("start timestamp is after end timestamp")
 	}
 
-	return timeTo.Sub(timeFrom).Seconds(), nil
+	return endTime - startTime, nil
 }
