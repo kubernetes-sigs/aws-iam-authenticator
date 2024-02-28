@@ -41,5 +41,9 @@ type BackendMapper struct {
 
 // AccessConfig represents the configuration format for cluster access config via backend mode.
 type BackendModeConfig struct {
+	// Time that the object takes from update time to load time
+	LastUpdatedDateTime string `json:"LastUpdatedDateTime"`
+	// Version is the version number of the update
+	Version     string `json:"Version"`
 	BackendMode string `json:"backendMode"`
 }
