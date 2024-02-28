@@ -24,7 +24,6 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -508,11 +507,11 @@ func (h *handler) CallBackForFileLoad(dynamicContent []byte) error {
 	// so a workaround is to skip the first time the metric is calculated, and only emit metris after
 	// as we know any subsequent calculations are from a valid change upstream
 	if h.backendModeConfigInitDone {
-		latency, err := fileutil.CalculateTimeDeltaFromUnixInSeconds(backendModes.LastUpdatedDateTime, strconv.FormatInt(time.Now().Unix(), 10))
+		latency, err := fileutil.CalculateTimeDeltaFromUnixInSeconds(backendModes.LastUpdatedDateTime)
 		if err != nil {
 			logrus.Errorf("error parsing latency for dynamic backend mode file: %v", err)
 		} else {
-			metrics.Get().E2ELatency.WithLabelValues("dynamic_backend_mode").Observe(latency)
+			metrics.Get().E2ELatency.WithLabelValues("dynamic_backend_mode").Observe(float64(latency))
 			logrus.WithFields(logrus.Fields{
 				"Version": backendModes.Version,
 				"Type":    "dynamic_backend_mode",

@@ -3,10 +3,8 @@ package dynamicfile
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
@@ -181,11 +179,11 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 	// so a workaround is to skip the first time the metric is calculated, and only emit metris after
 	// as we know any subsequent calculations are from a valid change upstream
 	if ms.dynamicFileInitDone {
-		latency, err := fileutil.CalculateTimeDeltaFromUnixInSeconds(dynamicFileData.LastUpdatedDateTime, strconv.FormatInt(time.Now().Unix(), 10))
+		latency, err := fileutil.CalculateTimeDeltaFromUnixInSeconds(dynamicFileData.LastUpdatedDateTime)
 		if err != nil {
 			logrus.Errorf("error parsing latency for dynamic file: %v", err)
 		} else {
-			metrics.Get().E2ELatency.WithLabelValues("dynamic_file").Observe(latency)
+			metrics.Get().E2ELatency.WithLabelValues("dynamic_file").Observe(float64(latency))
 			logrus.WithFields(logrus.Fields{
 				"Version": dynamicFileData.Version,
 				"Type":    "dynamic_file",

@@ -103,7 +103,6 @@ func TestAWSAccount(t *testing.T) {
 
 var origFileContent = `
 {
-  "ApiVersion": "1",
   "Version": "1",
   "LastUpdatedDateTime": "12345678",
   "ClusterId": "000000000098",
@@ -144,7 +143,6 @@ var origFileContent = `
 
 var updatedFileContent = `
 {
-  "ApiVersion": "1",
   "Version": "1",
   "LastUpdatedDateTime": "12345678",
   "ClusterId": "000000000098",
