@@ -1,8 +1,8 @@
 package fileutil
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -126,52 +126,54 @@ func TestDeleteDynamicFile(t *testing.T) {
 
 func TestCalculateTimeDeltaFromUnixInSeconds(t *testing.T) {
 	type args struct {
-		from string
-		to   string
+		startTime string
 	}
 	cases := []struct {
 		input  args
-		want   float64
 		errexp bool
+		sleep  bool
 	}{
 		{
-			args{"1706648530", "1706648539"},
-			9.0,
+			args{"1706648530"},
+			false,
 			false,
 		},
 		{
-			args{"1706648520", "1706648539"},
-			19.0,
+			args{"1706648520"},
+			false,
 			false,
 		},
 		{
-			args{"1906648520", "1806648539"},
-			0,
+			args{"foo"},
 			true,
+			false,
 		},
 		{
-			args{"foo", "1806648539"},
-			0,
+			args{"2706648520"},
 			true,
+			false,
 		},
 		{
-			args{"1706648520", "bar"},
-			0,
+			args{strconv.FormatInt(time.Now().Unix(), 10)},
+			false,
 			true,
 		},
 	}
 
 	for _, c := range cases {
-		fmt.Println(c.input.from, c.input.to)
-		out, err := CalculateTimeDeltaFromUnixInSeconds(c.input.from, c.input.to)
+		if c.sleep {
+			time.Sleep(1 * time.Second)
+		}
+
+		out, err := CalculateTimeDeltaFromUnixInSeconds(c.input.startTime)
 		if !c.errexp && err != nil {
 			t.Errorf("Did not expect error but got err: %v", err)
 		} else if c.errexp && err == nil {
 			t.Error("Expected error but got nil")
 		}
 
-		if out != c.want {
-			t.Errorf("unexpected result: got %v but expected %v", out, c.want)
+		if !c.errexp && out < 1 {
+			t.Errorf("Returned an invalid value: %d", out)
 		}
 	}
 }
