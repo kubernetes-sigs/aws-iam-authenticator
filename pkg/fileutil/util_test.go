@@ -2,6 +2,7 @@ package fileutil
 
 import (
 	"os"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -121,4 +122,58 @@ func TestDeleteDynamicFile(t *testing.T) {
 		t.Errorf("failed in TestDeleteDynamicFile")
 	}
 	testA.mutex.Unlock()
+}
+
+func TestCalculateTimeDeltaFromUnixInSeconds(t *testing.T) {
+	type args struct {
+		startTime string
+	}
+	cases := []struct {
+		input  args
+		errexp bool
+		sleep  bool
+	}{
+		{
+			args{"1706648530"},
+			false,
+			false,
+		},
+		{
+			args{"1706648520"},
+			false,
+			false,
+		},
+		{
+			args{"foo"},
+			true,
+			false,
+		},
+		{
+			args{"2706648520"},
+			true,
+			false,
+		},
+		{
+			args{strconv.FormatInt(time.Now().Unix(), 10)},
+			false,
+			true,
+		},
+	}
+
+	for _, c := range cases {
+		if c.sleep {
+			time.Sleep(1 * time.Second)
+		}
+
+		out, err := CalculateTimeDeltaFromUnixInSeconds(c.input.startTime)
+		if !c.errexp && err != nil {
+			t.Errorf("Did not expect error but got err: %v", err)
+		} else if c.errexp && err == nil {
+			t.Error("Expected error but got nil")
+		}
+
+		if !c.errexp && out < 1 {
+			t.Errorf("Returned an invalid value: %d", out)
+		}
+	}
 }
