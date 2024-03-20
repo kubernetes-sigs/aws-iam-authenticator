@@ -1,7 +1,9 @@
 package fileutil
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -103,4 +105,19 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 			}
 		}
 	}, time.Second, stopCh)
+}
+
+func CalculateTimeDeltaFromUnixInSeconds(from string) (int64, error) {
+	startTime, err := strconv.ParseInt(from, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse 'startTime' string: %v", err)
+	}
+
+	endTime := time.Now().Unix()
+
+	if startTime > endTime {
+		return 0, fmt.Errorf("start timestamp is after end timestamp")
+	}
+
+	return endTime - startTime, nil
 }

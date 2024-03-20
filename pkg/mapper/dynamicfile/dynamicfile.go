@@ -10,6 +10,8 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/fileutil"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
 type DynamicFileMapStore struct {
@@ -21,13 +23,18 @@ type DynamicFileMapStore struct {
 	filename                  string
 	userIDStrict              bool
 	usernamePrefixReserveList []string
+
+	dynamicFileInitDone bool
 }
 
 type DynamicFileData struct {
+	// Time that the object takes from update time to load time
+	LastUpdatedDateTime string `json:"LastUpdatedDateTime"`
+	// Version is the version number of the update
+	Version string `json:"Version"`
 	// RoleMappings is a list of mappings from AWS IAM Role to
 	// Kubernetes username + groups.
 	RoleMappings []config.RoleMapping `json:"mapRoles"`
-
 	// UserMappings is a list of mappings from AWS IAM User to
 	// Kubernetes username + groups.
 	UserMappings []config.UserMapping `json:"mapUsers"`
@@ -48,6 +55,7 @@ func NewDynamicFileMapStore(cfg config.Config) (*DynamicFileMapStore, error) {
 	ms := DynamicFileMapStore{}
 	ms.filename = cfg.DynamicFilePath
 	ms.userIDStrict = cfg.DynamicFileUserIDStrict
+	ms.dynamicFileInitDone = false
 	return &ms, nil
 }
 
@@ -165,6 +173,26 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 		return err
 	}
 	ms.saveMap(userMappings, roleMappings, awsAccounts)
+
+	// when instance or container restarts, the dynamic file is (re)loaded and the latency metric is calculated
+	// regardless if there was a change upstream, and thus can emit an incorrect latency value
+	// so a workaround is to skip the first time the metric is calculated, and only emit metris after
+	// as we know any subsequent calculations are from a valid change upstream
+	if ms.dynamicFileInitDone {
+		latency, err := fileutil.CalculateTimeDeltaFromUnixInSeconds(dynamicFileData.LastUpdatedDateTime)
+		if err != nil {
+			logrus.Errorf("error parsing latency for dynamic file: %v", err)
+		} else {
+			metrics.Get().E2ELatency.WithLabelValues("dynamic_file").Observe(float64(latency))
+			logrus.WithFields(logrus.Fields{
+				"Version": dynamicFileData.Version,
+				"Type":    "dynamic_file",
+				"Latency": latency,
+			}).Infof("logging latency metric")
+		}
+	}
+	ms.dynamicFileInitDone = true
+
 	return nil
 }
 

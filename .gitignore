@@ -1,5 +1,7 @@
 aws-iam-authenticator
 
+bin
+
 /dist
 /_output
 

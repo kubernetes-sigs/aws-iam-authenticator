@@ -78,6 +78,10 @@ if [[ "${CREATE_TEST_ROLE}" = "true" ]]; then
     TEST_ROLE_ARN="$(echo ${create_role_output} | jq -r '.Role.Arn')"
 fi
 
+source hack/setup-go.sh
+
+go version
+
 make clean
 make bin
 
