@@ -482,7 +482,7 @@ server:
     groups:
     - system:masters
 
-  # each mapUsers entry maps an IAM role to a static username and set of groups
+  # each mapUsers entry maps an IAM user to a static username and set of groups
   mapUsers:
   # map user IAM user Alice in 000000000000 to user "alice" in group "system:masters"
   - userarn: arn:aws:iam::000000000000:user/Alice

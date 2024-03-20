@@ -70,13 +70,14 @@ var (
 // server state (internal)
 type handler struct {
 	http.ServeMux
-	mutex            sync.RWMutex
-	verifier         token.Verifier
-	ec2Provider      ec2provider.EC2Provider
-	clusterID        string
-	backendMapper    BackendMapper
-	scrubbedAccounts []string
-	cfg              config.Config
+	mutex                     sync.RWMutex
+	verifier                  token.Verifier
+	ec2Provider               ec2provider.EC2Provider
+	clusterID                 string
+	backendMapper             BackendMapper
+	backendModeConfigInitDone bool
+	scrubbedAccounts          []string
+	cfg                       config.Config
 }
 
 // New authentication webhook server.
@@ -205,12 +206,13 @@ func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2
 	}
 
 	h := &handler{
-		verifier:         token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
-		ec2Provider:      ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
-		clusterID:        c.ClusterID,
-		backendMapper:    backendMapper,
-		scrubbedAccounts: c.Config.ScrubbedAWSAccounts,
-		cfg:              c.Config,
+		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
+		ec2Provider:               ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
+		clusterID:                 c.ClusterID,
+		backendMapper:             backendMapper,
+		scrubbedAccounts:          c.Config.ScrubbedAWSAccounts,
+		cfg:                       c.Config,
+		backendModeConfigInitDone: false,
 	}
 
 	h.HandleFunc("/authenticate", h.authenticateEndpoint)
@@ -513,6 +515,32 @@ func (h *handler) CallBackForFileLoad(dynamicContent []byte) error {
 	} else {
 		logrus.Infof("BackendMode dynamic file got changed, but same with current mode, skip rebuild mapper")
 	}
+
+	// when instance or container restarts, the backendend mode config is (re)loaded and the latency metric is calculated
+	// regardless if there was a change upstream, and thus can emit an incorrect latency value
+	// so a workaround is to skip the first time the metric is calculated, and only emit metris after
+	// as we know any subsequent calculations are from a valid change upstream
+	if h.backendModeConfigInitDone {
+		latency, err := fileutil.CalculateTimeDeltaFromUnixInSeconds(backendModes.LastUpdatedDateTime)
+		if err != nil {
+			logrus.Errorf("error parsing latency for dynamic backend mode file: %v", err)
+		} else {
+			metrics.Get().E2ELatency.WithLabelValues("dynamic_backend_mode").Observe(float64(latency))
+			logrus.WithFields(logrus.Fields{
+				"Version": backendModes.Version,
+				"Type":    "dynamic_backend_mode",
+				"Latency": latency,
+			}).Infof("logging latency metric")
+		}
+	}
+	h.backendModeConfigInitDone = true
+
+	if h.backendMapper.currentModes == mapper.ModeDynamicFile {
+		metrics.Get().DynamicFileOnly.Set(1)
+	} else if strings.Contains(h.backendMapper.currentModes, mapper.ModeDynamicFile) {
+		metrics.Get().DynamicFileEnabled.Set(1)
+	}
+
 	return nil
 }
 
