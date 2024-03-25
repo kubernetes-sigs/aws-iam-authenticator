@@ -1,4 +1,5 @@
 //go:build !no_init
+
 /*
 Copyright 2017 by the contributors.
 

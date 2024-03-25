@@ -29,9 +29,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	clientset "k8s.io/client-go/kubernetes"
-	restclientset "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubernetes/test/e2e/framework"
 )
 
@@ -41,17 +38,13 @@ const (
 	testTimeout  = 300 * time.Second
 )
 
-var _ = Describe("[apiserver] [Disruptive] the apiserver", func() {
-	var (
-		cs  clientset.Interface
-		cfg *restclientset.Config
-	)
+var SIGDescribe = framework.SIGDescribe("api-machinery")
+
+var _ = SIGDescribe("apiserver", framework.WithDisruptive(), func() {
+	f := framework.NewDefaultFramework("apiserver")
 
 	When("the manifest changes", func() {
 		BeforeEach(func() {
-			cfg, _ = clientcmd.BuildConfigFromFlags("", framework.TestContext.KubeConfig)
-			cs, _ = clientset.NewForConfig(cfg)
-
 			jobPath := filepath.Join(os.Getenv("BASE_DIR"), "apiserver-restart.yaml")
 
 			b, _ := os.ReadFile(jobPath)
@@ -59,13 +52,13 @@ var _ = Describe("[apiserver] [Disruptive] the apiserver", func() {
 			jobSpec := &batchv1.Job{}
 			_ = decoder.Decode(&jobSpec)
 
-			_, _ = cs.BatchV1().
+			_, _ = f.ClientSet.BatchV1().
 				Jobs(kubeSystemNs).
 				Create(context.TODO(), jobSpec, metav1.CreateOptions{})
 
 			fmt.Printf("Waiting for apiserver to go down...\n")
 			err := wait.PollImmediate(restartDelay, restartWait, func() (bool, error) {
-				_, pingErr := cs.CoreV1().
+				_, pingErr := f.ClientSet.CoreV1().
 					Nodes().
 					List(context.TODO(), metav1.ListOptions{})
 
@@ -82,13 +75,13 @@ var _ = Describe("[apiserver] [Disruptive] the apiserver", func() {
 		})
 
 		AfterEach(func() {
-			cs.BatchV1().Jobs(kubeSystemNs).Delete(context.TODO(), "apiserver-restarter", metav1.DeleteOptions{})
+			f.ClientSet.BatchV1().Jobs(kubeSystemNs).Delete(context.TODO(), "apiserver-restarter", metav1.DeleteOptions{})
 		})
 
 		It("restarts successfully", func() {
 			startTime := time.Now()
 			err := wait.PollImmediate(1, testTimeout, func() (bool, error) {
-				res, pingErr := cs.CoreV1().
+				res, pingErr := f.ClientSet.CoreV1().
 					Nodes().
 					List(context.TODO(), metav1.ListOptions{})
 

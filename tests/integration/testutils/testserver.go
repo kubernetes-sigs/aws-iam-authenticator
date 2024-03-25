@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -56,7 +57,7 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 		t.Fatal(err)
 	}
 
-	adminClient, kubeAPIServerClientConfig, tearDownFn := framework.StartTestServer(t, framework.TestServerSetup{
+	adminClient, kubeAPIServerClientConfig, tearDownFn := framework.StartTestServer(context.Background(), t, framework.TestServerSetup{
 		ModifyServerRunOptions: func(opts *options.ServerRunOptions) {
 			opts.Authentication.WebHook.ConfigFile = cfg.GenerateKubeconfigPath
 		},
