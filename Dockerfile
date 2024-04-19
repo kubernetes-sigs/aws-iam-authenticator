@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ARG image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2023-09-06-1694026927.2
-ARG golang_image=public.ecr.aws/docker/library/golang:1.21.8
+ARG golang_image=public.ecr.aws/docker/library/golang:1.22.2
 
 FROM --platform=$BUILDPLATFORM $golang_image AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-iam-authenticator
