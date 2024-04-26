@@ -1,26 +1,30 @@
 name: "Dependency Review"
-on: [push, pull_request, workflow_dispatch]
+
+on: [pull_request, workflow_dispatch]
+
 permissions:
   contents: read
+
 jobs:
   dependency-review:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout Repository"
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          show-progress: false
-      - name: "Dependency Review"
-        uses: actions/dependency-review-action@v3
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+
   govulncheck:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout Repository"
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          show-progress: false
+
       - id: govulncheck
         uses: golang/govulncheck-action@v1
         with:
-          go-version-input: 1.21.8
           go-version-file: go.mod
+
+      # [Info] Shows version of go that is (was) used
+      - run: go version
