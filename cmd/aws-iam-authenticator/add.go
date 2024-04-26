@@ -1,3 +1,5 @@
+//go:build !no_add
+
 /*
 Copyright 2021 by the contributors.
 

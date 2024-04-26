@@ -11,16 +11,20 @@ on:
 jobs:
   tag-release:
     if: ${{ github.repository == 'kubernetes-sigs/aws-iam-authenticator' }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     permissions:
       contents: write
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: /usr/bin/git config --global user.email actions@github.com
-      - run: /usr/bin/git config --global user.name 'GitHub Actions Release Tagger'
-      - run: hack/tag-release.sh
+          ssh-key: "${{ secrets.RELEASE_KEY }}"
 
+      - name: Tag release
+        run: |
+          /usr/bin/git config --global user.email actions@github.com
+          /usr/bin/git config --global user.name 'GitHub Actions Release Tagger'
+          hack/tag-release.sh

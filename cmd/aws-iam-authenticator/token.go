@@ -1,3 +1,5 @@
+//go:build !no_token
+
 /*
 Copyright 2017 by the contributors.
 
