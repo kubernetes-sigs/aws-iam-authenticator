@@ -1,14 +1,11 @@
 approvers:
-- nckturner
 - micahhausler
 - wongma7
 - jyotimahapatra
 - nnmin-aws
 
 reviewers:
-- nckturner
 - micahhausler
-- justinsb
 - wongma7
 - jyotimahapatra
 - nnmin-aws
@@ -18,3 +15,4 @@ emeritus_approvers:
 - mattmoyer
 - mattlandis
 - jaypipes
+- nckturner
