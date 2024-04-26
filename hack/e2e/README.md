@@ -5,20 +5,22 @@ End-to-end testing verifies the functionality of the AWS IAM authenticator for K
 ## Prerequisites
 
 Have the following installed on your system:
-- go (1.16+)
+
+- go (1.22+)
 - jq
 - awscli
-    - Configure your AWS credentials, as well.
+  - Configure your AWS credentials, as well.
 - docker
 
 ## Operation
 
-From the base directory, run `./hack/e2e/run.sh`. Alternatively, run `make test-<testname>` or `GINKGO_FOCUS="[<test_group>]" ./hack/e2e/run.sh` to run a specific subset of tests. 
+From the base directory, run `./hack/e2e/run.sh`. Alternatively, run `make test-<testname>` or `GINKGO_FOCUS="[<test_group>]" ./hack/e2e/run.sh` to run a specific subset of tests.
 
 You can change the behavior of the tests by setting certain environment variables beforehand. Most of these can stay unchanged, but some should be noted:
+
 - `REGION`, `ZONES`: AWS region that the tests should be run on.
 - `KOPS_STATE_FILE`: An S3 bucket that you have access to. **Change this to a bucket you own!**
-- `K8S_VERSION`: Kuberenetes version. Don't change this off `1.22.10`; you might end up with a bunch of build errors otherwise.
+- `K8S_VERSION`: Kuberenetes version.
 - `TEST_ID`: Normally a random number, but can be set for a more controlled environment.
 - `CLEAN`: Set to false if you don't want the cluster to be torn down after the tests are done running. Useful if you want to inspect the cluster state after setup.
 
