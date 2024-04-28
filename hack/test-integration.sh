@@ -89,10 +89,14 @@ if [[ -d ${TEST_ARTIFACTS}/k8s.io/kubernetes ]]; then
     rm -rf ${TEST_ARTIFACTS}/k8s.io/kubernetes
 fi
 
+GOPROXY=direct go install golang.org/x/tools/cmd/goimports
+
 mkdir -p ${TEST_ARTIFACTS}/k8s.io/kubernetes
 git clone --branch ${KUBERNETES_TAG} --depth 1 https://github.com/kubernetes/kubernetes.git ${TEST_ARTIFACTS}/k8s.io/kubernetes --depth 1
 
 pushd ${TEST_ARTIFACTS}/k8s.io/kubernetes
+./hack/install-protoc.sh
+export PATH="/home/prow/go/src/github.com/kubernetes-sigs/aws-iam-authenticator/test-artifacts/k8s.io/kubernetes/third_party/protoc:${PATH}"
 ./hack/update-codegen.sh
 ./hack/install-etcd.sh
 export PATH="${TEST_ARTIFACTS}/k8s.io/kubernetes/third_party/etcd:${PATH}"

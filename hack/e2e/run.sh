@@ -98,7 +98,7 @@ loudecho "Installing ginkgo to ${BIN_DIR}"
 GINKGO_BIN=${BIN_DIR}/ginkgo
 if [[ ! -e ${GINKGO_BIN} ]]; then
   pushd /tmp
-  GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} GO111MODULE=on go install github.com/onsi/ginkgo/ginkgo@v1.12.0
+  GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} GO111MODULE=on go install github.com/onsi/ginkgo/v2/ginkgo@v2.15.0
   popd
 fi
 
@@ -171,6 +171,7 @@ kops_create_cluster \
   "$K8S_VERSION" \
   "$CLUSTER_FILE" \
   "$KUBECONFIG" \
+  "$CLUSTER_NAME" \
   "$KUBECONFIG_ADMIN" \
   "$TEST_DIR" \
   "$KOPS_STATE_FILE" \

@@ -28,10 +28,11 @@ function kops_create_cluster() {
   K8S_VERSION=${8}
   CLUSTER_FILE=${9}
   KUBECONFIG=${10}
-  KUBECONFIG_ADMIN=${11}
-  TEST_DIR=${12}
-  KOPS_STATE_FILE=${13}
-  KOPS_PATCH_FILE=${14}
+  USER=${11}
+  KUBECONFIG_ADMIN=${12}
+  TEST_DIR=${13}
+  KOPS_STATE_FILE=${14}
+  KOPS_PATCH_FILE=${15}
 
   if [[ ! -e ${SSH_KEY_PATH} ]]; then
     loudecho "Generating SSH key $SSH_KEY_PATH"
@@ -72,7 +73,7 @@ function kops_create_cluster() {
     --ssh-public-key="${SSH_KEY_PATH}".pub --yes
 
   ${KOPS_BIN} export kubeconfig --state "${KOPS_STATE_FILE}" --kubeconfig "${KUBECONFIG_ADMIN}" "${CLUSTER_NAME}" --admin
-  ${KOPS_BIN} export kubeconfig --state "${KOPS_STATE_FILE}" --kubeconfig "${KUBECONFIG}" "${CLUSTER_NAME}"
+  ${KOPS_BIN} export kubeconfig --state "${KOPS_STATE_FILE}" --kubeconfig "${KUBECONFIG}" "${CLUSTER_NAME}" --user "${USER}"
 
   loudecho "Waiting on cluster ${CLUSTER_NAME}..."
   # we can't just use kops validate, because it requires the authenticator to be ready, but it's not set up yet...
