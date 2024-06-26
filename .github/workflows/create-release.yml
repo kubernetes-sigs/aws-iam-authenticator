@@ -2,21 +2,32 @@
 name: Create Release
 
 on:
-  workflow_dispatch:
   push:
-    # Sequence of patterns matched against refs/tags
-    tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+    branches:
+      - 'release-*'
+    paths:
+      - version.txt
 
 jobs:
-  goreleaser:
+  release:
+    if: ${{ github.repository == 'kubernetes-sigs/aws-iam-authenticator' }}
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ssh-key: "${{ secrets.RELEASE_KEY }}"
+
+      - name: Tag release
+        run: |
+          /usr/bin/git config --global user.email actions@github.com
+          /usr/bin/git config --global user.name 'GitHub Actions Release Tagger'
+          hack/tag-release.sh
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -25,7 +36,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
-          version: latest
-          args: release --rm-dist
+          version: '~> v2'
+          args: release --clean
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

@@ -33,6 +33,4 @@ release:
   github:
     owner: kubernetes-sigs
     name: aws-iam-authenticator
-  draft: true
-  prerelease: false
   name_template: "v{{.Version}}"
