@@ -57,7 +57,7 @@ EOF
 CREATE_TEST_ROLE="${CREATE_TEST_ROLE:-true}"
 GENERATED_TEST_ROLE_NAME="aws-iam-authenticator-test-role-${RANDOM}"
 GENERATED_TEST_ROLE_POLICY_FILE=/tmp/role-policy.json
-KUBERNETES_TAG="v1.22.1"
+KUBERNETES_TAG="v1.29.0"
 REPO_ROOT="$(cd "$( dirname "${BASH_SOURCE[0]}" )"/.. &> /dev/null && pwd)"
 TEST_ARTIFACTS="${TEST_ARTIFACTS:-"${REPO_ROOT}/test-artifacts"}"
 TEST_ROLE_ARN="${TEST_ROLE_ARN:-$(role_arn_from_default_credentials)}"
@@ -89,11 +89,15 @@ if [[ -d ${TEST_ARTIFACTS}/k8s.io/kubernetes ]]; then
     rm -rf ${TEST_ARTIFACTS}/k8s.io/kubernetes
 fi
 
+GOPROXY=direct go install golang.org/x/tools/cmd/goimports
+
 mkdir -p ${TEST_ARTIFACTS}/k8s.io/kubernetes
 git clone --branch ${KUBERNETES_TAG} --depth 1 https://github.com/kubernetes/kubernetes.git ${TEST_ARTIFACTS}/k8s.io/kubernetes --depth 1
 
 pushd ${TEST_ARTIFACTS}/k8s.io/kubernetes
-make generated_files
+./hack/install-protoc.sh
+export PATH="/home/prow/go/src/github.com/kubernetes-sigs/aws-iam-authenticator/test-artifacts/k8s.io/kubernetes/third_party/protoc:${PATH}"
+./hack/update-codegen.sh
 ./hack/install-etcd.sh
 export PATH="${TEST_ARTIFACTS}/k8s.io/kubernetes/third_party/etcd:${PATH}"
 popd
