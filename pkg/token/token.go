@@ -392,6 +392,18 @@ type tokenVerifier struct {
 	validSTShostnames map[string]bool
 }
 
+func getDefaultHostNameForRegion(partition *endpoints.Partition, region string) (string, error) {
+	rep, err := partition.EndpointFor(stsServiceID, region, endpoints.STSRegionalEndpointOption, endpoints.ResolveUnknownServiceOption)
+	if err != nil {
+		return "", fmt.Errorf("Error resolving endpoint for %s in partition %s. err: %v", region, partition.ID(), err)
+	}
+	parsedURL, err := url.Parse(rep.URL)
+	if err != nil {
+		return "", fmt.Errorf("Error parsing STS URL %s. err: %v", rep.URL, err)
+	}
+	return parsedURL.Hostname(), nil
+}
+
 func stsHostsForPartition(partitionID, region string) map[string]bool {
 	validSTShostnames := map[string]bool{}
 
@@ -410,6 +422,14 @@ func stsHostsForPartition(partitionID, region string) map[string]bool {
 	stsSvc, ok := partition.Services()[stsServiceID]
 	if !ok {
 		logrus.Errorf("STS service not found in partition %s", partitionID)
+		// Add the host of the current instances region if the service doesn't already exists in the partition
+		// so we don't fail if the service is not present in the go sdk but matches the instances region.
+		stsHostName, err := getDefaultHostNameForRegion(partition, region)
+		if err != nil {
+			logrus.WithError(err).Error("Error getting default hostname")
+		} else {
+			validSTShostnames[stsHostName] = true
+		}
 		return validSTShostnames
 	}
 	stsSvcEndPoints := stsSvc.Endpoints()
@@ -430,17 +450,12 @@ func stsHostsForPartition(partitionID, region string) map[string]bool {
 	// Add the host of the current instances region if not already exists so we don't fail if the region is not
 	// present in the go sdk but matches the instances region.
 	if _, ok := stsSvcEndPoints[region]; !ok {
-		rep, err := partition.EndpointFor(stsServiceID, region, endpoints.STSRegionalEndpointOption)
+		stsHostName, err := getDefaultHostNameForRegion(partition, region)
 		if err != nil {
-			logrus.WithError(err).Errorf("Error resolving endpoint for %s in partition %s", region, partitionID)
+			logrus.WithError(err).Error("Error getting default hostname")
 			return validSTShostnames
 		}
-		parsedURL, err := url.Parse(rep.URL)
-		if err != nil {
-			logrus.WithError(err).Errorf("Error parsing STS URL %s", rep.URL)
-			return validSTShostnames
-		}
-		validSTShostnames[parsedURL.Hostname()] = true
+		validSTShostnames[stsHostName] = true
 	}
 
 	return validSTShostnames
