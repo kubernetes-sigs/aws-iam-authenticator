@@ -378,8 +378,8 @@ type tokenVerifier struct {
 	validSTShostnames map[string]bool
 }
 
-func getDefaultHostNameForRegion(partition *endpoints.Partition, region string) (string, error) {
-	rep, err := partition.EndpointFor(stsServiceID, region, endpoints.STSRegionalEndpointOption, endpoints.ResolveUnknownServiceOption)
+func getDefaultHostNameForRegion(partition *endpoints.Partition, region, service string) (string, error) {
+	rep, err := partition.EndpointFor(service, region, endpoints.STSRegionalEndpointOption, endpoints.ResolveUnknownServiceOption)
 	if err != nil {
 		return "", fmt.Errorf("Error resolving endpoint for %s in partition %s. err: %v", region, partition.ID(), err)
 	}
@@ -410,7 +410,7 @@ func stsHostsForPartition(partitionID, region string) map[string]bool {
 		logrus.Errorf("STS service not found in partition %s", partitionID)
 		// Add the host of the current instances region if the service doesn't already exists in the partition
 		// so we don't fail if the service is not present in the go sdk but matches the instances region.
-		stsHostName, err := getDefaultHostNameForRegion(partition, region)
+		stsHostName, err := getDefaultHostNameForRegion(partition, region, stsServiceID)
 		if err != nil {
 			logrus.WithError(err).Error("Error getting default hostname")
 		} else {
@@ -436,7 +436,7 @@ func stsHostsForPartition(partitionID, region string) map[string]bool {
 	// Add the host of the current instances region if not already exists so we don't fail if the region is not
 	// present in the go sdk but matches the instances region.
 	if _, ok := stsSvcEndPoints[region]; !ok {
-		stsHostName, err := getDefaultHostNameForRegion(partition, region)
+		stsHostName, err := getDefaultHostNameForRegion(partition, region, stsServiceID)
 		if err != nil {
 			logrus.WithError(err).Error("Error getting default hostname")
 			return validSTShostnames
