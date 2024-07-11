@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -500,4 +501,71 @@ func response(account, userID, arn string) getCallerIdentityWrapper {
 	wrapper.GetCallerIdentityResponse.GetCallerIdentityResult.UserID = userID
 	wrapper.GetCallerIdentityResponse.ResponseMetadata.RequestID = "id1234"
 	return wrapper
+}
+
+func Test_getDefaultHostNameForRegion(t *testing.T) {
+	type args struct {
+		partition endpoints.Partition
+		region    string
+		service   string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "service doesn't exist should return default host name",
+			args: args{
+				partition: endpoints.AwsIsoEPartition(),
+				region:    "eu-isoe-west-1",
+				service:   "test",
+			},
+			want:    "test.eu-isoe-west-1.cloud.adc-e.uk",
+			wantErr: false,
+		},
+		{
+			name: "service and region doesn't exist should return default host name",
+			args: args{
+				partition: endpoints.AwsIsoEPartition(),
+				region:    "eu-isoe-test-1",
+				service:   "test",
+			},
+			want:    "test.eu-isoe-test-1.cloud.adc-e.uk",
+			wantErr: false,
+		},
+		{
+			name: "region doesn't exist should return default host name",
+			args: args{
+				partition: endpoints.AwsIsoPartition(),
+				region:    "us-iso-test-1",
+				service:   "sts",
+			},
+			want:    "sts.us-iso-test-1.c2s.ic.gov",
+			wantErr: false,
+		},
+		{
+			name: "invalid region should return error",
+			args: args{
+				partition: endpoints.AwsIsoPartition(),
+				region:    "test_123",
+				service:   "sts",
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getDefaultHostNameForRegion(&tt.args.partition, tt.args.region, tt.args.service)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getDefaultHostNameForRegion() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("getDefaultHostNameForRegion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
