@@ -194,12 +194,9 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ""
       labels:
         k8s-app: aws-iam-authenticator
     spec:
-
       # use service account with access to
       serviceAccountName: aws-iam-authenticator
 
@@ -209,6 +206,10 @@ spec:
       # run on each master node
       nodeSelector:
         node-role.kubernetes.io/master: ""
+
+      # mark pod as critical to the cluster
+      priorityClassName: system-cluster-critical
+
       tolerations:
       - effect: NoSchedule
         key: node-role.kubernetes.io/master
