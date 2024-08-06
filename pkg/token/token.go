@@ -338,6 +338,11 @@ func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, 
 	request, _ := stsAPI.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
 	request.HTTPRequest.Header.Add(clusterIDHeader, clusterID)
 
+	// Fetch the timestamp when the credentials we're going to use for signing will not be valid anymore
+	// This operation is potentially racey, but the worst case is that we expire a token early
+	// Not all credential providers support this, so we ignore any returned errors
+	credentialsExpiration, _ := request.Config.Credentials.ExpiresAt()
+
 	// Sign the request.  The expires parameter (sets the x-amz-expires header) is
 	// currently ignored by STS, and the token expires 15 minutes after the x-amz-date
 	// timestamp regardless.  We set it to 60 seconds for backwards compatibility (the
@@ -351,6 +356,9 @@ func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, 
 
 	// Set token expiration to 1 minute before the presigned URL expires for some cushion
 	tokenExpiration := time.Now().Local().Add(presignedURLExpiration - 1*time.Minute)
+	if !credentialsExpiration.IsZero() && credentialsExpiration.Before(tokenExpiration) {
+		tokenExpiration = credentialsExpiration
+	}
 	// TODO: this may need to be a constant-time base64 encoding
 	return Token{v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), tokenExpiration}, nil
 }
