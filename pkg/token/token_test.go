@@ -15,7 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -579,6 +583,64 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("getDefaultHostNameForRegion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetWithSTS(t *testing.T) {
+	clusterID := "test-cluster"
+
+	cases := []struct {
+		name    string
+		creds   *credentials.Credentials
+		nowTime time.Time
+		want    Token
+		wantErr error
+	}{
+		{
+			"Non-zero time",
+			// Example non-real credentials
+			func() *credentials.Credentials {
+				decodedAkid, _ := base64.StdEncoding.DecodeString("QVNJQVIyVEc0NFY2QVMzWlpFN0M=")
+				decodedSk, _ := base64.StdEncoding.DecodeString("NEtENWNudEdjVm1MV1JkRjV3dk5SdXpOTDVReG1wNk9LVlk2RnovUQ==")
+				return credentials.NewStaticCredentials(
+					string(decodedAkid),
+					string(decodedSk),
+					"",
+				)
+			}(),
+			time.Unix(1682640000, 0),
+			Token{
+				Token:      "k8s-aws-v1.aHR0cHM6Ly9zdHMudXMtd2VzdC0yLmFtYXpvbmF3cy5jb20vP0FjdGlvbj1HZXRDYWxsZXJJZGVudGl0eSZWZXJzaW9uPTIwMTEtMDYtMTUmWC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BU0lBUjJURzQ0VjZBUzNaWkU3QyUyRjIwMjMwNDI4JTJGdXMtd2VzdC0yJTJGc3RzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyMzA0MjhUMDAwMDAwWiZYLUFtei1FeHBpcmVzPTAmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0JTNCeC1rOHMtYXdzLWlkJlgtQW16LVNpZ25hdHVyZT00ZDdhYmZkZTk2NzI1ZWI4YTc3MzgyNDg0MTZlNGI1ZDA4ZDlkYmQ3MThiNGY2ZGQ2OTBmOGZiNzUwMTMyOWQ1",
+				Expiration: time.Unix(1682640000, 0).Local().Add(time.Minute * 14),
+			},
+			nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := sts.New(session.Must(session.NewSession(
+				&aws.Config{
+					Credentials:         tc.creds,
+					Region:              aws.String("us-west-2"),
+					STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
+				},
+			)))
+
+			gen := &generator{
+				forwardSessionName: false,
+				cache:              false,
+				nowFunc:            func() time.Time { return tc.nowTime },
+			}
+
+			got, err := gen.GetWithSTS(clusterID, svc)
+			if diff := cmp.Diff(err, tc.wantErr); diff != "" {
+				t.Errorf("Unexpected error: %s", diff)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("Got unexpected token: %s", diff)
 			}
 		})
 	}
