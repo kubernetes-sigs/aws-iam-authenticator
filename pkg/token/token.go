@@ -34,6 +34,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
+	v4 "github.com/aws/aws-sdk-go/aws/signer/v4"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/prometheus/client_golang/prometheus"
@@ -198,6 +199,7 @@ type Generator interface {
 type generator struct {
 	forwardSessionName bool
 	cache              bool
+	nowFunc            func() time.Time
 }
 
 // NewGenerator creates a Generator and returns it.
@@ -205,6 +207,7 @@ func NewGenerator(forwardSessionName bool, cache bool) (Generator, error) {
 	return generator{
 		forwardSessionName: forwardSessionName,
 		cache:              cache,
+		nowFunc:            time.Now,
 	}, nil
 }
 
@@ -332,11 +335,22 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 	return g.GetWithSTS(options.ClusterID, stsAPI)
 }
 
+func getNamedSigningHandler(nowFunc func() time.Time) request.NamedHandler {
+	return request.NamedHandler{
+		Name: "v4.SignRequestHandler", Fn: func(req *request.Request) {
+			v4.SignSDKRequestWithCurrentTime(req, nowFunc)
+		},
+	}
+}
+
 // GetWithSTS returns a token valid for clusterID using the given STS client.
 func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, error) {
 	// generate an sts:GetCallerIdentity request and add our custom cluster ID header
 	request, _ := stsAPI.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
 	request.HTTPRequest.Header.Add(clusterIDHeader, clusterID)
+
+	// override the Sign handler so we can control the now time for testing.
+	request.Handlers.Sign.Swap("v4.SignRequestHandler", getNamedSigningHandler(g.nowFunc))
 
 	// Sign the request.  The expires parameter (sets the x-amz-expires header) is
 	// currently ignored by STS, and the token expires 15 minutes after the x-amz-date
@@ -350,7 +364,7 @@ func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, 
 	}
 
 	// Set token expiration to 1 minute before the presigned URL expires for some cushion
-	tokenExpiration := time.Now().Local().Add(presignedURLExpiration - 1*time.Minute)
+	tokenExpiration := g.nowFunc().Local().Add(presignedURLExpiration - 1*time.Minute)
 	// TODO: this may need to be a constant-time base64 encoding
 	return Token{v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), tokenExpiration}, nil
 }
