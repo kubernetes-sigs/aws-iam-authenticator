@@ -379,7 +379,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 		userExtra["canonicalArn"] = authenticationv1beta1.ExtraValue{identity.CanonicalARN}
 		userExtra["sessionName"] = authenticationv1beta1.ExtraValue{identity.SessionName}
 		userExtra["accessKeyId"] = authenticationv1beta1.ExtraValue{identity.AccessKeyID}
-		userExtra["principalId"] = authenticationv1beta1.ExtraValue{identity.UserID}
+		userExtra["eks.amazonaws.com/principalId"] = authenticationv1beta1.ExtraValue{identity.UserID}
 	}
 
 	json.NewEncoder(w).Encode(authenticationv1beta1.TokenReview{
