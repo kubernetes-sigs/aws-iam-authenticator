@@ -504,6 +504,7 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 			"canonicalArn":                  authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
 			"sessionName":                   authenticationv1beta1.ExtraValue{"TestSession"},
 			"accessKeyId":                   authenticationv1beta1.ExtraValue{"ABCDEF"},
+			"principalId":                   authenticationv1beta1.ExtraValue{"Test"},
 			"eks.amazonaws.com/principalId": authenticationv1beta1.ExtraValue{"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
@@ -547,6 +548,7 @@ func TestAuthenticateVerifierRoleMappingCRD(t *testing.T) {
 			"canonicalArn":                  authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
 			"sessionName":                   authenticationv1beta1.ExtraValue{"TestSession"},
 			"accessKeyId":                   authenticationv1beta1.ExtraValue{""},
+			"principalId":                   authenticationv1beta1.ExtraValue{"Test"},
 			"eks.amazonaws.com/principalId": authenticationv1beta1.ExtraValue{"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
@@ -594,6 +596,7 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 			"canonicalArn":                  authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
 			"sessionName":                   authenticationv1beta1.ExtraValue{"TestSession"},
 			"accessKeyId":                   authenticationv1beta1.ExtraValue{""},
+			"principalId":                   authenticationv1beta1.ExtraValue{"Test"},
 			"eks.amazonaws.com/principalId": authenticationv1beta1.ExtraValue{"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
@@ -637,6 +640,7 @@ func TestAuthenticateVerifierUserMappingCRD(t *testing.T) {
 			"canonicalArn":                  authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
 			"sessionName":                   authenticationv1beta1.ExtraValue{"TestSession"},
 			"accessKeyId":                   authenticationv1beta1.ExtraValue{""},
+			"principalId":                   authenticationv1beta1.ExtraValue{"Test"},
 			"eks.amazonaws.com/principalId": authenticationv1beta1.ExtraValue{"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
@@ -680,6 +684,7 @@ func TestAuthenticateVerifierAccountMappingForUser(t *testing.T) {
 			"canonicalArn":                  authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
 			"sessionName":                   authenticationv1beta1.ExtraValue{"TestSession"},
 			"accessKeyId":                   authenticationv1beta1.ExtraValue{""},
+			"principalId":                   authenticationv1beta1.ExtraValue{"Test"},
 			"eks.amazonaws.com/principalId": authenticationv1beta1.ExtraValue{"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
@@ -723,6 +728,7 @@ func TestAuthenticateVerifierAccountMappingForUserCRD(t *testing.T) {
 			"canonicalArn":                  authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
 			"sessionName":                   authenticationv1beta1.ExtraValue{"TestSession"},
 			"accessKeyId":                   authenticationv1beta1.ExtraValue{""},
+			"principalId":                   authenticationv1beta1.ExtraValue{"Test"},
 			"eks.amazonaws.com/principalId": authenticationv1beta1.ExtraValue{"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
@@ -766,6 +772,7 @@ func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
 			"canonicalArn":                  authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
 			"sessionName":                   authenticationv1beta1.ExtraValue{"TestSession"},
 			"accessKeyId":                   authenticationv1beta1.ExtraValue{""},
+			"principalId":                   authenticationv1beta1.ExtraValue{"Test"},
 			"eks.amazonaws.com/principalId": authenticationv1beta1.ExtraValue{"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
@@ -809,6 +816,7 @@ func TestAuthenticateVerifierAccountMappingForRoleCRD(t *testing.T) {
 			"canonicalArn":                  authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
 			"sessionName":                   authenticationv1beta1.ExtraValue{"TestSession"},
 			"accessKeyId":                   authenticationv1beta1.ExtraValue{""},
+			"principalId":                   authenticationv1beta1.ExtraValue{"Test"},
 			"eks.amazonaws.com/principalId": authenticationv1beta1.ExtraValue{"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
@@ -857,6 +865,7 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 			"canonicalArn":                  authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
 			"sessionName":                   authenticationv1beta1.ExtraValue{"i-0c6f21bf1f24f9708"},
 			"accessKeyId":                   authenticationv1beta1.ExtraValue{""},
+			"principalId":                   authenticationv1beta1.ExtraValue{"TestNodeRole"},
 			"eks.amazonaws.com/principalId": authenticationv1beta1.ExtraValue{"TestNodeRole"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
@@ -902,6 +911,7 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 			"canonicalArn":                  authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
 			"sessionName":                   authenticationv1beta1.ExtraValue{"i-0c6f21bf1f24f9708"},
 			"accessKeyId":                   authenticationv1beta1.ExtraValue{""},
+			"principalId":                   authenticationv1beta1.ExtraValue{"TestNodeRole"},
 			"eks.amazonaws.com/principalId": authenticationv1beta1.ExtraValue{"TestNodeRole"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
