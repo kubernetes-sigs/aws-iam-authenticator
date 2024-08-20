@@ -931,12 +931,12 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:TestNodeRole",
 		[]string{"system:nodes", "system:bootstrappers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"i-0c6f21bf1f24f9708"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
-			"principalId":  authenticationv1beta1.ExtraValue{"TestNodeRole"},
-			"sigs.k8s.io/aws-iam-authenticator/principalId": authenticationv1beta1.ExtraValue{"TestNodeRole"},
+			"arn":          {"arn:aws:iam::0123456789012:role/TestNodeRole"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/TestNodeRole"},
+			"sessionName":  {"i-0c6f21bf1f24f9708"},
+			"accessKeyId":  {""},
+			"principalId":  {"TestNodeRole"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"TestNodeRole"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 
