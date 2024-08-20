@@ -524,11 +524,12 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		[]string{"sys:admin", "listers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{"ABCDEF"},
-			"principalId":  authenticationv1beta1.ExtraValue{"Test"},
+			"arn":          {"arn:aws:iam::0123456789012:role/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {"ABCDEF"},
+			"principalId":  {"Test"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -567,11 +568,12 @@ func TestAuthenticateVerifierRoleMappingCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		[]string{"sys:admin", "listers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
-			"principalId":  authenticationv1beta1.ExtraValue{"Test"},
+			"arn":          {"arn:aws:iam::0123456789012:role/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
+			"principalId":  {"Test"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -614,11 +616,12 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		[]string{"sys:admin", "listers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
-			"principalId":  authenticationv1beta1.ExtraValue{"Test"},
+			"arn":          {"arn:aws:iam::0123456789012:user/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:user/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
+			"principalId":  {"Test"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -657,11 +660,12 @@ func TestAuthenticateVerifierUserMappingCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		[]string{"sys:admin", "listers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
-			"principalId":  authenticationv1beta1.ExtraValue{"Test"},
+			"arn":          {"arn:aws:iam::0123456789012:user/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:user/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
+			"principalId":  {"Test"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -700,11 +704,12 @@ func TestAuthenticateVerifierAccountMappingForUser(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		nil,
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
-			"principalId":  authenticationv1beta1.ExtraValue{"Test"},
+			"arn":          {"arn:aws:iam::0123456789012:user/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:user/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
+			"principalId":  {"Test"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -743,11 +748,12 @@ func TestAuthenticateVerifierAccountMappingForUserCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		nil,
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:user/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
-			"principalId":  authenticationv1beta1.ExtraValue{"Test"},
+			"arn":          {"arn:aws:iam::0123456789012:user/Test"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:user/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
+			"principalId":  {"Test"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -786,11 +792,12 @@ func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		nil,
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:assumed-role/Test/extra"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
-			"principalId":  authenticationv1beta1.ExtraValue{"Test"},
+			"arn":          {"arn:aws:iam::0123456789012:assumed-role/Test/extra"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
+			"principalId":  {"Test"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -829,11 +836,12 @@ func TestAuthenticateVerifierAccountMappingForRoleCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:Test",
 		nil,
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:assumed-role/Test/extra"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/Test"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"TestSession"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
-			"principalId":  authenticationv1beta1.ExtraValue{"Test"},
+			"arn":          {"arn:aws:iam::0123456789012:assumed-role/Test/extra"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/Test"},
+			"sessionName":  {"TestSession"},
+			"accessKeyId":  {""},
+			"principalId":  {"Test"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"Test"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 }
@@ -877,11 +885,12 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:TestNodeRole",
 		[]string{"system:nodes", "system:bootstrappers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"i-0c6f21bf1f24f9708"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
-			"principalId":  authenticationv1beta1.ExtraValue{"TestNodeRole"},
+			"arn":          {"arn:aws:iam::0123456789012:role/TestNodeRole"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/TestNodeRole"},
+			"sessionName":  {"i-0c6f21bf1f24f9708"},
+			"accessKeyId":  {""},
+			"principalId":  {"TestNodeRole"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"TestNodeRole"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 
@@ -922,11 +931,12 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 		"aws-iam-authenticator:0123456789012:TestNodeRole",
 		[]string{"system:nodes", "system:bootstrappers"},
 		map[string]authenticationv1beta1.ExtraValue{
-			"arn":          authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
-			"canonicalArn": authenticationv1beta1.ExtraValue{"arn:aws:iam::0123456789012:role/TestNodeRole"},
-			"sessionName":  authenticationv1beta1.ExtraValue{"i-0c6f21bf1f24f9708"},
-			"accessKeyId":  authenticationv1beta1.ExtraValue{""},
-			"principalId":  authenticationv1beta1.ExtraValue{"TestNodeRole"},
+			"arn":          {"arn:aws:iam::0123456789012:role/TestNodeRole"},
+			"canonicalArn": {"arn:aws:iam::0123456789012:role/TestNodeRole"},
+			"sessionName":  {"i-0c6f21bf1f24f9708"},
+			"accessKeyId":  {""},
+			"principalId":  {"TestNodeRole"},
+			"sigs.k8s.io/aws-iam-authenticator/principalId": {"TestNodeRole"},
 		}))
 	validateMetrics(t, validateOpts{success: 1})
 
