@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
@@ -35,6 +36,11 @@ const (
 	// Maximum time in Milliseconds to wait for a new batch call this also depends on if the instance size has
 	// already become 100 then it will not respect this limit
 	maxWaitIntervalForBatch = 200
+
+	// Headers for STS request for source ARN
+	headerSourceArn = "x-amz-source-arn"
+	// Headers for STS request for source account
+	headerSourceAccount = "x-amz-source-account"
 )
 
 // Get a node name from instance ID
@@ -60,7 +66,7 @@ type ec2ProviderImpl struct {
 	instanceIdsChannel chan string
 }
 
-func New(roleARN, region string, qps int, burst int) EC2Provider {
+func New(roleARN, sourceARN, region string, qps int, burst int) EC2Provider {
 	dnsCache := ec2PrivateDNSCache{
 		cache: make(map[string]string),
 		lock:  sync.RWMutex{},
@@ -70,7 +76,7 @@ func New(roleARN, region string, qps int, burst int) EC2Provider {
 		lock: sync.RWMutex{},
 	}
 	return &ec2ProviderImpl{
-		ec2:                ec2.New(newSession(roleARN, region, qps, burst)),
+		ec2:                ec2.New(newSession(roleARN, sourceARN, region, qps, burst)),
 		privateDNSCache:    dnsCache,
 		ec2Requests:        ec2Requests,
 		instanceIdsChannel: make(chan string, maxChannelSize),
@@ -81,7 +87,7 @@ func New(roleARN, region string, qps int, burst int) EC2Provider {
 // the environment, shared credentials (~/.aws/credentials), or EC2 Instance
 // Role.
 
-func newSession(roleARN, region string, qps int, burst int) *session.Session {
+func newSession(roleARN, sourceARN, region string, qps int, burst int) *session.Session {
 	sess := session.Must(session.NewSession())
 	sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
 		Name: "authenticatorUserAgent",
@@ -103,8 +109,10 @@ func newSession(roleARN, region string, qps int, burst int) *session.Session {
 			logrus.Errorf("Getting error = %s while creating rate limited client ", err)
 		}
 
+		stsClient := applySTSRequestHeaders(sts.New(sess, aws.NewConfig().WithHTTPClient(rateLimitedClient).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint)),
+			roleARN, sourceARN)
 		ap := &stscreds.AssumeRoleProvider{
-			Client:   sts.New(sess, aws.NewConfig().WithHTTPClient(rateLimitedClient).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint)),
+			Client:   stsClient,
 			RoleARN:  roleARN,
 			Duration: time.Duration(60) * time.Minute,
 		}
@@ -276,4 +284,42 @@ func (p *ec2ProviderImpl) getPrivateDnsAndPublishToCache(instanceIdList []string
 	for _, id := range instanceIdList {
 		p.unsetRequestInFlightForInstanceId(id)
 	}
+}
+
+func applySTSRequestHeaders(stsClient *sts.STS, roleARN, sourceARN string) *sts.STS {
+	logrus.Infof("Using AWS assumed role %v", roleARN)
+	sourceAcct, err := getSourceAccount(roleARN)
+	if err != nil {
+		logrus.Errorf("failed to parse source account from role ARN %v: %v", roleARN, err)
+		return stsClient
+	}
+	reqHeaders := map[string]string{
+		headerSourceAccount: sourceAcct,
+	}
+	if sourceARN != "" {
+		reqHeaders[headerSourceArn] = sourceARN
+	}
+	stsClient.Handlers.Sign.PushFront(func(s *request.Request) {
+		s.ApplyOptions(request.WithSetRequestHeaders(reqHeaders))
+	})
+	logrus.Infof("configuring STS client with extra headers, %v", reqHeaders)
+	return stsClient
+}
+
+// getSourceAccount constructs source acct and return them for use
+func getSourceAccount(roleARN string) (string, error) {
+	// ARN format (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html)
+	// arn:partition:service:region:account-id:resource-type/resource-id
+	// IAM format, region is always blank
+	// arn:aws:iam::account:role/role-name-with-path
+	if !arn.IsARN(roleARN) {
+		return "", fmt.Errorf("incorrect ARN format for role %s", roleARN)
+	}
+
+	parsedArn, err := arn.Parse(roleARN)
+	if err != nil {
+		return "", err
+	}
+
+	return parsedArn.AccountID, nil
 }
