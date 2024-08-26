@@ -111,7 +111,6 @@ type GetTokenOptions struct {
 	AssumeRoleARN        string
 	AssumeRoleExternalID string
 	SessionName          string
-	Session              *session.Session
 }
 
 // FormatError is returned when there is a problem with token that is
@@ -182,12 +181,6 @@ type getCallerIdentityWrapper struct {
 
 // Generator provides new tokens for the AWS IAM Authenticator.
 type Generator interface {
-	// Get a token using credentials in the default credentials chain.
-	Get(string) (Token, error)
-	// GetWithRole creates a token by assuming the provided role, using the credentials in the default chain.
-	GetWithRole(clusterID, roleARN string) (Token, error)
-	// GetWithRoleForSession creates a token by assuming the provided role, using the provided session.
-	GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (Token, error)
 	// Get a token using the provided options
 	GetWithOptions(options *GetTokenOptions) (Token, error)
 	// GetWithSTS returns a token valid for clusterID using the given STS client.
@@ -211,31 +204,6 @@ func NewGenerator(forwardSessionName bool, cache bool) (Generator, error) {
 	}, nil
 }
 
-// Get uses the directly available AWS credentials to return a token valid for
-// clusterID. It follows the default AWS credential handling behavior.
-func (g generator) Get(clusterID string) (Token, error) {
-	return g.GetWithOptions(&GetTokenOptions{ClusterID: clusterID})
-}
-
-// GetWithRole assumes the given AWS IAM role and returns a token valid for
-// clusterID. If roleARN is empty, behaves like Get (does not assume a role).
-func (g generator) GetWithRole(clusterID string, roleARN string) (Token, error) {
-	return g.GetWithOptions(&GetTokenOptions{
-		ClusterID:     clusterID,
-		AssumeRoleARN: roleARN,
-	})
-}
-
-// GetWithRoleForSession assumes the given AWS IAM role for the given session and behaves
-// like GetWithRole.
-func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (Token, error) {
-	return g.GetWithOptions(&GetTokenOptions{
-		ClusterID:     clusterID,
-		AssumeRoleARN: roleARN,
-		Session:       sess,
-	})
-}
-
 // StdinStderrTokenProvider gets MFA token from standard input.
 func StdinStderrTokenProvider() (string, error) {
 	var v string
@@ -252,46 +220,42 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 		return Token{}, fmt.Errorf("ClusterID is required")
 	}
 
-	if options.Session == nil {
-		// create a session with the "base" credentials available
-		// (from environment variable, profile files, EC2 metadata, etc)
-		sess, err := session.NewSessionWithOptions(session.Options{
-			AssumeRoleTokenProvider: StdinStderrTokenProvider,
-			SharedConfigState:       session.SharedConfigEnable,
-		})
-		if err != nil {
-			return Token{}, fmt.Errorf("could not create session: %v", err)
-		}
-		sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
-			Name: "authenticatorUserAgent",
-			Fn: request.MakeAddToUserAgentHandler(
-				"aws-iam-authenticator", pkg.Version),
-		})
-		if options.Region != "" {
-			sess = sess.Copy(aws.NewConfig().WithRegion(options.Region).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint))
-		}
+	// create a session with the "base" credentials available
+	// (from environment variable, profile files, EC2 metadata, etc)
+	sess, err := session.NewSessionWithOptions(session.Options{
+		AssumeRoleTokenProvider: StdinStderrTokenProvider,
+		SharedConfigState:       session.SharedConfigEnable,
+	})
+	if err != nil {
+		return Token{}, fmt.Errorf("could not create session: %v", err)
+	}
+	sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
+		Name: "authenticatorUserAgent",
+		Fn: request.MakeAddToUserAgentHandler(
+			"aws-iam-authenticator", pkg.Version),
+	})
+	if options.Region != "" {
+		sess = sess.Copy(aws.NewConfig().WithRegion(options.Region).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint))
+	}
 
-		if g.cache {
-			// figure out what profile we're using
-			var profile string
-			if v := os.Getenv("AWS_PROFILE"); len(v) > 0 {
-				profile = v
-			} else {
-				profile = session.DefaultSharedConfigProfile
-			}
-			// create a cacheing Provider wrapper around the Credentials
-			if cacheProvider, err := NewFileCacheProvider(options.ClusterID, profile, options.AssumeRoleARN, sess.Config.Credentials); err == nil {
-				sess.Config.Credentials = credentials.NewCredentials(&cacheProvider)
-			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "unable to use cache: %v\n", err)
-			}
+	if g.cache {
+		// figure out what profile we're using
+		var profile string
+		if v := os.Getenv("AWS_PROFILE"); len(v) > 0 {
+			profile = v
+		} else {
+			profile = session.DefaultSharedConfigProfile
 		}
-
-		options.Session = sess
+		// create a cacheing Provider wrapper around the Credentials
+		if cacheProvider, err := NewFileCacheProvider(options.ClusterID, profile, options.AssumeRoleARN, sess.Config.Credentials); err == nil {
+			sess.Config.Credentials = credentials.NewCredentials(&cacheProvider)
+		} else {
+			fmt.Fprintf(os.Stderr, "unable to use cache: %v\n", err)
+		}
 	}
 
 	// use an STS client based on the direct credentials
-	stsAPI := sts.New(options.Session)
+	stsAPI := sts.New(sess)
 
 	// if a roleARN was specified, replace the STS client with one that uses
 	// temporary credentials from that role.
@@ -326,10 +290,10 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 		}
 
 		// create STS-based credentials that will assume the given role
-		creds := stscreds.NewCredentials(options.Session, options.AssumeRoleARN, sessionSetters...)
+		creds := stscreds.NewCredentials(sess, options.AssumeRoleARN, sessionSetters...)
 
 		// create an STS API interface that uses the assumed role's temporary credentials
-		stsAPI = sts.New(options.Session, &aws.Config{Credentials: creds})
+		stsAPI = sts.New(sess, &aws.Config{Credentials: creds})
 	}
 
 	return g.GetWithSTS(options.ClusterID, stsAPI)
