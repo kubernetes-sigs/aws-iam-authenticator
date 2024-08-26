@@ -1,25 +1,24 @@
 package ec2provider
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/httputil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	smithymiddleware "github.com/aws/smithy-go/middleware"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -36,11 +35,6 @@ const (
 	// Maximum time in Milliseconds to wait for a new batch call this also depends on if the instance size has
 	// already become 100 then it will not respect this limit
 	maxWaitIntervalForBatch = 200
-
-	// Headers for STS request for source ARN
-	headerSourceArn = "x-amz-source-arn"
-	// Headers for STS request for source account
-	headerSourceAccount = "x-amz-source-account"
 )
 
 // Get a node name from instance ID
@@ -60,13 +54,13 @@ type ec2Requests struct {
 }
 
 type ec2ProviderImpl struct {
-	ec2                ec2iface.EC2API
+	ec2                ec2.DescribeInstancesAPIClient
 	privateDNSCache    ec2PrivateDNSCache
 	ec2Requests        ec2Requests
 	instanceIdsChannel chan string
 }
 
-func New(roleARN, sourceARN, region string, qps int, burst int) EC2Provider {
+func New(roleARN, sourceARN, region string, qps int, burst int) (EC2Provider, error) {
 	dnsCache := ec2PrivateDNSCache{
 		cache: make(map[string]string),
 		lock:  sync.RWMutex{},
@@ -75,50 +69,56 @@ func New(roleARN, sourceARN, region string, qps int, burst int) EC2Provider {
 		set:  make(map[string]bool),
 		lock: sync.RWMutex{},
 	}
+	cfg, err := newConfig(roleARN, sourceARN, region, qps, burst)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ec2ProviderImpl{
-		ec2:                ec2.New(newSession(roleARN, sourceARN, region, qps, burst)),
+		ec2:                ec2.NewFromConfig(cfg),
 		privateDNSCache:    dnsCache,
 		ec2Requests:        ec2Requests,
 		instanceIdsChannel: make(chan string, maxChannelSize),
-	}
+	}, nil
 }
 
-// Initial credentials loaded from SDK's default credential chain, such as
-// the environment, shared credentials (~/.aws/credentials), or EC2 Instance
-// Role.
-
-func newSession(roleARN, sourceARN, region string, qps int, burst int) *session.Session {
-	sess := session.Must(session.NewSession())
-	sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
-		Name: "authenticatorUserAgent",
-		Fn: request.MakeAddToUserAgentHandler(
-			"aws-iam-authenticator", pkg.Version),
-	})
-	if aws.StringValue(sess.Config.Region) == "" {
-		sess.Config.Region = aws.String(region)
+func newConfig(roleARN, sourceArn, region string, qps, burst int) (aws.Config, error) {
+	rateLimitedClient, err := httputil.NewRateLimitedClient(qps, burst)
+	if err != nil {
+		logrus.Errorf("error creating rate limited client %s", err)
+		return aws.Config{}, err
 	}
-
+	loadOpts := []func(*config.LoadOptions) error{
+		config.WithRegion(region),
+		config.WithAPIOptions(
+			[]func(*smithymiddleware.Stack) error{
+				middleware.AddUserAgentKeyValue("aws-iam-authenticator", pkg.Version),
+			}),
+		config.WithHTTPClient(rateLimitedClient),
+	}
 	if roleARN != "" {
 		logrus.WithFields(logrus.Fields{
 			"roleARN": roleARN,
 		}).Infof("Using assumed role for EC2 API")
 
-		rateLimitedClient, err := httputil.NewRateLimitedClient(qps, burst)
-
+		cfg, err := config.LoadDefaultConfig(context.Background(), loadOpts...)
 		if err != nil {
-			logrus.Errorf("Getting error = %s while creating rate limited client ", err)
+			logrus.Errorf("error loading AWS config %s", err)
+			return aws.Config{}, err
+		}
+		stsOpts := []func(*sts.Options){}
+		if sourceArn != "" {
+			stsOpts = append(stsOpts, WithSourceHeaders(sourceArn))
 		}
 
-		stsClient := applySTSRequestHeaders(sts.New(sess, aws.NewConfig().WithHTTPClient(rateLimitedClient).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint)), sourceARN)
-		ap := &stscreds.AssumeRoleProvider{
-			Client:   stsClient,
-			RoleARN:  roleARN,
-			Duration: time.Duration(60) * time.Minute,
-		}
-
-		sess.Config.Credentials = credentials.NewCredentials(ap)
+		stsCli := sts.NewFromConfig(cfg, stsOpts...)
+		creds := stscreds.NewAssumeRoleProvider(stsCli, roleARN,
+			func(o *stscreds.AssumeRoleOptions) {
+				o.Duration = time.Duration(60) * time.Minute
+			})
+		loadOpts = append(loadOpts, config.WithCredentialsProvider(creds))
 	}
-	return sess
+	return config.LoadDefaultConfig(context.Background(), loadOpts...)
 }
 
 func (p *ec2ProviderImpl) setPrivateDNSNameCache(id string, privateDNSName string) {
@@ -197,8 +197,8 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(id string) (string, error) {
 	logrus.Infof("Calling ec2:DescribeInstances for the InstanceId = %s ", id)
 	metrics.Get().EC2DescribeInstanceCallCount.Inc()
 	// Look up instance from EC2 API
-	output, err := p.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
-		InstanceIds: aws.StringSlice([]string{id}),
+	output, err := p.ec2.DescribeInstances(context.Background(), &ec2.DescribeInstancesInput{
+		InstanceIds: []string{id},
 	})
 	if err != nil {
 		p.unsetRequestInFlightForInstanceId(id)
@@ -206,8 +206,8 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(id string) (string, error) {
 	}
 	for _, reservation := range output.Reservations {
 		for _, instance := range reservation.Instances {
-			if aws.StringValue(instance.InstanceId) == id {
-				privateDNSName = aws.StringValue(instance.PrivateDnsName)
+			if aws.ToString(instance.InstanceId) == id {
+				privateDNSName = aws.ToString(instance.PrivateDnsName)
 				p.setPrivateDNSNameCache(id, privateDNSName)
 				p.unsetRequestInFlightForInstanceId(id)
 			}
@@ -258,8 +258,8 @@ func (p *ec2ProviderImpl) getPrivateDnsAndPublishToCache(instanceIdList []string
 	// Look up instance from EC2 API
 	logrus.Infof("Making Batch Query to DescribeInstances for %v instances ", len(instanceIdList))
 	metrics.Get().EC2DescribeInstanceCallCount.Inc()
-	output, err := p.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
-		InstanceIds: aws.StringSlice(instanceIdList),
+	output, err := p.ec2.DescribeInstances(context.Background(), &ec2.DescribeInstancesInput{
+		InstanceIds: instanceIdList,
 	})
 	if err != nil {
 		logrus.Errorf("Batch call failed querying private DNS from EC2 API for nodes [%s] : with error = []%s ", instanceIdList, err.Error())
@@ -272,8 +272,8 @@ func (p *ec2ProviderImpl) getPrivateDnsAndPublishToCache(instanceIdList []string
 		// Adding the result to privateDNSChache as well as removing from the requestQueueMap.
 		for _, reservation := range output.Reservations {
 			for _, instance := range reservation.Instances {
-				id := aws.StringValue(instance.InstanceId)
-				privateDNSName := aws.StringValue(instance.PrivateDnsName)
+				id := aws.ToString(instance.InstanceId)
+				privateDNSName := aws.ToString(instance.PrivateDnsName)
 				p.setPrivateDNSNameCache(id, privateDNSName)
 			}
 		}
@@ -283,41 +283,4 @@ func (p *ec2ProviderImpl) getPrivateDnsAndPublishToCache(instanceIdList []string
 	for _, id := range instanceIdList {
 		p.unsetRequestInFlightForInstanceId(id)
 	}
-}
-
-func applySTSRequestHeaders(stsClient *sts.STS, sourceARN string) *sts.STS {
-	// parse both source account and source arn from the sourceARN, and add them as headers to the STS client
-	if sourceARN != "" {
-		sourceAcct, err := getSourceAccount(sourceARN)
-		if err != nil {
-			panic(fmt.Sprintf("%s is not a valid arn, err: %v", sourceARN, err))
-		}
-		reqHeaders := map[string]string{
-			headerSourceAccount: sourceAcct,
-			headerSourceArn:     sourceARN,
-		}
-		stsClient.Handlers.Sign.PushFront(func(s *request.Request) {
-			s.ApplyOptions(request.WithSetRequestHeaders(reqHeaders))
-		})
-		logrus.Infof("configuring STS client with extra headers, %v", reqHeaders)
-	}
-	return stsClient
-}
-
-// getSourceAccount constructs source acct and return them for use
-func getSourceAccount(roleARN string) (string, error) {
-	// ARN format (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html)
-	// arn:partition:service:region:account-id:resource-type/resource-id
-	// IAM format, region is always blank
-	// arn:aws:iam::account:role/role-name-with-path
-	if !arn.IsARN(roleARN) {
-		return "", fmt.Errorf("incorrect ARN format for role %s", roleARN)
-	}
-
-	parsedArn, err := arn.Parse(roleARN)
-	if err != nil {
-		return "", err
-	}
-
-	return parsedArn.AccountID, nil
 }

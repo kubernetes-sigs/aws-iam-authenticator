@@ -1,14 +1,15 @@
 package ec2provider
 
 import (
+	"context"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
@@ -18,25 +19,24 @@ const (
 )
 
 type mockEc2Client struct {
-	ec2iface.EC2API
-	Reservations []*ec2.Reservation
+	Reservations []ec2types.Reservation
 }
 
-func (c *mockEc2Client) DescribeInstances(in *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+func (c *mockEc2Client) DescribeInstances(ctx context.Context, in *ec2.DescribeInstancesInput, _ ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	// simulate the time it takes for aws to return
 	time.Sleep(DescribeDelay * time.Millisecond)
-	var reservations []*ec2.Reservation
+	var reservations []ec2types.Reservation
 	for _, res := range c.Reservations {
-		var reservation ec2.Reservation
+		var reservation ec2types.Reservation
 		for _, inst := range res.Instances {
 			for _, id := range in.InstanceIds {
-				if aws.StringValue(id) == aws.StringValue(inst.InstanceId) {
+				if id == aws.ToString(inst.InstanceId) {
 					reservation.Instances = append(reservation.Instances, inst)
 				}
 			}
 		}
 		if len(reservation.Instances) > 0 {
-			reservations = append(reservations, &reservation)
+			reservations = append(reservations, reservation)
 		}
 	}
 	return &ec2.DescribeInstancesOutput{
@@ -76,12 +76,12 @@ func TestGetPrivateDNSName(t *testing.T) {
 	}
 }
 
-func prepareSingleInstanceOutput() []*ec2.Reservation {
-	reservations := []*ec2.Reservation{
+func prepareSingleInstanceOutput() []ec2types.Reservation {
+	reservations := []ec2types.Reservation{
 		{
 			Groups: nil,
-			Instances: []*ec2.Instance{
-				&ec2.Instance{
+			Instances: []ec2types.Instance{
+				ec2types.Instance{
 					InstanceId:     aws.String("ec2-1"),
 					PrivateDnsName: aws.String("ec2-dns-1"),
 				},
@@ -125,20 +125,20 @@ func getPrivateDNSName(ec2provider *ec2ProviderImpl, instanceString string, dnsS
 	}
 }
 
-func prepare100InstanceOutput() []*ec2.Reservation {
+func prepare100InstanceOutput() []ec2types.Reservation {
 
-	var reservations []*ec2.Reservation
+	var reservations []ec2types.Reservation
 
 	for i := 1; i < 101; i++ {
 		instanceString := "ec2-" + strconv.Itoa(i)
 		dnsString := "ec2-dns-" + strconv.Itoa(i)
-		instance := &ec2.Instance{
+		instance := ec2types.Instance{
 			InstanceId:     aws.String(instanceString),
 			PrivateDnsName: aws.String(dnsString),
 		}
-		var instances []*ec2.Instance
+		var instances []ec2types.Instance
 		instances = append(instances, instance)
-		res1 := &ec2.Reservation{
+		res1 := ec2types.Reservation{
 			Groups:        nil,
 			Instances:     instances,
 			OwnerId:       nil,
@@ -149,45 +149,4 @@ func prepare100InstanceOutput() []*ec2.Reservation {
 	}
 	return reservations
 
-}
-
-func TestGetSourceAcctAndArn(t *testing.T) {
-	type args struct {
-		roleARN string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
-	}{
-		{
-			name: "corect role arn",
-			args: args{
-				roleARN: "arn:aws:iam::123456789876:role/test-cluster",
-			},
-			want:    "123456789876",
-			wantErr: false,
-		},
-		{
-			name: "incorect role arn",
-			args: args{
-				roleARN: "arn:aws:iam::123456789876",
-			},
-			want:    "",
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getSourceAccount(tt.args.roleARN)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetSourceAccount() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("GetSourceAccount() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
 }

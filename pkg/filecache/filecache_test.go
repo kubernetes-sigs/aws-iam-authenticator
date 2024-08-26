@@ -383,10 +383,6 @@ func TestNewFileCacheProvider_ExistingARN(t *testing.T) {
 		t.Errorf("Cached credential should not be expired")
 	}
 
-	if p.ExpiresAt() != p.cachedCredential.Expires {
-		t.Errorf("Credential expiration time is not correct, expected %v, got %v",
-			p.cachedCredential.Expires, p.ExpiresAt())
-	}
 }
 
 func TestFileCacheProvider_Retrieve_NoExpirer(t *testing.T) {
@@ -407,7 +403,7 @@ func TestFileCacheProvider_Retrieve_NoExpirer(t *testing.T) {
 	)
 	validateFileCacheProvider(t, p, err, provider)
 
-	credential, err := p.Retrieve()
+	credential, err := p.Retrieve(context.Background())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -442,12 +438,12 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Unlockable(t *testing.T) {
 	tfl.success = false
 	tfl.err = errors.New("lock stuck, needs wd-40")
 
-	credential, err := p.Retrieve()
+	credential, err := p.Retrieve(context.Background())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 	if credential.AccessKeyID != "AKID" || credential.SecretAccessKey != "SECRET" ||
-		credential.SessionToken != "TOKEN" || credential.ProviderName != "stubProvider" {
+		credential.SessionToken != "TOKEN" || credential.Source != "stubProvider" {
 		t.Errorf("cached credential not extracted correctly, got %v", p.cachedCredential)
 	}
 }
@@ -471,14 +467,14 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Unwritable(t *testing.T) {
 	)
 	validateFileCacheProvider(t, p, err, provider)
 
-	credential, err := p.Retrieve()
+	credential, err := p.Retrieve(context.Background())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 	if credential.AccessKeyID != provider.creds.AccessKeyID ||
 		credential.SecretAccessKey != provider.creds.SecretAccessKey ||
 		credential.SessionToken != provider.creds.SessionToken ||
-		credential.ProviderName != provider.creds.Source {
+		credential.Source != provider.creds.Source {
 		t.Errorf("cached credential not extracted correctly, got %v", p.cachedCredential)
 	}
 
@@ -525,14 +521,14 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Writable(t *testing.T) {
 	// retrieve credential, which will fetch from underlying Provider
 	// same as TestFileCacheProvider_Retrieve_WithExpirer_Unwritable,
 	// but write to disk (code coverage)
-	credential, err := p.Retrieve()
+	credential, err := p.Retrieve(context.Background())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 	if credential.AccessKeyID != provider.creds.AccessKeyID ||
 		credential.SecretAccessKey != provider.creds.SecretAccessKey ||
 		credential.SessionToken != provider.creds.SessionToken ||
-		credential.ProviderName != provider.creds.Source {
+		credential.Source != provider.creds.Source {
 		t.Errorf("cached credential not extracted correctly, got %v", p.cachedCredential)
 	}
 }
@@ -567,19 +563,14 @@ func TestFileCacheProvider_Retrieve_CacheHit(t *testing.T) {
 		}))
 	validateFileCacheProvider(t, p, err, provider)
 
-	credential, err := p.Retrieve()
+	credential, err := p.Retrieve(context.Background())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 	if credential.AccessKeyID != "ABC" || credential.SecretAccessKey != "DEF" ||
-		credential.SessionToken != "GHI" || credential.ProviderName != "JKL" {
+		credential.SessionToken != "GHI" || credential.Source != "JKL" ||
+		!credential.Expires.Equal(currentTime.Add(time.Hour*6)) {
 		t.Errorf("cached credential not returned")
 	}
 
-	if !p.ExpiresAt().Equal(currentTime.Add(time.Hour * 6)) {
-		t.Errorf("unexpected expiration time: got %s, wanted %s",
-			p.ExpiresAt().Format(time.RFC3339Nano),
-			currentTime.Add(time.Hour*6).Format(time.RFC3339Nano),
-		)
-	}
 }

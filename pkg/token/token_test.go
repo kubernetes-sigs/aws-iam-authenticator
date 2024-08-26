@@ -2,6 +2,7 @@ package token
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -14,11 +15,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -587,12 +589,12 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 	}
 }
 
-func TestGetWithSTS(t *testing.T) {
+func TestPresign(t *testing.T) {
 	clusterID := "test-cluster"
 
 	cases := []struct {
 		name    string
-		creds   *credentials.Credentials
+		creds   aws.CredentialsProvider
 		nowTime time.Time
 		want    Token
 		wantErr error
@@ -600,10 +602,10 @@ func TestGetWithSTS(t *testing.T) {
 		{
 			"Non-zero time",
 			// Example non-real credentials
-			func() *credentials.Credentials {
+			func() credentials.StaticCredentialsProvider {
 				decodedAkid, _ := base64.StdEncoding.DecodeString("QVNJQVIyVEc0NFY2QVMzWlpFN0M=")
 				decodedSk, _ := base64.StdEncoding.DecodeString("NEtENWNudEdjVm1MV1JkRjV3dk5SdXpOTDVReG1wNk9LVlk2RnovUQ==")
-				return credentials.NewStaticCredentials(
+				return credentials.NewStaticCredentialsProvider(
 					string(decodedAkid),
 					string(decodedSk),
 					"",
@@ -620,13 +622,15 @@ func TestGetWithSTS(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := sts.New(session.Must(session.NewSession(
-				&aws.Config{
-					Credentials:         tc.creds,
-					Region:              aws.String("us-west-2"),
-					STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
-				},
-			)))
+			cfg, err := config.LoadDefaultConfig(
+				context.Background(),
+				config.WithRegion("us-west-2"),
+				config.WithCredentialsProvider(tc.creds),
+			)
+			if err != nil {
+				t.Errorf("unexpected error initialzing config: %v", err)
+				return
+			}
 
 			gen := &generator{
 				forwardSessionName: false,
@@ -634,7 +638,13 @@ func TestGetWithSTS(t *testing.T) {
 				nowFunc:            func() time.Time { return tc.nowTime },
 			}
 
-			got, err := gen.GetWithSTS(clusterID, svc)
+			stsSvc := sts.NewFromConfig(cfg, WithClusterIDHeader(clusterID))
+			presigner := timedPresigner{v4.NewSigner(), gen.nowFunc}
+			presignClient := sts.NewPresignClient(stsSvc, func(o *sts.PresignOptions) {
+				o.Presigner = &presigner
+			})
+
+			got, err := gen.Presign(presignClient)
 			if diff := cmp.Diff(err, tc.wantErr); diff != "" {
 				t.Errorf("Unexpected error: %s", diff)
 			}

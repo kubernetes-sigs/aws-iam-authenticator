@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/gofrs/flock"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
@@ -136,7 +135,7 @@ type FileCacheProvider struct {
 	cachedCredential aws.Credentials         // the cached credential, if it exists
 }
 
-var _ credentials.Provider = &FileCacheProvider{}
+var _ aws.CredentialsProvider = &FileCacheProvider{}
 
 // NewFileCacheProvider creates a new Provider implementation that wraps a provided Credentials,
 // and works with an on disk cache to speed up credential usage when the cached copy is not expired.
@@ -200,26 +199,19 @@ func NewFileCacheProvider(clusterID, profile, roleARN string, provider aws.Crede
 	return resp, nil
 }
 
-// Retrieve() implements the Provider interface, returning the cached credential if is not expired,
-// otherwise fetching the credential from the underlying Provider and caching the results on disk
+// Retrieve() implements the aws.CredentialsProvider interface, returning the cached credential if is not expired,
+// otherwise fetching the credential from the underlying CredentialProvider and caching the results on disk
 // with an expiration time.
-func (f *FileCacheProvider) Retrieve() (credentials.Value, error) {
-	return f.RetrieveWithContext(context.Background())
-}
-
-// Retrieve() implements the Provider interface, returning the cached credential if is not expired,
-// otherwise fetching the credential from the underlying Provider and caching the results on disk
-// with an expiration time.
-func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (credentials.Value, error) {
+func (f *FileCacheProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
 	if !f.cachedCredential.Expired() && f.cachedCredential.HasKeys() {
 		// use the cached credential
-		return V2CredentialToV1Value(f.cachedCredential), nil
+		return f.cachedCredential, nil
 	} else {
 		_, _ = fmt.Fprintf(os.Stderr, "No cached credential available.  Refreshing...\n")
 		// fetch the credentials from the underlying Provider
 		credential, err := f.provider.Retrieve(ctx)
 		if err != nil {
-			return V2CredentialToV1Value(credential), err
+			return credential, err
 		}
 
 		if credential.CanExpire {
@@ -235,7 +227,7 @@ func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (credential
 			if !ok {
 				// can't get write lock to create/update cache, but still return the credential
 				_, _ = fmt.Fprintf(os.Stderr, "Unable to write lock file %s: %v\n", f.filename, err)
-				return V2CredentialToV1Value(credential), nil
+				return credential, nil
 			}
 			f.cachedCredential = credential
 			// don't really care about read error.  Either read the cache, or we create a new cache.
@@ -254,19 +246,8 @@ func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (credential
 			_, _ = fmt.Fprintf(os.Stderr, "Unable to cache credential: %v\n", err)
 			err = nil
 		}
-		return V2CredentialToV1Value(credential), err
+		return credential, err
 	}
-}
-
-// IsExpired() implements the Provider interface, deferring to the cached credential first,
-// but fall back to the underlying Provider if it is expired.
-func (f *FileCacheProvider) IsExpired() bool {
-	return f.cachedCredential.CanExpire && f.cachedCredential.Expired()
-}
-
-// ExpiresAt implements the Expirer interface, and gives access to the expiration time of the credential
-func (f *FileCacheProvider) ExpiresAt() time.Time {
-	return f.cachedCredential.Expires
 }
 
 // defaultCacheFilename returns the name of the credential cache file, which can either be

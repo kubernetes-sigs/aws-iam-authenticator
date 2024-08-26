@@ -28,8 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
@@ -42,7 +40,9 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
-	awsarn "github.com/aws/aws-sdk-go/aws/arn"
+	awsarn "github.com/aws/aws-sdk-go-v2/aws/arn"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
@@ -88,7 +88,7 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 
 	backendMapper, err := BuildMapperChain(cfg, cfg.BackendMode)
 	if err != nil {
-		logrus.Fatalf("failed to build mapper chain: %v", err)
+		logrus.WithError(err).Fatal("failed to build mapper chain")
 	}
 
 	for _, mapping := range c.RoleMappings {
@@ -144,7 +144,11 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 
 	logrus.Infof("listening on %s", listener.Addr())
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
-	internalHandler := c.getHandler(backendMapper, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst, stopCh)
+	internalHandler, err := c.getHandler(backendMapper, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst, stopCh)
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to create handlers")
+	}
+
 	c.httpServer = http.Server{
 		ErrorLog: log.New(errLog, "", 0),
 		Handler:  internalHandler,
@@ -191,23 +195,35 @@ type healthzHandler struct{}
 func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
-func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int, stopCh <-chan struct{}) *handler {
+
+func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int, stopCh <-chan struct{}) (*handler, error) {
 	if c.ServerEC2DescribeInstancesRoleARN != "" {
 		_, err := awsarn.Parse(c.ServerEC2DescribeInstancesRoleARN)
 		if err != nil {
-			panic(fmt.Sprintf("describeinstancesrole %s is not a valid arn", c.ServerEC2DescribeInstancesRoleARN))
+			logrus.WithError(err).Errorf("describeinstancesrole %s is not a valid arn", c.ServerEC2DescribeInstancesRoleARN)
+			return nil, err
 		}
 	}
-	sess := session.Must(session.NewSession())
-	ec2metadata := ec2metadata.New(sess)
-	instanceRegion, err := ec2metadata.Region()
+	ctx := context.Background()
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		logrus.WithError(err).Errorln("Region not found in instance metadata.")
+		logrus.WithError(err).Error("EC2 instance metadata not configured")
+	}
+	cli := imds.NewFromConfig(cfg)
+	resp, err := cli.GetRegion(ctx, nil)
+	if err != nil {
+		logrus.WithError(err).Error("region not found in instance metadata.")
+	}
+
+	ec2Prov, err := ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, resp.Region, ec2DescribeQps, ec2DescribeBurst)
+	if err != nil {
+		logrus.WithError(err).Errorln("error initializing EC2 provider")
+		return nil, err
 	}
 
 	h := &handler{
-		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
-		ec2Provider:               ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
+		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, resp.Region),
+		ec2Provider:               ec2Prov,
 		clusterID:                 c.ClusterID,
 		backendMapper:             backendMapper,
 		scrubbedAccounts:          c.Config.ScrubbedAWSAccounts,
@@ -226,7 +242,7 @@ func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2
 		fileutil.StartLoadDynamicFile(c.DynamicBackendModePath, h, stopCh)
 	}
 
-	return h
+	return h, nil
 }
 
 func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) {
