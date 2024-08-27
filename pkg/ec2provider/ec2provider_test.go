@@ -150,3 +150,44 @@ func prepare100InstanceOutput() []*ec2.Reservation {
 	return reservations
 
 }
+
+func TestGetSourceAcctAndArn(t *testing.T) {
+	type args struct {
+		roleARN string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "corect role arn",
+			args: args{
+				roleARN: "arn:aws:iam::123456789876:role/test-cluster",
+			},
+			want:    "123456789876",
+			wantErr: false,
+		},
+		{
+			name: "incorect role arn",
+			args: args{
+				roleARN: "arn:aws:iam::123456789876",
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getSourceAccount(tt.args.roleARN)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetSourceAccount() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("GetSourceAccount() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

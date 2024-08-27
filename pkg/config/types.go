@@ -128,6 +128,12 @@ type Config struct {
 	// running.
 	ServerEC2DescribeInstancesRoleARN string
 
+	// SourceARN is value which is passed while assuming role specified by ServerEC2DescribeInstancesRoleARN.
+	// When a service assumes a role in your account, you can include the aws:SourceAccount and aws:SourceArn global
+	// condition context keys in your role trust policy to limit access to the role to only requests that are generated
+	// by expected resources. https://docs.aws.amazon.com/IAM/latest/UserGuide/confused-deputy.html
+	SourceARN string
+
 	// Address defines the hostname or IP Address to bind the HTTPS server to listen to. This is useful when creating
 	// a local server to handle the authentication request for development.
 	Address string
