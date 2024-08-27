@@ -91,6 +91,7 @@ func getConfig() (config.Config, error) {
 		PartitionID:                       viper.GetString("server.partition"),
 		ClusterID:                         viper.GetString("clusterID"),
 		ServerEC2DescribeInstancesRoleARN: viper.GetString("server.ec2DescribeInstancesRoleARN"),
+		SourceARN:                         viper.GetString("server.sourceARN"),
 		HostPort:                          viper.GetInt("server.port"),
 		Hostname:                          viper.GetString("server.hostname"),
 		GenerateKubeconfigPath:            viper.GetString("server.generateKubeconfig"),
