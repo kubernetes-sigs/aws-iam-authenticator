@@ -322,7 +322,7 @@ func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, 
 	// parameter is a required argument to Presign(), and authenticators 0.3.0 and older are expecting a value between
 	// 0 and 60 on the server side).
 	// https://github.com/aws/aws-sdk-go/issues/2167
-	presignedURLString, err := request.Presign(requestPresignParam)
+	presignedURLString, err := request.Presign(requestPresignParam * time.Second)
 	if err != nil {
 		return Token{}, err
 	}
