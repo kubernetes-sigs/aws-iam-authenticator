@@ -248,7 +248,11 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 			profile = session.DefaultSharedConfigProfile
 		}
 		// create a cacheing Provider wrapper around the Credentials
-		if cacheProvider, err := filecache.NewFileCacheProvider(options.ClusterID, profile, options.AssumeRoleARN, sess.Config.Credentials); err == nil {
+		if cacheProvider, err := filecache.NewFileCacheProvider(
+			options.ClusterID,
+			profile,
+			options.AssumeRoleARN,
+			filecache.V1CredentialToV2Provider(sess.Config.Credentials)); err == nil {
 			sess.Config.Credentials = credentials.NewCredentials(cacheProvider)
 		} else {
 			fmt.Fprintf(os.Stderr, "unable to use cache: %v\n", err)
