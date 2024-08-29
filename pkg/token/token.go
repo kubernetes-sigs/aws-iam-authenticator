@@ -44,6 +44,7 @@ import (
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/filecache"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
@@ -247,8 +248,8 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 			profile = session.DefaultSharedConfigProfile
 		}
 		// create a cacheing Provider wrapper around the Credentials
-		if cacheProvider, err := NewFileCacheProvider(options.ClusterID, profile, options.AssumeRoleARN, sess.Config.Credentials); err == nil {
-			sess.Config.Credentials = credentials.NewCredentials(&cacheProvider)
+		if cacheProvider, err := filecache.NewFileCacheProvider(options.ClusterID, profile, options.AssumeRoleARN, sess.Config.Credentials); err == nil {
+			sess.Config.Credentials = credentials.NewCredentials(cacheProvider)
 		} else {
 			fmt.Fprintf(os.Stderr, "unable to use cache: %v\n", err)
 		}
