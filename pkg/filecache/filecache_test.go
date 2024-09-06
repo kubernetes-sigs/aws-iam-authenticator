@@ -1,7 +1,6 @@
 package filecache
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/afero"
 )
 
@@ -20,33 +20,15 @@ const (
 
 // stubProvider implements credentials.Provider with configurable response values
 type stubProvider struct {
-	creds   credentials.Value
-	expired bool
-	err     error
+	creds aws.Credentials
+	err   error
 }
 
-var _ credentials.Provider = &stubProvider{}
+var _ aws.CredentialsProvider = &stubProvider{}
 
-func (s *stubProvider) Retrieve() (credentials.Value, error) {
-	s.expired = false
-	s.creds.ProviderName = "stubProvider"
+func (s *stubProvider) Retrieve(_ context.Context) (aws.Credentials, error) {
+	s.creds.Source = "stubProvider"
 	return s.creds, s.err
-}
-
-func (s *stubProvider) IsExpired() bool {
-	return s.expired
-}
-
-// stubProviderExpirer implements credentials.Expirer with configurable expiration
-type stubProviderExpirer struct {
-	stubProvider
-	expiration time.Time
-}
-
-var _ credentials.Expirer = &stubProviderExpirer{}
-
-func (s *stubProviderExpirer) ExpiresAt() time.Time {
-	return s.expiration
 }
 
 // testFileInfo implements fs.FileInfo with configurable response values
@@ -116,22 +98,34 @@ func getMocks() (*testFS, *testFilelock) {
 }
 
 // makeCredential returns a dummy AWS crdential
-func makeCredential() credentials.Value {
-	return credentials.Value{
+func makeCredential() aws.Credentials {
+	return aws.Credentials{
 		AccessKeyID:     "AKID",
 		SecretAccessKey: "SECRET",
 		SessionToken:    "TOKEN",
-		ProviderName:    "stubProvider",
+		Source:          "stubProvider",
+		CanExpire:       false,
+	}
+}
+
+func makeExpiringCredential(e time.Time) aws.Credentials {
+	return aws.Credentials{
+		AccessKeyID:     "AKID",
+		SecretAccessKey: "SECRET",
+		SessionToken:    "TOKEN",
+		Source:          "stubProvider",
+		CanExpire:       true,
+		Expires:         e,
 	}
 }
 
 // validateFileCacheProvider ensures that the cache provider is properly initialized
-func validateFileCacheProvider(t *testing.T, p *FileCacheProvider, err error, c *credentials.Credentials) {
+func validateFileCacheProvider(t *testing.T, p *FileCacheProvider, err error, c aws.CredentialsProvider) {
 	t.Helper()
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	if p.credentials != c {
+	if p.provider != c {
 		t.Errorf("Credentials not copied")
 	}
 	if p.cacheKey.clusterID != "CLUSTER" {
@@ -184,24 +178,24 @@ func TestCacheFilename(t *testing.T) {
 }
 
 func TestNewFileCacheProvider_Missing(t *testing.T) {
-	c := credentials.NewCredentials(&stubProvider{})
+	provider := &stubProvider{}
 
 	tfs, tfl := getMocks()
 
-	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
 			return tfl
 		}))
-	validateFileCacheProvider(t, p, err, c)
-	if !p.cachedCredential.IsExpired() {
-		t.Errorf("missing cache file should result in expired cached credential")
+	validateFileCacheProvider(t, p, err, provider)
+	if p.cachedCredential.HasKeys() {
+		t.Errorf("missing cache file should result in empty cached credential")
 	}
 }
 
 func TestNewFileCacheProvider_BadPermissions(t *testing.T) {
-	c := credentials.NewCredentials(&stubProvider{})
+	provider := &stubProvider{}
 
 	tfs, _ := getMocks()
 	// afero.MemMapFs always returns tempfile FileInfo,
@@ -209,7 +203,7 @@ func TestNewFileCacheProvider_BadPermissions(t *testing.T) {
 	tfs.fileinfo = &testFileInfo{mode: 0777}
 
 	// bad permissions
-	_, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	_, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 	)
@@ -223,7 +217,7 @@ func TestNewFileCacheProvider_BadPermissions(t *testing.T) {
 }
 
 func TestNewFileCacheProvider_Unlockable(t *testing.T) {
-	c := credentials.NewCredentials(&stubProvider{})
+	provider := &stubProvider{}
 
 	tfs, tfl := getMocks()
 	tfs.Create(testFilename)
@@ -232,7 +226,7 @@ func TestNewFileCacheProvider_Unlockable(t *testing.T) {
 	tfl.success = false
 	tfl.err = errors.New("lock stuck, needs wd-40")
 
-	_, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	_, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
@@ -245,14 +239,14 @@ func TestNewFileCacheProvider_Unlockable(t *testing.T) {
 }
 
 func TestNewFileCacheProvider_Unreadable(t *testing.T) {
-	c := credentials.NewCredentials(&stubProvider{})
+	provider := &stubProvider{}
 
 	tfs, tfl := getMocks()
 	tfs.Create(testFilename)
 	tfl.err = fmt.Errorf("open %s: permission denied", testFilename)
 	tfl.success = false
 
-	_, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	_, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
@@ -270,12 +264,12 @@ func TestNewFileCacheProvider_Unreadable(t *testing.T) {
 }
 
 func TestNewFileCacheProvider_Unparseable(t *testing.T) {
-	c := credentials.NewCredentials(&stubProvider{})
+	provider := &stubProvider{}
 
 	tfs, tfl := getMocks()
 	tfs.Create(testFilename)
 
-	_, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	_, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
@@ -297,12 +291,12 @@ func TestNewFileCacheProvider_Unparseable(t *testing.T) {
 }
 
 func TestNewFileCacheProvider_Empty(t *testing.T) {
-	c := credentials.NewCredentials(&stubProvider{})
+	provider := &stubProvider{}
 
 	tfs, tfl := getMocks()
 
 	// successfully parse existing but empty cache file
-	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
@@ -313,58 +307,60 @@ func TestNewFileCacheProvider_Empty(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 		return
 	}
-	validateFileCacheProvider(t, p, err, c)
-	if !p.cachedCredential.IsExpired() {
-		t.Errorf("empty cache file should result in expired cached credential")
+	validateFileCacheProvider(t, p, err, provider)
+	if p.cachedCredential.HasKeys() {
+		t.Errorf("empty cache file should result in empty cached credential")
 	}
 }
 
 func TestNewFileCacheProvider_ExistingCluster(t *testing.T) {
-	c := credentials.NewCredentials(&stubProvider{})
+	provider := &stubProvider{}
 
 	tfs, tfl := getMocks()
-	afero.WriteFile(
-		tfs,
-		testFilename,
-		[]byte(`clusters:
-  CLUSTER:
-    ARN2: {}
-`),
-		0700)
+	tfs.Create(testFilename)
+
 	// successfully parse existing cluster without matching arn
-	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
-			tfs.Create(testFilename)
+
+			afero.WriteFile(
+				tfs,
+				testFilename,
+				[]byte(`clusters:
+  CLUSTER:
+    PROFILE2: {}
+`),
+				0700)
 			return tfl
 		}),
 	)
-	validateFileCacheProvider(t, p, err, c)
-	if !p.cachedCredential.IsExpired() {
-		t.Errorf("missing arn in cache file should result in expired cached credential")
+	validateFileCacheProvider(t, p, err, provider)
+	if p.cachedCredential.HasKeys() {
+		t.Errorf("missing profile in cache file should result in empty cached credential")
 	}
 }
 
 func TestNewFileCacheProvider_ExistingARN(t *testing.T) {
-	c := credentials.NewCredentials(&stubProvider{})
+	provider := &stubProvider{}
 
+	expiry := time.Now().Add(time.Hour * 6)
 	content := []byte(`clusters:
   CLUSTER:
     PROFILE:
       ARN:
-        credential:
-          accesskeyid: ABC
-          secretaccesskey: DEF
-          sessiontoken: GHI
-          providername: JKL
-        expiration: 2018-01-02T03:04:56.789Z
+        accesskeyid: ABC
+        secretaccesskey: DEF
+        sessiontoken: GHI
+        source: JKL
+        expires: ` + expiry.Format(time.RFC3339Nano) + `
 `)
 	tfs, tfl := getMocks()
 	tfs.Create(testFilename)
 
 	// successfully parse cluster with matching arn
-	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
@@ -377,38 +373,31 @@ func TestNewFileCacheProvider_ExistingARN(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 		return
 	}
-	validateFileCacheProvider(t, p, err, c)
-	if p.cachedCredential.Credential.AccessKeyID != "ABC" || p.cachedCredential.Credential.SecretAccessKey != "DEF" ||
-		p.cachedCredential.Credential.SessionToken != "GHI" || p.cachedCredential.Credential.ProviderName != "JKL" {
+	validateFileCacheProvider(t, p, err, provider)
+	if p.cachedCredential.AccessKeyID != "ABC" || p.cachedCredential.SecretAccessKey != "DEF" ||
+		p.cachedCredential.SessionToken != "GHI" || p.cachedCredential.Source != "JKL" {
 		t.Errorf("cached credential not extracted correctly, got %v", p.cachedCredential)
 	}
-	// fiddle with clock
-	p.cachedCredential.currentTime = func() time.Time {
-		return time.Date(2017, 12, 25, 12, 23, 45, 678, time.UTC)
-	}
-	if p.cachedCredential.IsExpired() {
+
+	if p.cachedCredential.Expired() {
 		t.Errorf("Cached credential should not be expired")
 	}
-	if p.IsExpired() {
-		t.Errorf("Cache credential should not be expired")
-	}
-	expectedExpiration := time.Date(2018, 01, 02, 03, 04, 56, 789000000, time.UTC)
-	if p.ExpiresAt() != expectedExpiration {
+
+	if p.ExpiresAt() != p.cachedCredential.Expires {
 		t.Errorf("Credential expiration time is not correct, expected %v, got %v",
-			expectedExpiration, p.ExpiresAt())
+			p.cachedCredential.Expires, p.ExpiresAt())
 	}
 }
 
 func TestFileCacheProvider_Retrieve_NoExpirer(t *testing.T) {
-	providerCredential := makeCredential()
-	c := credentials.NewCredentials(&stubProvider{
-		creds: providerCredential,
-	})
+	provider := &stubProvider{
+		creds: makeCredential(),
+	}
 
 	tfs, tfl := getMocks()
 	// don't create the empty cache file, create it in the filelock creator
 
-	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
@@ -416,45 +405,37 @@ func TestFileCacheProvider_Retrieve_NoExpirer(t *testing.T) {
 			return tfl
 		}),
 	)
-	validateFileCacheProvider(t, p, err, c)
+	validateFileCacheProvider(t, p, err, provider)
 
 	credential, err := p.Retrieve()
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	if credential != providerCredential {
+	if credential.AccessKeyID != provider.creds.AccessKeyID ||
+		credential.SecretAccessKey != provider.creds.SecretAccessKey ||
+		credential.SessionToken != provider.creds.SessionToken {
 		t.Errorf("Cache did not return provider credential, got %v, expected %v",
-			credential, providerCredential)
+			credential, provider.creds)
 	}
 }
 
-// makeExpirerCredentials returns an expiring credential
-func makeExpirerCredentials() (providerCredential credentials.Value, expiration time.Time, c *credentials.Credentials) {
-	providerCredential = makeCredential()
-	expiration = time.Date(2020, 9, 19, 13, 14, 0, 1000000, time.UTC)
-	c = credentials.NewCredentials(&stubProviderExpirer{
-		stubProvider{
-			creds: providerCredential,
-		},
-		expiration,
-	})
-	return
-}
-
 func TestFileCacheProvider_Retrieve_WithExpirer_Unlockable(t *testing.T) {
-	providerCredential, _, c := makeExpirerCredentials()
+	expires := time.Now().Add(time.Hour * 6)
+	provider := &stubProvider{
+		creds: makeExpiringCredential(expires),
+	}
 
 	tfs, tfl := getMocks()
 	// don't create the empty cache file, create it in the filelock creator
 
-	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
 			tfs.Create(testFilename)
 			return tfl
 		}))
-	validateFileCacheProvider(t, p, err, c)
+	validateFileCacheProvider(t, p, err, provider)
 
 	// retrieve credential, which will fetch from underlying Provider
 	// fail to get write lock
@@ -465,19 +446,22 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Unlockable(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	if credential != providerCredential {
-		t.Errorf("Cache did not return provider credential, got %v, expected %v",
-			credential, providerCredential)
+	if credential.AccessKeyID != "AKID" || credential.SecretAccessKey != "SECRET" ||
+		credential.SessionToken != "TOKEN" || credential.ProviderName != "stubProvider" {
+		t.Errorf("cached credential not extracted correctly, got %v", p.cachedCredential)
 	}
 }
 
 func TestFileCacheProvider_Retrieve_WithExpirer_Unwritable(t *testing.T) {
-	providerCredential, expiration, c := makeExpirerCredentials()
+	expires := time.Now().Add(time.Hour * 6)
+	provider := &stubProvider{
+		creds: makeExpiringCredential(expires),
+	}
 
 	tfs, tfl := getMocks()
 	// don't create the file, let the FileLocker create it
 
-	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
@@ -485,45 +469,50 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Unwritable(t *testing.T) {
 			return tfl
 		}),
 	)
-	validateFileCacheProvider(t, p, err, c)
+	validateFileCacheProvider(t, p, err, provider)
 
 	credential, err := p.Retrieve()
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	if credential != providerCredential {
-		t.Errorf("Cache did not return provider credential, got %v, expected %v",
-			credential, providerCredential)
+	if credential.AccessKeyID != provider.creds.AccessKeyID ||
+		credential.SecretAccessKey != provider.creds.SecretAccessKey ||
+		credential.SessionToken != provider.creds.SessionToken ||
+		credential.ProviderName != provider.creds.Source {
+		t.Errorf("cached credential not extracted correctly, got %v", p.cachedCredential)
 	}
 
 	expectedData := []byte(`clusters:
   CLUSTER:
     PROFILE:
       ARN:
-        credential:
-          accesskeyid: AKID
-          secretaccesskey: SECRET
-          sessiontoken: TOKEN
-          providername: stubProvider
-        expiration: ` + expiration.Format(time.RFC3339Nano) + `
+        accesskeyid: AKID
+        secretaccesskey: SECRET
+        sessiontoken: TOKEN
+        source: stubProvider
+        canexpire: true
+        expires: ` + expires.Format(time.RFC3339Nano) + `
+        accountid: ""
 `)
 	got, err := afero.ReadFile(tfs, testFilename)
 	if err != nil {
 		t.Errorf("unexpected error reading generated file: %v", err)
 	}
-	if !bytes.Equal(got, expectedData) {
-		t.Errorf("Wrong data written to cache, expected: %s, got %s",
-			expectedData, got)
+	if diff := cmp.Diff(got, expectedData); diff != "" {
+		t.Errorf("Wrong data written to cache, %s", diff)
 	}
 }
 
 func TestFileCacheProvider_Retrieve_WithExpirer_Writable(t *testing.T) {
-	providerCredential, _, c := makeExpirerCredentials()
+	expires := time.Now().Add(time.Hour * 6)
+	provider := &stubProvider{
+		creds: makeExpiringCredential(expires),
+	}
 
 	tfs, tfl := getMocks()
 	// don't create the file, let the FileLocker create it
 
-	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
@@ -531,7 +520,7 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Writable(t *testing.T) {
 			return tfl
 		}),
 	)
-	validateFileCacheProvider(t, p, err, c)
+	validateFileCacheProvider(t, p, err, provider)
 
 	// retrieve credential, which will fetch from underlying Provider
 	// same as TestFileCacheProvider_Retrieve_WithExpirer_Unwritable,
@@ -540,15 +529,17 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Writable(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	if credential != providerCredential {
-		t.Errorf("Cache did not return provider credential, got %v, expected %v",
-			credential, providerCredential)
+	if credential.AccessKeyID != provider.creds.AccessKeyID ||
+		credential.SecretAccessKey != provider.creds.SecretAccessKey ||
+		credential.SessionToken != provider.creds.SessionToken ||
+		credential.ProviderName != provider.creds.Source {
+		t.Errorf("cached credential not extracted correctly, got %v", p.cachedCredential)
 	}
 }
 
 func TestFileCacheProvider_Retrieve_CacheHit(t *testing.T) {
-	c := credentials.NewCredentials(&stubProvider{})
-	currentTime := time.Date(2017, 12, 25, 12, 23, 45, 678, time.UTC)
+	provider := &stubProvider{}
+	currentTime := time.Now()
 
 	tfs, tfl := getMocks()
 	tfs.Create(testFilename)
@@ -559,13 +550,14 @@ func TestFileCacheProvider_Retrieve_CacheHit(t *testing.T) {
     PROFILE:
       ARN:
         credential:
-          accesskeyid: ABC
-          secretaccesskey: DEF
-          sessiontoken: GHI
-          providername: JKL
-        expiration: ` + currentTime.Add(time.Hour*6).Format(time.RFC3339Nano) + `
+        accesskeyid: ABC
+        secretaccesskey: DEF
+        sessiontoken: GHI
+        source: JKL
+        canexpire: true
+        expires: ` + currentTime.Add(time.Hour*6).Format(time.RFC3339Nano) + `
 `)
-	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", c,
+	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
@@ -573,10 +565,7 @@ func TestFileCacheProvider_Retrieve_CacheHit(t *testing.T) {
 			afero.WriteFile(tfs, testFilename, content, 0700)
 			return tfl
 		}))
-	validateFileCacheProvider(t, p, err, c)
-
-	// fiddle with clock
-	p.cachedCredential.currentTime = func() time.Time { return currentTime }
+	validateFileCacheProvider(t, p, err, provider)
 
 	credential, err := p.Retrieve()
 	if err != nil {
@@ -585,5 +574,12 @@ func TestFileCacheProvider_Retrieve_CacheHit(t *testing.T) {
 	if credential.AccessKeyID != "ABC" || credential.SecretAccessKey != "DEF" ||
 		credential.SessionToken != "GHI" || credential.ProviderName != "JKL" {
 		t.Errorf("cached credential not returned")
+	}
+
+	if !p.ExpiresAt().Equal(currentTime.Add(time.Hour * 6)) {
+		t.Errorf("unexpected expiration time: got %s, wanted %s",
+			p.ExpiresAt().Format(time.RFC3339Nano),
+			currentTime.Add(time.Hour*6).Format(time.RFC3339Nano),
+		)
 	}
 }
