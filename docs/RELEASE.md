@@ -64,8 +64,6 @@ Source code (zip)
 Source code (tar.gz)
 ```
 
-Check the ECR registry to make sure that the images were published.
-
 ## Post Release
 
 In a new PR after the images are pushed to ECR, update the yaml in `deploy/example.yaml`:
