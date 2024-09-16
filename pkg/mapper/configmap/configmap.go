@@ -38,6 +38,8 @@ func New(masterURL, kubeConfig string) (*MapStore, error) {
 	if err != nil {
 		return nil, err
 	}
+	clientconfig.AcceptContentTypes = "application/vnd.kubernetes.protobuf,application/json"
+	clientconfig.ContentType = "application/vnd.kubernetes.protobuf"
 	clientset, err := kubernetes.NewForConfig(clientconfig)
 	if err != nil {
 		return nil, err
