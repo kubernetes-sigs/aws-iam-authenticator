@@ -157,6 +157,8 @@ func createClient() client.Client {
 			os.Exit(1)
 		}
 	}
+	kcfg.AcceptContentTypes = "application/vnd.kubernetes.protobuf,application/json"
+	kcfg.ContentType = "application/vnd.kubernetes.protobuf"
 	clientset, err := kubernetes.NewForConfig(kcfg)
 	if err != nil {
 		fmt.Println(err)
