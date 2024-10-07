@@ -6,16 +6,15 @@ import (
 )
 
 const (
-	Namespace          = "aws_iam_authenticator"
-	Malformed          = "malformed_request"
-	Invalid            = "invalid_token"
-	STSError           = "sts_error"
-	STSThrottling      = "sts_throttling"
-	Unknown            = "uknown_user"
-	Success            = "success"
-	STSGlobal          = "sts_global"
-	STSRegional        = "sts_regional"
-	InvalidSTSEndpoint = "invalid_sts_endpoint"
+	Namespace     = "aws_iam_authenticator"
+	Malformed     = "malformed_request"
+	Invalid       = "invalid_token"
+	STSError      = "sts_error"
+	STSThrottling = "sts_throttling"
+	Unknown       = "uknown_user"
+	Success       = "success"
+	STSGlobal     = "sts_global"
+	STSRegional   = "sts_regional"
 )
 
 var authenticatorMetrics Metrics
@@ -42,8 +41,10 @@ type Metrics struct {
 	Latency                      *prometheus.HistogramVec
 	EC2DescribeInstanceCallCount prometheus.Counter
 	StsConnectionFailure         *prometheus.CounterVec
+	StsConnectionFailure         *prometheus.CounterVec
 	StsResponses                 *prometheus.CounterVec
 	DynamicFileFailures          prometheus.Counter
+	StsThrottling                *prometheus.CounterVec
 	StsThrottling                *prometheus.CounterVec
 	E2ELatency                   *prometheus.HistogramVec
 	DynamicFileEnabled           prometheus.Gauge
@@ -69,17 +70,21 @@ func createMetrics(reg prometheus.Registerer) Metrics {
 			},
 		),
 		StsConnectionFailure: factory.NewCounterVec(
+		StsConnectionFailure: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: Namespace,
 				Name:      "sts_connection_failures_total",
 				Help:      "Sts call could not succeed or timedout",
 			}, []string{"StsEndpointType"},
+			}, []string{"StsEndpointType"},
 		),
+		StsThrottling: factory.NewCounterVec(
 		StsThrottling: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: Namespace,
 				Name:      "sts_throttling_total",
 				Help:      "Sts call got throttled",
+			}, []string{"StsEndpointType"},
 			}, []string{"StsEndpointType"},
 		),
 		StsResponses: factory.NewCounterVec(
@@ -87,6 +92,7 @@ func createMetrics(reg prometheus.Registerer) Metrics {
 				Namespace: Namespace,
 				Name:      "sts_responses_total",
 				Help:      "Sts responses with error code label",
+			}, []string{"ResponseCode", "StsEndpointType"},
 			}, []string{"ResponseCode", "StsEndpointType"},
 		),
 		Latency: factory.NewHistogramVec(

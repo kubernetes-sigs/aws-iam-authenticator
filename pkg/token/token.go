@@ -564,12 +564,9 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	req.Header.Set(clusterIDHeader, v.clusterID)
 	req.Header.Set("accept", "application/json")
 
-	stsEndpointType := metrics.InvalidSTSEndpoint
+	stsEndpointType := metrics.STSRegional
 	if parsedURL.Host == "sts.amazonaws.com" {
 		stsEndpointType = metrics.STSGlobal
-	} else if strings.HasPrefix(parsedURL.Host, "sts.") {
-		stsEndpointType = metrics.STSRegional
-	}
 
 	logrus.Infof("Sending request to %s endpoint, host: %s", stsEndpointType, parsedURL.Host)
 
