@@ -565,14 +565,23 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	req.Header.Set(clusterIDHeader, v.clusterID)
 	req.Header.Set("accept", "application/json")
 
+	stsEndpointType := metrics.InvalidSTSEndpoint
+	if parsedURL.Host == "sts.amazonaws.com" {
+		stsEndpointType = metrics.STSGlobal
+	} else if strings.HasPrefix(parsedURL.Host, "sts.") {
+		stsEndpointType = metrics.STSRegional
+	}
+
+	logrus.Infof("Sending request to %s endpoint, host: %s", stsEndpointType, parsedURL.Host)
+
 	response, err := v.client.Do(req)
 	if err != nil {
-		metrics.Get().StsConnectionFailure.Inc()
+		metrics.Get().StsConnectionFailure.WithLabelValues(stsEndpointType).Inc()
 		// special case to avoid printing the full URL if possible
 		if urlErr, ok := err.(*url.Error); ok {
-			return nil, NewSTSError(fmt.Sprintf("error during GET: %v", urlErr.Err))
+			return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", urlErr.Err, stsEndpointType))
 		}
-		return nil, NewSTSError(fmt.Sprintf("error during GET: %v", err))
+		return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", err, stsEndpointType))
 	}
 	defer response.Body.Close()
 
@@ -581,13 +590,13 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, NewSTSError(fmt.Sprintf("error reading HTTP result: %v", err))
 	}
 
-	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode)).Inc()
+	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode), stsEndpointType).Inc()
 	if response.StatusCode != 200 {
 		responseStr := string(responseBody[:])
 		// refer to https://docs.aws.amazon.com/STS/latest/APIReference/CommonErrors.html and log
 		// response body for STS Throttling is {"Error":{"Code":"Throttling","Message":"Rate exceeded","Type":"Sender"},"RequestId":"xxx"}
 		if strings.Contains(responseStr, "Throttling") {
-			metrics.Get().StsThrottling.Inc()
+			metrics.Get().StsThrottling.WithLabelValues(stsEndpointType).Inc()
 			return nil, NewSTSThrottling(responseStr)
 		}
 		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d). Body: %s", response.StatusCode, responseStr))
