@@ -78,6 +78,9 @@ type Identity struct {
 	// in conjunction with CloudTrail to determine the identity of the individual
 	// if the individual assumed an IAM role before making the request.
 	AccessKeyID string
+
+	// ASW STS endpoint typ used to authenticate (sts_global/sts_regional)
+	STSEndpointType string
 }
 
 const (
@@ -569,8 +572,6 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		stsEndpointType = metrics.STSGlobal
 	}
 
-	logrus.Infof("Sending request to %s endpoint, host: %s", stsEndpointType, parsedURL.Host)
-
 	response, err := v.client.Do(req)
 	if err != nil {
 		metrics.Get().StsConnectionFailure.WithLabelValues(stsEndpointType).Inc()
@@ -606,7 +607,8 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	}
 
 	id := &Identity{
-		AccessKeyID: accessKeyID,
+		AccessKeyID:     accessKeyID,
+		STSEndpointType: stsEndpointType,
 	}
 	return getIdentityFromSTSResponse(id, callerIdentity)
 }
