@@ -567,6 +567,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	stsEndpointType := metrics.STSRegional
 	if parsedURL.Host == "sts.amazonaws.com" {
 		stsEndpointType = metrics.STSGlobal
+	}
 
 	logrus.Infof("Sending request to %s endpoint, host: %s", stsEndpointType, parsedURL.Host)
 
