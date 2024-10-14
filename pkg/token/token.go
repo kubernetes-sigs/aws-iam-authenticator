@@ -598,7 +598,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 			metrics.Get().StsThrottling.WithLabelValues(stsEndpointType).Inc()
 			return nil, NewSTSThrottling(responseStr)
 		}
-		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d). Body: %s", response.StatusCode, responseStr))
+		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d) on %s endpoint. Body: %s", response.StatusCode, stsEndpointType, responseStr))
 	}
 
 	var callerIdentity getCallerIdentityWrapper
