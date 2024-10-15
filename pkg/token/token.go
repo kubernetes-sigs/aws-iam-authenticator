@@ -79,8 +79,8 @@ type Identity struct {
 	// if the individual assumed an IAM role before making the request.
 	AccessKeyID string
 
-	// ASW STS endpoint type(global/regional) used to authenticate (expected values sts_global/sts_regional)
-	STSEndpointType string
+	// ASW STS endpoint (global/regional) used to authenticate (expected values sts_global/sts_regional)
+	STSEndpoint string
 }
 
 const (
@@ -607,8 +607,8 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	}
 
 	id := &Identity{
-		AccessKeyID:     accessKeyID,
-		STSEndpointType: stsEndpointType,
+		AccessKeyID: accessKeyID,
+		STSEndpoint: parsedURL.Host,
 	}
 	return getIdentityFromSTSResponse(id, callerIdentity)
 }
