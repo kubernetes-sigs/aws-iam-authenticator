@@ -79,7 +79,7 @@ type Identity struct {
 	// if the individual assumed an IAM role before making the request.
 	AccessKeyID string
 
-	// ASW STS endpoint (global/regional) used to authenticate (expected values sts_global/sts_regional)
+	// ASW STS endpoint used to authenticate (expected values is sts endpoint eg: sts.us-west-2.amazonaws.com)
 	STSEndpoint string
 }
 
