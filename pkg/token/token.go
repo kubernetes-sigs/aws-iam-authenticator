@@ -457,6 +457,7 @@ func NewVerifier(clusterID, partitionID, region string) Verifier {
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
+			Timeout: 10 * time.Second,
 		},
 		clusterID:         clusterID,
 		validSTShostnames: stsHostsForPartition(partitionID, region),
