@@ -13,8 +13,6 @@ const (
 	STSThrottling = "sts_throttling"
 	Unknown       = "uknown_user"
 	Success       = "success"
-	STSGlobal     = "sts_global"
-	STSRegional   = "sts_regional"
 )
 
 var authenticatorMetrics Metrics
@@ -72,21 +70,21 @@ func createMetrics(reg prometheus.Registerer) Metrics {
 				Namespace: Namespace,
 				Name:      "sts_connection_failures_total",
 				Help:      "Sts call could not succeed or timedout",
-			}, []string{"StsEndpointType"},
+			}, []string{"StsRegion"},
 		),
 		StsThrottling: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: Namespace,
 				Name:      "sts_throttling_total",
 				Help:      "Sts call got throttled",
-			}, []string{"StsEndpointType"},
+			}, []string{"StsRegion"},
 		),
 		StsResponses: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: Namespace,
 				Name:      "sts_responses_total",
 				Help:      "Sts responses with error code label",
-			}, []string{"ResponseCode", "StsEndpointType"},
+			}, []string{"ResponseCode", "StsRegion"},
 		),
 		Latency: factory.NewHistogramVec(
 			prometheus.HistogramOpts{

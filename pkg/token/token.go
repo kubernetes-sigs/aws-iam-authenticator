@@ -567,19 +567,16 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	req.Header.Set(clusterIDHeader, v.clusterID)
 	req.Header.Set("accept", "application/json")
 
-	stsEndpointType := metrics.STSRegional
-	if parsedURL.Host == "sts.amazonaws.com" {
-		stsEndpointType = metrics.STSGlobal
-	}
+	stsRegion := getStsRegion(parsedURL.Host)
 
 	response, err := v.client.Do(req)
 	if err != nil {
-		metrics.Get().StsConnectionFailure.WithLabelValues(stsEndpointType).Inc()
+		metrics.Get().StsConnectionFailure.WithLabelValues(stsRegion).Inc()
 		// special case to avoid printing the full URL if possible
 		if urlErr, ok := err.(*url.Error); ok {
-			return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", urlErr.Err, stsEndpointType))
+			return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", urlErr.Err, stsRegion))
 		}
-		return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", err, stsEndpointType))
+		return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", err, stsRegion))
 	}
 	defer response.Body.Close()
 
@@ -588,16 +585,16 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, NewSTSError(fmt.Sprintf("error reading HTTP result: %v", err))
 	}
 
-	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode), stsEndpointType).Inc()
+	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode), stsRegion).Inc()
 	if response.StatusCode != 200 {
 		responseStr := string(responseBody[:])
 		// refer to https://docs.aws.amazon.com/STS/latest/APIReference/CommonErrors.html and log
 		// response body for STS Throttling is {"Error":{"Code":"Throttling","Message":"Rate exceeded","Type":"Sender"},"RequestId":"xxx"}
 		if strings.Contains(responseStr, "Throttling") {
-			metrics.Get().StsThrottling.WithLabelValues(stsEndpointType).Inc()
+			metrics.Get().StsThrottling.WithLabelValues(stsRegion).Inc()
 			return nil, NewSTSThrottling(responseStr)
 		}
-		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d) on %s endpoint. Body: %s", response.StatusCode, stsEndpointType, responseStr))
+		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d) on %s endpoint. Body: %s", response.StatusCode, stsRegion, responseStr))
 	}
 
 	var callerIdentity getCallerIdentityWrapper
@@ -667,4 +664,12 @@ func hasSignedClusterIDHeader(paramsLower *url.Values) bool {
 		}
 	}
 	return false
+}
+
+func getStsRegion(host string) string {
+	parts := strings.Split(host, ".")
+	if host == "sts.amazonaws.com" {
+		return "global"
+	}
+	return parts[1]
 }
