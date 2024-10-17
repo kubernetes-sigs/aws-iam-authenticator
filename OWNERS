@@ -4,12 +4,15 @@ approvers:
 - jaypipes
 - jyotimahapatra
 - nnmin-aws
+- kmala
 
 reviewers:
 - micahhausler
 - wongma7
 - jaypipes
 - jyotimahapatra
+- nnmin-aws
+- kmala
 
 emeritus_approvers:
 - christopherhein
