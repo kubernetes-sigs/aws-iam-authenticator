@@ -3,7 +3,6 @@ approvers:
 - wongma7
 - jaypipes
 - jyotimahapatra
-- nnmin-aws
 - kmala
 
 reviewers:
@@ -11,7 +10,6 @@ reviewers:
 - wongma7
 - jaypipes
 - jyotimahapatra
-- nnmin-aws
 - kmala
 
 emeritus_approvers:
@@ -20,3 +18,4 @@ emeritus_approvers:
 - mattlandis
 - jaypipes
 - nckturner
+- nnmin-aws
