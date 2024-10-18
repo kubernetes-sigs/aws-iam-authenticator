@@ -505,7 +505,11 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	if err = v.verifyHost(parsedURL.Host); err != nil {
 		return nil, err
 	}
+
 	stsRegion, err := getStsRegion(parsedURL.Host)
+	if err != nil {
+		return nil, err
+	}
 
 	if parsedURL.Path != "/" {
 		return nil, FormatError{"unexpected path in pre-signed URL"}
