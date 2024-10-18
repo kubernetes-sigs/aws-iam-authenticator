@@ -504,6 +504,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	if err = v.verifyHost(parsedURL.Host); err != nil {
 		return nil, err
 	}
+	stsRegion, err := getStsRegion(parsedURL.Host)
 
 	if parsedURL.Path != "/" {
 		return nil, FormatError{"unexpected path in pre-signed URL"}
@@ -566,8 +567,6 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	req, err := http.NewRequest("GET", parsedURL.String(), nil)
 	req.Header.Set(clusterIDHeader, v.clusterID)
 	req.Header.Set("accept", "application/json")
-
-	stsRegion := getStsRegion(parsedURL.Host)
 
 	response, err := v.client.Do(req)
 	if err != nil {
@@ -666,10 +665,18 @@ func hasSignedClusterIDHeader(paramsLower *url.Values) bool {
 	return false
 }
 
-func getStsRegion(host string) string {
-	parts := strings.Split(host, ".")
-	if host == "sts.amazonaws.com" {
-		return "global"
+func getStsRegion(host string) (string, error) {
+	if host == "" {
+		return "", fmt.Errorf("host is empty")
 	}
-	return parts[1]
+
+	parts := strings.Split(host, ".")
+	if len(parts) < 3 {
+		return "", fmt.Errorf("invalid host format: %v", host)
+	}
+
+	if host == "sts.amazonaws.com" {
+		return "global", nil
+	}
+	return parts[1], nil
 }

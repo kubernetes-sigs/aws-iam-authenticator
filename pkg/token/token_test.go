@@ -646,3 +646,28 @@ func TestGetWithSTS(t *testing.T) {
 		})
 	}
 }
+
+func TestGetStsRegion(t *testing.T) {
+	tests := []struct {
+		host     string
+		expected string
+		wantErr  bool
+	}{
+		{"sts.amazonaws.com", "global", false},                    // Global endpoint
+		{"sts.us-west-2.amazonaws.com", "us-west-2", false},       // Valid regional endpoint
+		{"sts.eu-central-1.amazonaws.com", "eu-central-1", false}, // Another valid regional endpoint
+		{"", "", true},                // Empty input (expect error)
+		{"sts", "", true},             // Malformed input (expect error)
+		{"sts.wrongformat", "", true}, // Malformed input (expect error)
+	}
+
+	for _, test := range tests {
+		result, err := getStsRegion(test.host)
+		if (err != nil) != test.wantErr {
+			t.Errorf("getStsRegion(%q) error = %v, wantErr %v", test.host, err, test.wantErr)
+		}
+		if result != test.expected {
+			t.Errorf("getStsRegion(%q) = %q; expected %q", test.host, result, test.expected)
+		}
+	}
+}
