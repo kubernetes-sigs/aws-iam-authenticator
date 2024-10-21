@@ -78,6 +78,9 @@ type Identity struct {
 	// in conjunction with CloudTrail to determine the identity of the individual
 	// if the individual assumed an IAM role before making the request.
 	AccessKeyID string
+
+	// ASW STS endpoint used to authenticate (expected values is sts endpoint eg: sts.us-west-2.amazonaws.com)
+	STSEndpoint string
 }
 
 const (
@@ -503,6 +506,11 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, err
 	}
 
+	stsRegion, err := getStsRegion(parsedURL.Host)
+	if err != nil {
+		return nil, err
+	}
+
 	if parsedURL.Path != "/" {
 		return nil, FormatError{"unexpected path in pre-signed URL"}
 	}
@@ -567,12 +575,12 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 
 	response, err := v.client.Do(req)
 	if err != nil {
-		metrics.Get().StsConnectionFailure.Inc()
+		metrics.Get().StsConnectionFailure.WithLabelValues(stsRegion).Inc()
 		// special case to avoid printing the full URL if possible
 		if urlErr, ok := err.(*url.Error); ok {
-			return nil, NewSTSError(fmt.Sprintf("error during GET: %v", urlErr.Err))
+			return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", urlErr.Err, stsRegion))
 		}
-		return nil, NewSTSError(fmt.Sprintf("error during GET: %v", err))
+		return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", err, stsRegion))
 	}
 	defer response.Body.Close()
 
@@ -581,16 +589,16 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, NewSTSError(fmt.Sprintf("error reading HTTP result: %v", err))
 	}
 
-	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode)).Inc()
+	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode), stsRegion).Inc()
 	if response.StatusCode != 200 {
 		responseStr := string(responseBody[:])
 		// refer to https://docs.aws.amazon.com/STS/latest/APIReference/CommonErrors.html and log
 		// response body for STS Throttling is {"Error":{"Code":"Throttling","Message":"Rate exceeded","Type":"Sender"},"RequestId":"xxx"}
 		if strings.Contains(responseStr, "Throttling") {
-			metrics.Get().StsThrottling.Inc()
+			metrics.Get().StsThrottling.WithLabelValues(stsRegion).Inc()
 			return nil, NewSTSThrottling(responseStr)
 		}
-		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d). Body: %s", response.StatusCode, responseStr))
+		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d) on %s endpoint. Body: %s", response.StatusCode, stsRegion, responseStr))
 	}
 
 	var callerIdentity getCallerIdentityWrapper
@@ -601,6 +609,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 
 	id := &Identity{
 		AccessKeyID: accessKeyID,
+		STSEndpoint: parsedURL.Host,
 	}
 	return getIdentityFromSTSResponse(id, callerIdentity)
 }
@@ -659,4 +668,20 @@ func hasSignedClusterIDHeader(paramsLower *url.Values) bool {
 		}
 	}
 	return false
+}
+
+func getStsRegion(host string) (string, error) {
+	if host == "" {
+		return "", fmt.Errorf("host is empty")
+	}
+
+	parts := strings.Split(host, ".")
+	if len(parts) < 3 {
+		return "", fmt.Errorf("invalid host format: %v", host)
+	}
+
+	if host == "sts.amazonaws.com" {
+		return "global", nil
+	}
+	return parts[1], nil
 }

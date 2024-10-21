@@ -357,6 +357,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 			"accountid":   identity.AccountID,
 			"userid":      identity.UserID,
 			"session":     identity.SessionName,
+			"stsendpoint": identity.STSEndpoint,
 		}).Info("STS response")
 
 		// look up the ARN in each of our mappings to fill in the username and groups
@@ -380,9 +381,10 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 
 	// the token is valid and the role is mapped, return success!
 	log.WithFields(logrus.Fields{
-		"username": username,
-		"uid":      uid,
-		"groups":   groups,
+		"username":    username,
+		"uid":         uid,
+		"groups":      groups,
+		"stsendpoint": identity.STSEndpoint,
 	}).Info("access granted")
 	metrics.Get().Latency.WithLabelValues(metrics.Success).Observe(duration(start))
 	w.WriteHeader(http.StatusOK)
