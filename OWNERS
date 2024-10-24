@@ -2,13 +2,13 @@ approvers:
 - micahhausler
 - wongma7
 - jyotimahapatra
-- nnmin-aws
+- kmala
 
 reviewers:
 - micahhausler
 - wongma7
 - jyotimahapatra
-- nnmin-aws
+- kmala
 
 emeritus_approvers:
 - christopherhein
@@ -16,3 +16,4 @@ emeritus_approvers:
 - mattlandis
 - jaypipes
 - nckturner
+- nnmin-aws
