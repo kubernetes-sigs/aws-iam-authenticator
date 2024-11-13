@@ -1,12 +1,14 @@
 approvers:
 - micahhausler
 - wongma7
+- jaypipes
 - jyotimahapatra
 - kmala
 
 reviewers:
 - micahhausler
 - wongma7
+- jaypipes
 - jyotimahapatra
 - kmala
 
@@ -16,4 +18,3 @@ emeritus_approvers:
 - mattlandis
 - jaypipes
 - nckturner
-- nnmin-aws
