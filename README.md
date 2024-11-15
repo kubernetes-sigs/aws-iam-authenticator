@@ -205,7 +205,7 @@ This means the `kubeconfig` is entirely public data and can be shared across all
 It may make sense to upload it to a trusted public location such as AWS S3.
 
 Make sure you have the `aws-iam-authenticator` binary installed.
-You can install it with `go get -u -v sigs.k8s.io/aws-iam-authenticator/cmd/aws-iam-authenticator`.
+You can install it with `go install sigs.k8s.io/aws-iam-authenticator/cmd/aws-iam-authenticator@latest`.
 
 To authenticate, run `kubectl --kubeconfig /path/to/kubeconfig" [...]`.
 kubectl will `exec` the `aws-iam-authenticator` binary with the supplied params in your kubeconfig which will generate a token and pass it to the apiserver.
