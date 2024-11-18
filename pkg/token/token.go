@@ -20,7 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -34,6 +34,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
+	v4 "github.com/aws/aws-sdk-go/aws/signer/v4"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/prometheus/client_golang/prometheus"
@@ -43,6 +44,7 @@ import (
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/filecache"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
@@ -76,6 +78,9 @@ type Identity struct {
 	// in conjunction with CloudTrail to determine the identity of the individual
 	// if the individual assumed an IAM role before making the request.
 	AccessKeyID string
+
+	// ASW STS endpoint used to authenticate (expected values is sts endpoint eg: sts.us-west-2.amazonaws.com)
+	STSEndpoint string
 }
 
 const (
@@ -110,7 +115,6 @@ type GetTokenOptions struct {
 	AssumeRoleARN        string
 	AssumeRoleExternalID string
 	SessionName          string
-	Session              *session.Session
 }
 
 // FormatError is returned when there is a problem with token that is
@@ -137,6 +141,20 @@ func (e STSError) Error() string {
 // NewSTSError creates a error of type STS.
 func NewSTSError(m string) STSError {
 	return STSError{message: m}
+}
+
+// STSThrottling is returned when there was STS Throttling.
+type STSThrottling struct {
+	message string
+}
+
+func (e STSThrottling) Error() string {
+	return "sts getCallerIdentity was throttled: " + e.message
+}
+
+// NewSTSError creates a error of type STS.
+func NewSTSThrottling(m string) STSThrottling {
+	return STSThrottling{message: m}
 }
 
 var parameterWhitelist = map[string]bool{
@@ -167,12 +185,6 @@ type getCallerIdentityWrapper struct {
 
 // Generator provides new tokens for the AWS IAM Authenticator.
 type Generator interface {
-	// Get a token using credentials in the default credentials chain.
-	Get(string) (Token, error)
-	// GetWithRole creates a token by assuming the provided role, using the credentials in the default chain.
-	GetWithRole(clusterID, roleARN string) (Token, error)
-	// GetWithRoleForSession creates a token by assuming the provided role, using the provided session.
-	GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (Token, error)
 	// Get a token using the provided options
 	GetWithOptions(options *GetTokenOptions) (Token, error)
 	// GetWithSTS returns a token valid for clusterID using the given STS client.
@@ -184,6 +196,7 @@ type Generator interface {
 type generator struct {
 	forwardSessionName bool
 	cache              bool
+	nowFunc            func() time.Time
 }
 
 // NewGenerator creates a Generator and returns it.
@@ -191,32 +204,8 @@ func NewGenerator(forwardSessionName bool, cache bool) (Generator, error) {
 	return generator{
 		forwardSessionName: forwardSessionName,
 		cache:              cache,
+		nowFunc:            time.Now,
 	}, nil
-}
-
-// Get uses the directly available AWS credentials to return a token valid for
-// clusterID. It follows the default AWS credential handling behavior.
-func (g generator) Get(clusterID string) (Token, error) {
-	return g.GetWithOptions(&GetTokenOptions{ClusterID: clusterID})
-}
-
-// GetWithRole assumes the given AWS IAM role and returns a token valid for
-// clusterID. If roleARN is empty, behaves like Get (does not assume a role).
-func (g generator) GetWithRole(clusterID string, roleARN string) (Token, error) {
-	return g.GetWithOptions(&GetTokenOptions{
-		ClusterID:     clusterID,
-		AssumeRoleARN: roleARN,
-	})
-}
-
-// GetWithRoleForSession assumes the given AWS IAM role for the given session and behaves
-// like GetWithRole.
-func (g generator) GetWithRoleForSession(clusterID string, roleARN string, sess *session.Session) (Token, error) {
-	return g.GetWithOptions(&GetTokenOptions{
-		ClusterID:     clusterID,
-		AssumeRoleARN: roleARN,
-		Session:       sess,
-	})
 }
 
 // StdinStderrTokenProvider gets MFA token from standard input.
@@ -235,46 +224,46 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 		return Token{}, fmt.Errorf("ClusterID is required")
 	}
 
-	if options.Session == nil {
-		// create a session with the "base" credentials available
-		// (from environment variable, profile files, EC2 metadata, etc)
-		sess, err := session.NewSessionWithOptions(session.Options{
-			AssumeRoleTokenProvider: StdinStderrTokenProvider,
-			SharedConfigState:       session.SharedConfigEnable,
-		})
-		if err != nil {
-			return Token{}, fmt.Errorf("could not create session: %v", err)
-		}
-		sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
-			Name: "authenticatorUserAgent",
-			Fn: request.MakeAddToUserAgentHandler(
-				"aws-iam-authenticator", pkg.Version),
-		})
-		if options.Region != "" {
-			sess = sess.Copy(aws.NewConfig().WithRegion(options.Region).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint))
-		}
+	// create a session with the "base" credentials available
+	// (from environment variable, profile files, EC2 metadata, etc)
+	sess, err := session.NewSessionWithOptions(session.Options{
+		AssumeRoleTokenProvider: StdinStderrTokenProvider,
+		SharedConfigState:       session.SharedConfigEnable,
+	})
+	if err != nil {
+		return Token{}, fmt.Errorf("could not create session: %v", err)
+	}
+	sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
+		Name: "authenticatorUserAgent",
+		Fn: request.MakeAddToUserAgentHandler(
+			"aws-iam-authenticator", pkg.Version),
+	})
+	if options.Region != "" {
+		sess = sess.Copy(aws.NewConfig().WithRegion(options.Region).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint))
+	}
 
-		if g.cache {
-			// figure out what profile we're using
-			var profile string
-			if v := os.Getenv("AWS_PROFILE"); len(v) > 0 {
-				profile = v
-			} else {
-				profile = session.DefaultSharedConfigProfile
-			}
-			// create a cacheing Provider wrapper around the Credentials
-			if cacheProvider, err := NewFileCacheProvider(options.ClusterID, profile, options.AssumeRoleARN, sess.Config.Credentials); err == nil {
-				sess.Config.Credentials = credentials.NewCredentials(&cacheProvider)
-			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "unable to use cache: %v\n", err)
-			}
+	if g.cache {
+		// figure out what profile we're using
+		var profile string
+		if v := os.Getenv("AWS_PROFILE"); len(v) > 0 {
+			profile = v
+		} else {
+			profile = session.DefaultSharedConfigProfile
 		}
-
-		options.Session = sess
+		// create a cacheing Provider wrapper around the Credentials
+		if cacheProvider, err := filecache.NewFileCacheProvider(
+			options.ClusterID,
+			profile,
+			options.AssumeRoleARN,
+			filecache.V1CredentialToV2Provider(sess.Config.Credentials)); err == nil {
+			sess.Config.Credentials = credentials.NewCredentials(cacheProvider)
+		} else {
+			fmt.Fprintf(os.Stderr, "unable to use cache: %v\n", err)
+		}
 	}
 
 	// use an STS client based on the direct credentials
-	stsAPI := sts.New(options.Session)
+	stsAPI := sts.New(sess)
 
 	// if a roleARN was specified, replace the STS client with one that uses
 	// temporary credentials from that role.
@@ -309,13 +298,21 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 		}
 
 		// create STS-based credentials that will assume the given role
-		creds := stscreds.NewCredentials(options.Session, options.AssumeRoleARN, sessionSetters...)
+		creds := stscreds.NewCredentials(sess, options.AssumeRoleARN, sessionSetters...)
 
 		// create an STS API interface that uses the assumed role's temporary credentials
-		stsAPI = sts.New(options.Session, &aws.Config{Credentials: creds})
+		stsAPI = sts.New(sess, &aws.Config{Credentials: creds})
 	}
 
 	return g.GetWithSTS(options.ClusterID, stsAPI)
+}
+
+func getNamedSigningHandler(nowFunc func() time.Time) request.NamedHandler {
+	return request.NamedHandler{
+		Name: "v4.SignRequestHandler", Fn: func(req *request.Request) {
+			v4.SignSDKRequestWithCurrentTime(req, nowFunc)
+		},
+	}
 }
 
 // GetWithSTS returns a token valid for clusterID using the given STS client.
@@ -324,19 +321,22 @@ func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, 
 	request, _ := stsAPI.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
 	request.HTTPRequest.Header.Add(clusterIDHeader, clusterID)
 
+	// override the Sign handler so we can control the now time for testing.
+	request.Handlers.Sign.Swap("v4.SignRequestHandler", getNamedSigningHandler(g.nowFunc))
+
 	// Sign the request.  The expires parameter (sets the x-amz-expires header) is
 	// currently ignored by STS, and the token expires 15 minutes after the x-amz-date
 	// timestamp regardless.  We set it to 60 seconds for backwards compatibility (the
 	// parameter is a required argument to Presign(), and authenticators 0.3.0 and older are expecting a value between
 	// 0 and 60 on the server side).
 	// https://github.com/aws/aws-sdk-go/issues/2167
-	presignedURLString, err := request.Presign(requestPresignParam)
+	presignedURLString, err := request.Presign(requestPresignParam * time.Second)
 	if err != nil {
 		return Token{}, err
 	}
 
 	// Set token expiration to 1 minute before the presigned URL expires for some cushion
-	tokenExpiration := time.Now().Local().Add(presignedURLExpiration - 1*time.Minute)
+	tokenExpiration := g.nowFunc().Local().Add(presignedURLExpiration - 1*time.Minute)
 	// TODO: this may need to be a constant-time base64 encoding
 	return Token{v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), tokenExpiration}, nil
 }
@@ -460,6 +460,7 @@ func NewVerifier(clusterID, partitionID, region string) Verifier {
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
+			Timeout: 10 * time.Second,
 		},
 		clusterID:         clusterID,
 		validSTShostnames: stsHostsForPartition(partitionID, region),
@@ -502,6 +503,11 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 	}
 
 	if err = v.verifyHost(parsedURL.Host); err != nil {
+		return nil, err
+	}
+
+	stsRegion, err := getStsRegion(parsedURL.Host)
+	if err != nil {
 		return nil, err
 	}
 
@@ -569,23 +575,30 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 
 	response, err := v.client.Do(req)
 	if err != nil {
-		metrics.Get().StsConnectionFailure.Inc()
+		metrics.Get().StsConnectionFailure.WithLabelValues(stsRegion).Inc()
 		// special case to avoid printing the full URL if possible
 		if urlErr, ok := err.(*url.Error); ok {
-			return nil, NewSTSError(fmt.Sprintf("error during GET: %v", urlErr.Err))
+			return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", urlErr.Err, stsRegion))
 		}
-		return nil, NewSTSError(fmt.Sprintf("error during GET: %v", err))
+		return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", err, stsRegion))
 	}
 	defer response.Body.Close()
 
-	responseBody, err := ioutil.ReadAll(response.Body)
+	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, NewSTSError(fmt.Sprintf("error reading HTTP result: %v", err))
 	}
 
-	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode)).Inc()
+	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode), stsRegion).Inc()
 	if response.StatusCode != 200 {
-		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d). Body: %s", response.StatusCode, string(responseBody[:])))
+		responseStr := string(responseBody[:])
+		// refer to https://docs.aws.amazon.com/STS/latest/APIReference/CommonErrors.html and log
+		// response body for STS Throttling is {"Error":{"Code":"Throttling","Message":"Rate exceeded","Type":"Sender"},"RequestId":"xxx"}
+		if strings.Contains(responseStr, "Throttling") {
+			metrics.Get().StsThrottling.WithLabelValues(stsRegion).Inc()
+			return nil, NewSTSThrottling(responseStr)
+		}
+		return nil, NewSTSError(fmt.Sprintf("error from AWS (expected 200, got %d) on %s endpoint. Body: %s", response.StatusCode, stsRegion, responseStr))
 	}
 
 	var callerIdentity getCallerIdentityWrapper
@@ -596,6 +609,7 @@ func (v tokenVerifier) Verify(token string) (*Identity, error) {
 
 	id := &Identity{
 		AccessKeyID: accessKeyID,
+		STSEndpoint: parsedURL.Host,
 	}
 	return getIdentityFromSTSResponse(id, callerIdentity)
 }
@@ -654,4 +668,20 @@ func hasSignedClusterIDHeader(paramsLower *url.Values) bool {
 		}
 	}
 	return false
+}
+
+func getStsRegion(host string) (string, error) {
+	if host == "" {
+		return "", fmt.Errorf("host is empty")
+	}
+
+	parts := strings.Split(host, ".")
+	if len(parts) < 3 {
+		return "", fmt.Errorf("invalid host format: %v", host)
+	}
+
+	if host == "sts.amazonaws.com" {
+		return "global", nil
+	}
+	return parts[1], nil
 }

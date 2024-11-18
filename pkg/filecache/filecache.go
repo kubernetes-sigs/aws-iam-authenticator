@@ -1,86 +1,41 @@
-package token
+package filecache
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/gofrs/flock"
-	"gopkg.in/yaml.v2"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/gofrs/flock"
+	"github.com/spf13/afero"
+	"gopkg.in/yaml.v2"
 )
 
 // env variable name for custom credential cache file location
 const cacheFileNameEnv = "AWS_IAM_AUTHENTICATOR_CACHE_FILE"
 
-// A mockable filesystem interface
-var f filesystem = osFS{}
-
-type filesystem interface {
-	Stat(filename string) (os.FileInfo, error)
-	ReadFile(filename string) ([]byte, error)
-	WriteFile(filename string, data []byte, perm os.FileMode) error
-	MkdirAll(path string, perm os.FileMode) error
-}
-
-// default os based implementation
-type osFS struct{}
-
-func (osFS) Stat(filename string) (os.FileInfo, error) {
-	return os.Stat(filename)
-}
-
-func (osFS) ReadFile(filename string) ([]byte, error) {
-	return ioutil.ReadFile(filename)
-}
-
-func (osFS) WriteFile(filename string, data []byte, perm os.FileMode) error {
-	return ioutil.WriteFile(filename, data, perm)
-}
-
-func (osFS) MkdirAll(path string, perm os.FileMode) error {
-	return os.MkdirAll(path, perm)
-}
-
-// A mockable environment interface
-var e environment = osEnv{}
-
-type environment interface {
-	Getenv(key string) string
-	LookupEnv(key string) (string, bool)
-}
-
-// default os based implementation
-type osEnv struct{}
-
-func (osEnv) Getenv(key string) string {
-	return os.Getenv(key)
-}
-
-func (osEnv) LookupEnv(key string) (string, bool) {
-	return os.LookupEnv(key)
-}
-
-// A mockable flock interface
-type filelock interface {
+// FileLocker is a subset of the methods exposed by *flock.Flock
+type FileLocker interface {
 	Unlock() error
 	TryLockContext(ctx context.Context, retryDelay time.Duration) (bool, error)
 	TryRLockContext(ctx context.Context, retryDelay time.Duration) (bool, error)
 }
 
-var newFlock = func(filename string) filelock {
+// NewFileLocker returns a *flock.Flock that satisfies FileLocker
+func NewFileLocker(filename string) FileLocker {
 	return flock.New(filename)
 }
 
 // cacheFile is a map of clusterID/roleARNs to cached credentials
 type cacheFile struct {
 	// a map of clusterIDs/profiles/roleARNs to cachedCredentials
-	ClusterMap map[string]map[string]map[string]cachedCredential `yaml:"clusters"`
+	ClusterMap map[string]map[string]map[string]aws.Credentials `yaml:"clusters"`
 }
 
 // a utility type for dealing with compound cache keys
@@ -90,19 +45,19 @@ type cacheKey struct {
 	roleARN   string
 }
 
-func (c *cacheFile) Put(key cacheKey, credential cachedCredential) {
+func (c *cacheFile) Put(key cacheKey, credential aws.Credentials) {
 	if _, ok := c.ClusterMap[key.clusterID]; !ok {
 		// first use of this cluster id
-		c.ClusterMap[key.clusterID] = map[string]map[string]cachedCredential{}
+		c.ClusterMap[key.clusterID] = map[string]map[string]aws.Credentials{}
 	}
 	if _, ok := c.ClusterMap[key.clusterID][key.profile]; !ok {
 		// first use of this profile
-		c.ClusterMap[key.clusterID][key.profile] = map[string]cachedCredential{}
+		c.ClusterMap[key.clusterID][key.profile] = map[string]aws.Credentials{}
 	}
 	c.ClusterMap[key.clusterID][key.profile][key.roleARN] = credential
 }
 
-func (c *cacheFile) Get(key cacheKey) (credential cachedCredential) {
+func (c *cacheFile) Get(key cacheKey) (credential aws.Credentials) {
 	if _, ok := c.ClusterMap[key.clusterID]; ok {
 		if _, ok := c.ClusterMap[key.clusterID][key.profile]; ok {
 			// we at least have this cluster and profile combo in the map, if no matching roleARN, map will
@@ -113,33 +68,14 @@ func (c *cacheFile) Get(key cacheKey) (credential cachedCredential) {
 	return
 }
 
-// cachedCredential is a single cached credential entry, along with expiration time
-type cachedCredential struct {
-	Credential credentials.Value
-	Expiration time.Time
-	// If set will be used by IsExpired to determine the current time.
-	// Defaults to time.Now if CurrentTime is not set.  Available for testing
-	// to be able to mock out the current time.
-	currentTime func() time.Time
-}
-
-// IsExpired determines if the cached credential has expired
-func (c *cachedCredential) IsExpired() bool {
-	curTime := c.currentTime
-	if curTime == nil {
-		curTime = time.Now
-	}
-	return c.Expiration.Before(curTime())
-}
-
 // readCacheWhileLocked reads the contents of the credential cache and returns the
 // parsed yaml as a cacheFile object.  This method must be called while a shared
 // lock is held on the filename.
-func readCacheWhileLocked(filename string) (cache cacheFile, err error) {
+func readCacheWhileLocked(fs afero.Fs, filename string) (cache cacheFile, err error) {
 	cache = cacheFile{
-		map[string]map[string]map[string]cachedCredential{},
+		map[string]map[string]map[string]aws.Credentials{},
 	}
-	data, err := f.ReadFile(filename)
+	data, err := afero.ReadFile(fs, filename)
 	if err != nil {
 		err = fmt.Errorf("unable to open file %s: %v", filename, err)
 		return
@@ -155,45 +91,86 @@ func readCacheWhileLocked(filename string) (cache cacheFile, err error) {
 // writeCacheWhileLocked writes the contents of the credential cache using the
 // yaml marshaled form of the passed cacheFile object.  This method must be
 // called while an exclusive lock is held on the filename.
-func writeCacheWhileLocked(filename string, cache cacheFile) error {
+func writeCacheWhileLocked(fs afero.Fs, filename string, cache cacheFile) error {
 	data, err := yaml.Marshal(cache)
 	if err == nil {
 		// write privately owned by the user
-		err = f.WriteFile(filename, data, 0600)
+		err = afero.WriteFile(fs, filename, data, 0600)
 	}
 	return err
 }
 
-// FileCacheProvider is a Provider implementation that wraps an underlying Provider
+type FileCacheOpt func(*FileCacheProvider)
+
+// WithFs returns a FileCacheOpt that sets the cache's filesystem
+func WithFs(fs afero.Fs) FileCacheOpt {
+	return func(p *FileCacheProvider) {
+		p.fs = fs
+	}
+}
+
+// WithFilename returns a FileCacheOpt that sets the cache's file
+func WithFilename(filename string) FileCacheOpt {
+	return func(p *FileCacheProvider) {
+		p.filename = filename
+	}
+}
+
+// WithFileLockCreator returns a FileCacheOpt that sets the cache's FileLocker
+// creation function
+func WithFileLockerCreator(f func(string) FileLocker) FileCacheOpt {
+	return func(p *FileCacheProvider) {
+		p.filelockCreator = f
+	}
+}
+
+// FileCacheProvider is a credentials.Provider implementation that wraps an underlying Provider
 // (contained in Credentials) and provides caching support for credentials for the
 // specified clusterID, profile, and roleARN (contained in cacheKey)
 type FileCacheProvider struct {
-	credentials      *credentials.Credentials // the underlying implementation that has the *real* Provider
-	cacheKey         cacheKey                 // cache key parameters used to create Provider
-	cachedCredential cachedCredential         // the cached credential, if it exists
+	fs               afero.Fs
+	filelockCreator  func(string) FileLocker
+	filename         string
+	provider         aws.CredentialsProvider // the underlying implementation that has the *real* Provider
+	cacheKey         cacheKey                // cache key parameters used to create Provider
+	cachedCredential aws.Credentials         // the cached credential, if it exists
 }
+
+var _ credentials.Provider = &FileCacheProvider{}
 
 // NewFileCacheProvider creates a new Provider implementation that wraps a provided Credentials,
 // and works with an on disk cache to speed up credential usage when the cached copy is not expired.
 // If there are any problems accessing or initializing the cache, an error will be returned, and
 // callers should just use the existing credentials provider.
-func NewFileCacheProvider(clusterID, profile, roleARN string, creds *credentials.Credentials) (FileCacheProvider, error) {
-	if creds == nil {
-		return FileCacheProvider{}, errors.New("no underlying Credentials object provided")
+func NewFileCacheProvider(clusterID, profile, roleARN string, provider aws.CredentialsProvider, opts ...FileCacheOpt) (*FileCacheProvider, error) {
+	if provider == nil {
+		return nil, errors.New("no underlying Credentials object provided")
 	}
-	filename := CacheFilename()
-	cacheKey := cacheKey{clusterID, profile, roleARN}
-	cachedCredential := cachedCredential{}
+
+	resp := &FileCacheProvider{
+		fs:               afero.NewOsFs(),
+		filelockCreator:  NewFileLocker,
+		filename:         defaultCacheFilename(),
+		provider:         provider,
+		cacheKey:         cacheKey{clusterID, profile, roleARN},
+		cachedCredential: aws.Credentials{},
+	}
+
+	// override defaults
+	for _, opt := range opts {
+		opt(resp)
+	}
+
 	// ensure path to cache file exists
-	_ = f.MkdirAll(filepath.Dir(filename), 0700)
-	if info, err := f.Stat(filename); err == nil {
+	_ = resp.fs.MkdirAll(filepath.Dir(resp.filename), 0700)
+	if info, err := resp.fs.Stat(resp.filename); err == nil {
 		if info.Mode()&0077 != 0 {
 			// cache file has secret credentials and should only be accessible to the user, refuse to use it.
-			return FileCacheProvider{}, fmt.Errorf("cache file %s is not private", filename)
+			return nil, fmt.Errorf("cache file %s is not private", resp.filename)
 		}
 
 		// do file locking on cache to prevent inconsistent reads
-		lock := newFlock(filename)
+		lock := resp.filelockCreator(resp.filename)
 		defer lock.Unlock()
 		// wait up to a second for the file to lock
 		ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
@@ -201,73 +178,73 @@ func NewFileCacheProvider(clusterID, profile, roleARN string, creds *credentials
 		ok, err := lock.TryRLockContext(ctx, 250*time.Millisecond) // try to lock every 1/4 second
 		if !ok {
 			// unable to lock the cache, something is wrong, refuse to use it.
-			return FileCacheProvider{}, fmt.Errorf("unable to read lock file %s: %v", filename, err)
+			return nil, fmt.Errorf("unable to read lock file %s: %v", resp.filename, err)
 		}
 
-		cache, err := readCacheWhileLocked(filename)
+		cache, err := readCacheWhileLocked(resp.fs, resp.filename)
 		if err != nil {
 			// can't read or parse cache, refuse to use it.
-			return FileCacheProvider{}, err
+			return nil, err
 		}
 
-		cachedCredential = cache.Get(cacheKey)
+		resp.cachedCredential = cache.Get(resp.cacheKey)
 	} else {
 		if errors.Is(err, fs.ErrNotExist) {
 			// cache file is missing.  maybe this is the very first run?  continue to use cache.
-			_, _ = fmt.Fprintf(os.Stderr, "Cache file %s does not exist.\n", filename)
+			_, _ = fmt.Fprintf(os.Stderr, "Cache file %s does not exist.\n", resp.filename)
 		} else {
-			return FileCacheProvider{}, fmt.Errorf("couldn't stat cache file: %w", err)
+			return nil, fmt.Errorf("couldn't stat cache file: %w", err)
 		}
 	}
 
-	return FileCacheProvider{
-		creds,
-		cacheKey,
-		cachedCredential,
-	}, nil
+	return resp, nil
 }
 
 // Retrieve() implements the Provider interface, returning the cached credential if is not expired,
 // otherwise fetching the credential from the underlying Provider and caching the results on disk
 // with an expiration time.
 func (f *FileCacheProvider) Retrieve() (credentials.Value, error) {
-	if !f.cachedCredential.IsExpired() {
+	return f.RetrieveWithContext(context.Background())
+}
+
+// Retrieve() implements the Provider interface, returning the cached credential if is not expired,
+// otherwise fetching the credential from the underlying Provider and caching the results on disk
+// with an expiration time.
+func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (credentials.Value, error) {
+	if !f.cachedCredential.Expired() && f.cachedCredential.HasKeys() {
 		// use the cached credential
-		return f.cachedCredential.Credential, nil
+		return V2CredentialToV1Value(f.cachedCredential), nil
 	} else {
 		_, _ = fmt.Fprintf(os.Stderr, "No cached credential available.  Refreshing...\n")
 		// fetch the credentials from the underlying Provider
-		credential, err := f.credentials.Get()
+		credential, err := f.provider.Retrieve(ctx)
 		if err != nil {
-			return credential, err
+			return V2CredentialToV1Value(credential), err
 		}
-		if expiration, err := f.credentials.ExpiresAt(); err == nil {
-			// underlying provider supports Expirer interface, so we can cache
-			filename := CacheFilename()
+
+		if credential.CanExpire {
+			// Credential supports expiration, so we can cache
+
 			// do file locking on cache to prevent inconsistent writes
-			lock := newFlock(filename)
+			lock := f.filelockCreator(f.filename)
 			defer lock.Unlock()
 			// wait up to a second for the file to lock
-			ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+			ctx, cancel := context.WithTimeout(ctx, time.Second)
 			defer cancel()
 			ok, err := lock.TryLockContext(ctx, 250*time.Millisecond) // try to lock every 1/4 second
 			if !ok {
 				// can't get write lock to create/update cache, but still return the credential
-				_, _ = fmt.Fprintf(os.Stderr, "Unable to write lock file %s: %v\n", filename, err)
-				return credential, nil
+				_, _ = fmt.Fprintf(os.Stderr, "Unable to write lock file %s: %v\n", f.filename, err)
+				return V2CredentialToV1Value(credential), nil
 			}
-			f.cachedCredential = cachedCredential{
-				credential,
-				expiration,
-				nil,
-			}
+			f.cachedCredential = credential
 			// don't really care about read error.  Either read the cache, or we create a new cache.
-			cache, _ := readCacheWhileLocked(filename)
+			cache, _ := readCacheWhileLocked(f.fs, f.filename)
 			cache.Put(f.cacheKey, f.cachedCredential)
-			err = writeCacheWhileLocked(filename, cache)
+			err = writeCacheWhileLocked(f.fs, f.filename, cache)
 			if err != nil {
 				// can't write cache, but still return the credential
-				_, _ = fmt.Fprintf(os.Stderr, "Unable to update credential cache %s: %v\n", filename, err)
+				_, _ = fmt.Fprintf(os.Stderr, "Unable to update credential cache %s: %v\n", f.filename, err)
 				err = nil
 			} else {
 				_, _ = fmt.Fprintf(os.Stderr, "Updated cached credential\n")
@@ -277,38 +254,38 @@ func (f *FileCacheProvider) Retrieve() (credentials.Value, error) {
 			_, _ = fmt.Fprintf(os.Stderr, "Unable to cache credential: %v\n", err)
 			err = nil
 		}
-		return credential, err
+		return V2CredentialToV1Value(credential), err
 	}
 }
 
 // IsExpired() implements the Provider interface, deferring to the cached credential first,
 // but fall back to the underlying Provider if it is expired.
 func (f *FileCacheProvider) IsExpired() bool {
-	return f.cachedCredential.IsExpired() && f.credentials.IsExpired()
+	return f.cachedCredential.CanExpire && f.cachedCredential.Expired()
 }
 
 // ExpiresAt implements the Expirer interface, and gives access to the expiration time of the credential
 func (f *FileCacheProvider) ExpiresAt() time.Time {
-	return f.cachedCredential.Expiration
+	return f.cachedCredential.Expires
 }
 
-// CacheFilename returns the name of the credential cache file, which can either be
+// defaultCacheFilename returns the name of the credential cache file, which can either be
 // set by environment variable, or use the default of ~/.kube/cache/aws-iam-authenticator/credentials.yaml
-func CacheFilename() string {
-	if filename, ok := e.LookupEnv(cacheFileNameEnv); ok {
+func defaultCacheFilename() string {
+	if filename := os.Getenv(cacheFileNameEnv); filename != "" {
 		return filename
 	} else {
-		return filepath.Join(UserHomeDir(), ".kube", "cache", "aws-iam-authenticator", "credentials.yaml")
+		return filepath.Join(userHomeDir(), ".kube", "cache", "aws-iam-authenticator", "credentials.yaml")
 	}
 }
 
-// UserHomeDir returns the home directory for the user the process is
+// userHomeDir returns the home directory for the user the process is
 // running under.
-func UserHomeDir() string {
+func userHomeDir() string {
 	if runtime.GOOS == "windows" { // Windows
-		return e.Getenv("USERPROFILE")
+		return os.Getenv("USERPROFILE")
 	}
 
 	// *nix
-	return e.Getenv("HOME")
+	return os.Getenv("HOME")
 }

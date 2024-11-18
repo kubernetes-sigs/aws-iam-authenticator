@@ -3,13 +3,14 @@ approvers:
 - wongma7
 - jaypipes
 - jyotimahapatra
-- nnmin-aws
+- kmala
 
 reviewers:
 - micahhausler
 - wongma7
 - jaypipes
 - jyotimahapatra
+- kmala
 
 emeritus_approvers:
 - christopherhein

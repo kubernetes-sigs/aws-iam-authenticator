@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,7 +14,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,6 +65,13 @@ func assertSTSError(t *testing.T, err error) {
 	}
 }
 
+func assertSTSThrottling(t *testing.T, err error) {
+	t.Helper()
+	if _, ok := err.(STSThrottling); !ok {
+		t.Errorf("Expected err %v to be an STSThrottling but was not", err)
+	}
+}
+
 var (
 	now        = time.Now()
 	timeStr    = now.UTC().Format("20060102T150405Z")
@@ -76,7 +86,7 @@ func toToken(url string) string {
 func newVerifier(partition string, statusCode int, body string, err error) Verifier {
 	var rc io.ReadCloser
 	if body != "" {
-		rc = ioutil.NopCloser(bytes.NewReader([]byte(body)))
+		rc = io.NopCloser(bytes.NewReader([]byte(body)))
 	}
 	return tokenVerifier{
 		client: &http.Client{
@@ -196,6 +206,13 @@ func TestVerifyTokenPreSTSValidations(t *testing.T) {
 	validationErrorTest(t, "aws", toToken(fmt.Sprintf("https://sts.us-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAAAAAAAAAAAAAAAAA%%2F20220601%%2Fus-west-2%%2Fsts%%2Faws4_request&X-Amz-Date=%s&X-Amz-Expires=900&X-Amz-Security-Token=XXXXXXXXXXXXX&X-Amz-SignedHeaders=host%%3Bx-k8s-aws-id&x-amz-credential=eve&X-Amz-Signature=999999999999999999", timeStr)), "input token was not properly formatted: duplicate query parameter found:")
 }
 
+func TestVerifyHTTPThrottling(t *testing.T) {
+	testVerifier := newVerifier("aws", 400, "{\\\"Error\\\":{\\\"Code\\\":\\\"Throttling\\\",\\\"Message\\\":\\\"Rate exceeded\\\",\\\"Type\\\":\\\"Sender\\\"},\\\"RequestId\\\":\\\"8c2d3520-24e1-4d5c-ac55-7e226335f447\\\"}", nil)
+	_, err := testVerifier.Verify(validToken)
+	errorContains(t, err, "sts getCallerIdentity was throttled")
+	assertSTSThrottling(t, err)
+}
+
 func TestVerifyHTTPError(t *testing.T) {
 	_, err := newVerifier("aws", 0, "", errors.New("an error")).Verify(validToken)
 	errorContains(t, err, "error during GET: an error")
@@ -228,7 +245,7 @@ func TestVerifyNoRedirectsFollowed(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	if resp.Header.Get("Location") != ts2.URL && resp.StatusCode != http.StatusFound {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		fmt.Printf("%#v\n", resp)
 		fmt.Println(string(body))
 		t.Error("Unexpectedly followed redirect")
@@ -567,5 +584,90 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 				t.Errorf("getDefaultHostNameForRegion() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestGetWithSTS(t *testing.T) {
+	clusterID := "test-cluster"
+
+	cases := []struct {
+		name    string
+		creds   *credentials.Credentials
+		nowTime time.Time
+		want    Token
+		wantErr error
+	}{
+		{
+			"Non-zero time",
+			// Example non-real credentials
+			func() *credentials.Credentials {
+				decodedAkid, _ := base64.StdEncoding.DecodeString("QVNJQVIyVEc0NFY2QVMzWlpFN0M=")
+				decodedSk, _ := base64.StdEncoding.DecodeString("NEtENWNudEdjVm1MV1JkRjV3dk5SdXpOTDVReG1wNk9LVlk2RnovUQ==")
+				return credentials.NewStaticCredentials(
+					string(decodedAkid),
+					string(decodedSk),
+					"",
+				)
+			}(),
+			time.Unix(1682640000, 0),
+			Token{
+				Token:      "k8s-aws-v1.aHR0cHM6Ly9zdHMudXMtd2VzdC0yLmFtYXpvbmF3cy5jb20vP0FjdGlvbj1HZXRDYWxsZXJJZGVudGl0eSZWZXJzaW9uPTIwMTEtMDYtMTUmWC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BU0lBUjJURzQ0VjZBUzNaWkU3QyUyRjIwMjMwNDI4JTJGdXMtd2VzdC0yJTJGc3RzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyMzA0MjhUMDAwMDAwWiZYLUFtei1FeHBpcmVzPTYwJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCUzQngtazhzLWF3cy1pZCZYLUFtei1TaWduYXR1cmU9ZTIxMWRiYTc3YWJhOWRjNDRiMGI2YmUzOGI4ZWFhZDA5MjU5OWM1MTU3ZjYzMTQ0NDRjNWI5ZDg1NzQ3ZjVjZQ",
+				Expiration: time.Unix(1682640000, 0).Local().Add(time.Minute * 14),
+			},
+			nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := sts.New(session.Must(session.NewSession(
+				&aws.Config{
+					Credentials:         tc.creds,
+					Region:              aws.String("us-west-2"),
+					STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
+				},
+			)))
+
+			gen := &generator{
+				forwardSessionName: false,
+				cache:              false,
+				nowFunc:            func() time.Time { return tc.nowTime },
+			}
+
+			got, err := gen.GetWithSTS(clusterID, svc)
+			if diff := cmp.Diff(err, tc.wantErr); diff != "" {
+				t.Errorf("Unexpected error: %s", diff)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				fmt.Printf("Want: %s\n", tc.want)
+				fmt.Printf("Got: %s\n", got)
+				t.Errorf("Got unexpected token: %s", diff)
+			}
+		})
+	}
+}
+
+func TestGetStsRegion(t *testing.T) {
+	tests := []struct {
+		host     string
+		expected string
+		wantErr  bool
+	}{
+		{"sts.amazonaws.com", "global", false},                    // Global endpoint
+		{"sts.us-west-2.amazonaws.com", "us-west-2", false},       // Valid regional endpoint
+		{"sts.eu-central-1.amazonaws.com", "eu-central-1", false}, // Another valid regional endpoint
+		{"", "", true},                // Empty input (expect error)
+		{"sts", "", true},             // Malformed input (expect error)
+		{"sts.wrongformat", "", true}, // Malformed input (expect error)
+	}
+
+	for _, test := range tests {
+		result, err := getStsRegion(test.host)
+		if (err != nil) != test.wantErr {
+			t.Errorf("getStsRegion(%q) error = %v, wantErr %v", test.host, err, test.wantErr)
+		}
+		if result != test.expected {
+			t.Errorf("getStsRegion(%q) = %q; expected %q", test.host, result, test.expected)
+		}
 	}
 }
