@@ -27,7 +27,7 @@ func (p *v2) Retrieve(ctx context.Context) (aws.Credentials, error) {
 		// Don't have account ID
 	}
 
-	if expiration, err := p.creds.ExpiresAt(); err != nil {
+	if expiration, err := p.creds.ExpiresAt(); err == nil {
 		resp.CanExpire = true
 		resp.Expires = expiration
 	}
