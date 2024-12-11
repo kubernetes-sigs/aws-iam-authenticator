@@ -1,11 +1,15 @@
 package fileutil
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var origFileContent = `
@@ -17,22 +21,26 @@ efgwht2033
 `
 
 type testStruct struct {
-	content         string
+	callCount       int
 	expectedContent string
 	mutex           sync.Mutex
 }
 
 func (a *testStruct) CallBackForFileLoad(dynamicContent []byte) error {
 	a.mutex.Lock()
-	a.expectedContent = string(dynamicContent)
 	defer a.mutex.Unlock()
+	a.callCount++
+	if len(dynamicContent) == 0 {
+		return fmt.Errorf("file doesn't contain data")
+	}
+	a.expectedContent = string(dynamicContent)
 	return nil
 }
 
 func (a *testStruct) CallBackForFileDeletion() error {
 	a.mutex.Lock()
-	a.expectedContent = ""
 	defer a.mutex.Unlock()
+	a.expectedContent = ""
 	return nil
 }
 
@@ -60,13 +68,25 @@ func TestLoadDynamicFile(t *testing.T) {
 	}
 	stopCh := make(chan struct{})
 	testA := &testStruct{}
-	StartLoadDynamicFile("/tmp/util_test.txt", testA, stopCh)
+	f, err := os.CreateTemp("/tmp", "testdata")
+	if err != nil {
+		t.Errorf("failed to create a local temp file %v", err)
+	}
+	defer os.Remove(f.Name())
+
+	StartLoadDynamicFile(f.Name(), testA, stopCh)
 	defer close(stopCh)
 	time.Sleep(2 * time.Second)
-	os.WriteFile("/tmp/util_test.txt", []byte("test"), 0777)
+	err = os.WriteFile(f.Name(), []byte("test"), 0777)
+	if err != nil {
+		t.Errorf("failed to update a temp file %s, err: %v", f.Name(), err)
+	}
 	for {
 		time.Sleep(1 * time.Second)
 		testA.mutex.Lock()
+		if testA.callCount != 3 {
+			t.Errorf("load file should fail twice but call count is only %d", testA.callCount)
+		}
 		if testA.expectedContent == "test" {
 			t.Log("read to test")
 			testA.mutex.Unlock()
@@ -75,8 +95,19 @@ func TestLoadDynamicFile(t *testing.T) {
 		testA.mutex.Unlock()
 	}
 	for _, c := range cases {
-		updateFile(testA, c.input, t)
-		testA.mutex.Lock()
+		updateFile(f.Name(), c.input, t)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		//wait until the file reloaded is handled or context timesout
+		wait.Until(func() {
+			testA.mutex.Lock()
+			defer testA.mutex.Unlock()
+			// if the file is reloaded then cancel such that the wait.Until completes
+			if testA.expectedContent == c.want {
+				cancel()
+			}
+		}, 100*time.Millisecond, ctx.Done())
+		cancel()
+		//Validate the content
 		if testA.expectedContent != c.want {
 			t.Errorf(
 				"Unexpected result: TestLoadDynamicFile: got: %s, wanted %s",
@@ -84,18 +115,16 @@ func TestLoadDynamicFile(t *testing.T) {
 				c.want,
 			)
 		}
-		testA.mutex.Unlock()
 	}
+
 }
 
-func updateFile(testA *testStruct, origFileContent string, t *testing.T) {
-	testA.content = origFileContent
+func updateFile(fileName, origFileContent string, t *testing.T) {
 	data := []byte(origFileContent)
-	err := os.WriteFile("/tmp/util_test.txt", data, 0600)
+	err := os.WriteFile(fileName, data, 0600)
 	if err != nil {
-		t.Errorf("failed to create a local file /tmp/util_test.txt")
+		t.Errorf("failed to update a temp file %s, err: %v", fileName, err)
 	}
-	time.Sleep(1 * time.Second)
 }
 
 func TestDeleteDynamicFile(t *testing.T) {
