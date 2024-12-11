@@ -58,6 +58,7 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 		defer watcher.Close()
 		content, err := loadDynamicFile(filename, stopCh)
 		if err != nil {
+			logrus.Errorf("startLoadDynamicFile: failed when loading file %s, %v", filename, err)
 			return
 		}
 		err = watcher.Add(filename)
@@ -68,6 +69,7 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 		}
 		if err := callBack.CallBackForFileLoad(content); err != nil {
 			logrus.Errorf("StartLoadDynamicFile: error in callBackForFileLoad, %v", err)
+			return
 		}
 		for {
 			select {
