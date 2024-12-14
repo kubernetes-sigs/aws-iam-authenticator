@@ -5,11 +5,13 @@ import (
 	"testing"
 	"time"
 
-	core_v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	gentype "k8s.io/client-go/gentype"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
@@ -30,14 +32,14 @@ func makeStore() MapStore {
 	return ms
 }
 
-func makeStoreWClient() (MapStore, *fake.FakeConfigMaps) {
-	fakeConfigMaps := &fake.FakeConfigMaps{}
-	fakeConfigMaps.Fake = &fake.FakeCoreV1{}
-	fakeConfigMaps.Fake.Fake = &k8stesting.Fake{}
+func makeStoreWClient() (MapStore, *fakeConfigMaps) {
+	fakeCore := &fake.FakeCoreV1{}
+	fakeCore.Fake = &k8stesting.Fake{}
+	fakeConfigMaps := newFakeConfigMaps(fakeCore, "")
 	ms := MapStore{
 		users:     make(map[string]config.UserMapping),
 		roles:     make(map[string]config.RoleMapping),
-		configMap: v1.ConfigMapInterface(fakeConfigMaps),
+		configMap: typedcorev1.ConfigMapInterface(fakeConfigMaps),
 	}
 	return ms, fakeConfigMaps
 }
@@ -168,7 +170,7 @@ func TestLoadConfigMap(t *testing.T) {
 	data["mapRoles"] = roleMapping
 	data["mapAccounts"] = autoMappedAWSAccountsYAML
 
-	watcher.Add(&core_v1.ConfigMap{ObjectMeta: meta, Data: data})
+	watcher.Add(&v1.ConfigMap{ObjectMeta: meta, Data: data})
 
 	time.Sleep(2 * time.Millisecond)
 
@@ -198,7 +200,7 @@ func TestLoadConfigMap(t *testing.T) {
 	updateData["mapUsers"] = updatedUserMapping
 	updateData["mapRoles"] = updatedRoleMapping
 	updateData["mapAccounts"] = updatedAWSAccountsYAML
-	watcher.Modify(&core_v1.ConfigMap{ObjectMeta: meta, Data: updateData})
+	watcher.Modify(&v1.ConfigMap{ObjectMeta: meta, Data: updateData})
 
 	//TODO: Sync without using sleep
 	time.Sleep(10 * time.Millisecond)
@@ -327,5 +329,27 @@ func TestBadParseMapSingleQuote(t *testing.T) {
 	emptyMap := map[string]string{}
 	if !reflect.DeepEqual(emptyMap, m2) {
 		t.Fatalf("unexpected %v != %v", emptyMap, m2)
+	}
+}
+
+type fakeConfigMaps struct {
+	*gentype.FakeClientWithListAndApply[*v1.ConfigMap, *v1.ConfigMapList, *corev1.ConfigMapApplyConfiguration]
+	Fake *fake.FakeCoreV1
+}
+
+func newFakeConfigMaps(fake *fake.FakeCoreV1, namespace string) *fakeConfigMaps {
+	return &fakeConfigMaps{
+		gentype.NewFakeClientWithListAndApply[*v1.ConfigMap, *v1.ConfigMapList, *corev1.ConfigMapApplyConfiguration](
+			fake.Fake,
+			namespace,
+			v1.SchemeGroupVersion.WithResource("configmaps"),
+			v1.SchemeGroupVersion.WithKind("ConfigMap"),
+			func() *v1.ConfigMap { return &v1.ConfigMap{} },
+			func() *v1.ConfigMapList { return &v1.ConfigMapList{} },
+			func(dst, src *v1.ConfigMapList) { dst.ListMeta = src.ListMeta },
+			func(list *v1.ConfigMapList) []*v1.ConfigMap { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1.ConfigMapList, items []*v1.ConfigMap) { list.Items = gentype.FromPointerSlice(items) },
+		),
+		fake,
 	}
 }
