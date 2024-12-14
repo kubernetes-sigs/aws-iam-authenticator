@@ -18,10 +18,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
-	v1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/apis/iamauthenticator/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
+	iamauthenticatorv1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/apis/iamauthenticator/v1alpha1"
 )
 
 // IAMIdentityMappingLister helps list IAMIdentityMappings.
@@ -29,39 +29,19 @@ import (
 type IAMIdentityMappingLister interface {
 	// List lists all IAMIdentityMappings in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.IAMIdentityMapping, err error)
+	List(selector labels.Selector) (ret []*iamauthenticatorv1alpha1.IAMIdentityMapping, err error)
 	// Get retrieves the IAMIdentityMapping from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.IAMIdentityMapping, error)
+	Get(name string) (*iamauthenticatorv1alpha1.IAMIdentityMapping, error)
 	IAMIdentityMappingListerExpansion
 }
 
 // iAMIdentityMappingLister implements the IAMIdentityMappingLister interface.
 type iAMIdentityMappingLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*iamauthenticatorv1alpha1.IAMIdentityMapping]
 }
 
 // NewIAMIdentityMappingLister returns a new IAMIdentityMappingLister.
 func NewIAMIdentityMappingLister(indexer cache.Indexer) IAMIdentityMappingLister {
-	return &iAMIdentityMappingLister{indexer: indexer}
-}
-
-// List lists all IAMIdentityMappings in the indexer.
-func (s *iAMIdentityMappingLister) List(selector labels.Selector) (ret []*v1alpha1.IAMIdentityMapping, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.IAMIdentityMapping))
-	})
-	return ret, err
-}
-
-// Get retrieves the IAMIdentityMapping from the index for a given name.
-func (s *iAMIdentityMappingLister) Get(name string) (*v1alpha1.IAMIdentityMapping, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("iamidentitymapping"), name)
-	}
-	return obj.(*v1alpha1.IAMIdentityMapping), nil
+	return &iAMIdentityMappingLister{listers.New[*iamauthenticatorv1alpha1.IAMIdentityMapping](indexer, iamauthenticatorv1alpha1.Resource("iamidentitymapping"))}
 }

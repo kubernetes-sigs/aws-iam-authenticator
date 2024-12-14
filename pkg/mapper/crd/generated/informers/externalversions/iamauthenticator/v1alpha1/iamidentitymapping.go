@@ -18,24 +18,24 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	iamauthenticatorv1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/apis/iamauthenticator/v1alpha1"
+	apisiamauthenticatorv1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/apis/iamauthenticator/v1alpha1"
 	versioned "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/clientset/versioned"
 	internalinterfaces "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/informers/externalversions/internalinterfaces"
-	v1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/listers/iamauthenticator/v1alpha1"
+	iamauthenticatorv1alpha1 "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/listers/iamauthenticator/v1alpha1"
 )
 
 // IAMIdentityMappingInformer provides access to a shared informer and lister for
 // IAMIdentityMappings.
 type IAMIdentityMappingInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.IAMIdentityMappingLister
+	Lister() iamauthenticatorv1alpha1.IAMIdentityMappingLister
 }
 
 type iAMIdentityMappingInformer struct {
@@ -69,7 +69,7 @@ func NewFilteredIAMIdentityMappingInformer(client versioned.Interface, resyncPer
 				return client.IamauthenticatorV1alpha1().IAMIdentityMappings().Watch(context.TODO(), options)
 			},
 		},
-		&iamauthenticatorv1alpha1.IAMIdentityMapping{},
+		&apisiamauthenticatorv1alpha1.IAMIdentityMapping{},
 		resyncPeriod,
 		indexers,
 	)
@@ -80,9 +80,9 @@ func (f *iAMIdentityMappingInformer) defaultInformer(client versioned.Interface,
 }
 
 func (f *iAMIdentityMappingInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&iamauthenticatorv1alpha1.IAMIdentityMapping{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisiamauthenticatorv1alpha1.IAMIdentityMapping{}, f.defaultInformer)
 }
 
-func (f *iAMIdentityMappingInformer) Lister() v1alpha1.IAMIdentityMappingLister {
-	return v1alpha1.NewIAMIdentityMappingLister(f.Informer().GetIndexer())
+func (f *iAMIdentityMappingInformer) Lister() iamauthenticatorv1alpha1.IAMIdentityMappingLister {
+	return iamauthenticatorv1alpha1.NewIAMIdentityMappingLister(f.Informer().GetIndexer())
 }

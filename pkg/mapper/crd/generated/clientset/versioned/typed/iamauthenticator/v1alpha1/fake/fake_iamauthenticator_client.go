@@ -28,7 +28,7 @@ type FakeIamauthenticatorV1alpha1 struct {
 }
 
 func (c *FakeIamauthenticatorV1alpha1) IAMIdentityMappings() v1alpha1.IAMIdentityMappingInterface {
-	return &FakeIAMIdentityMappings{c}
+	return newFakeIAMIdentityMappings(c)
 }
 
 // RESTClient returns a RESTClient that is used to communicate
