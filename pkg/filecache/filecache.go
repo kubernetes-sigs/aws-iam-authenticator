@@ -252,7 +252,6 @@ func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (credential
 		} else {
 			// credential doesn't support expiration time, so can't cache, but still return the credential
 			_, _ = fmt.Fprint(os.Stderr, "Unable to cache credential: credential doesn't support expiration\n")
-			err = nil
 		}
 		return V2CredentialToV1Value(credential), err
 	}
