@@ -131,6 +131,10 @@ func getConfig() (config.Config, error) {
 			cfg.ReservedPrefixConfig[c.BackendMode] = c
 		}
 	}
+	if featureGates.Enabled(config.SSORoleMatch) {
+		logrus.Info("SSORoleMatch feature enabled")
+		config.SSORoleMatchEnabled = true
+	}
 	if featureGates.Enabled(config.ConfiguredInitDirectories) {
 		logrus.Info("ConfiguredInitDirectories feature enabled")
 	}

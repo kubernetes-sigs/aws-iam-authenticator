@@ -4,16 +4,17 @@ import (
 	"fmt"
 	"strings"
 
+	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
+
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
 type FileMapper struct {
-	lowercaseRoleMap          map[string]config.RoleMapping
-	lowercaseUserMap          map[string]config.UserMapping
+	roleMap                   map[string]config.RoleMapping
+	userMap                   map[string]config.UserMapping
 	accountMap                map[string]bool
 	usernamePrefixReserveList []string
 }
@@ -22,24 +23,39 @@ var _ mapper.Mapper = &FileMapper{}
 
 func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 	fileMapper := &FileMapper{
-		lowercaseRoleMap: make(map[string]config.RoleMapping),
-		lowercaseUserMap: make(map[string]config.UserMapping),
-		accountMap:       make(map[string]bool),
+		roleMap:    make(map[string]config.RoleMapping),
+		userMap:    make(map[string]config.UserMapping),
+		accountMap: make(map[string]bool),
 	}
 
 	for _, m := range cfg.RoleMappings {
-		_, canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RoleARN))
+		err := m.Validate()
 		if err != nil {
-			return nil, fmt.Errorf("error canonicalizing ARN: %v", err)
+			return nil, err
 		}
-		fileMapper.lowercaseRoleMap[canonicalizedARN] = m
+		if m.RoleARN != "" {
+			_, canonicalizedARN, err := arn.Canonicalize(m.RoleARN)
+			if err != nil {
+				return nil, err
+			}
+			m.RoleARN = canonicalizedARN
+		}
+		fileMapper.roleMap[m.Key()] = m
 	}
 	for _, m := range cfg.UserMappings {
-		_, canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
+		err := m.Validate()
 		if err != nil {
-			return nil, fmt.Errorf("error canonicalizing ARN: %v", err)
+			return nil, err
 		}
-		fileMapper.lowercaseUserMap[canonicalizedARN] = m
+		var key string
+		if m.UserARN != "" {
+			_, canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
+			if err != nil {
+				return nil, fmt.Errorf("error canonicalizing ARN: %v", err)
+			}
+			key = canonicalizedARN
+		}
+		fileMapper.userMap[key] = m
 	}
 	for _, m := range cfg.AutoMappedAWSAccounts {
 		fileMapper.accountMap[m] = true
@@ -55,9 +71,9 @@ func NewFileMapperWithMaps(
 	lowercaseUserMap map[string]config.UserMapping,
 	accountMap map[string]bool) *FileMapper {
 	return &FileMapper{
-		lowercaseRoleMap: lowercaseRoleMap,
-		lowercaseUserMap: lowercaseUserMap,
-		accountMap:       accountMap,
+		roleMap:    lowercaseRoleMap,
+		userMap:    lowercaseUserMap,
+		accountMap: accountMap,
 	}
 }
 
@@ -71,16 +87,16 @@ func (m *FileMapper) Start(_ <-chan struct{}) error {
 
 func (m *FileMapper) Map(identity *token.Identity) (*config.IdentityMapping, error) {
 	canonicalARN := strings.ToLower(identity.CanonicalARN)
-
-	if roleMapping, exists := m.lowercaseRoleMap[canonicalARN]; exists {
-		return &config.IdentityMapping{
-			IdentityARN: canonicalARN,
-			Username:    roleMapping.Username,
-			Groups:      roleMapping.Groups,
-		}, nil
+	for _, roleMapping := range m.roleMap {
+		if roleMapping.Matches(canonicalARN) {
+			return &config.IdentityMapping{
+				IdentityARN: canonicalARN,
+				Username:    roleMapping.Username,
+				Groups:      roleMapping.Groups,
+			}, nil
+		}
 	}
-
-	if userMapping, exists := m.lowercaseUserMap[canonicalARN]; exists {
+	if userMapping, exists := m.userMap[canonicalARN]; exists {
 		return &config.IdentityMapping{
 			IdentityARN: canonicalARN,
 			Username:    userMapping.Username,

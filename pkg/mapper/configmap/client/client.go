@@ -78,18 +78,27 @@ func (cli *client) add(role *config.RoleMapping, user *config.UserMapping) (cm *
 		}
 
 		if role != nil {
+			err = role.Validate()
+			if err != nil {
+				return fmt.Errorf("role is invalid: %v", err)
+			}
+
 			for _, r := range roleMappings {
-				if r.RoleARN == role.RoleARN {
-					return fmt.Errorf("cannot add duplicate role ARN %q", role.RoleARN)
+				if r.Key() == role.Key() {
+					return fmt.Errorf("cannot add duplicate role ARN %q", role.Key())
 				}
 			}
 			roleMappings = append(roleMappings, *role)
 		}
 
 		if user != nil {
+			err = user.Validate()
+			if err != nil {
+				return fmt.Errorf("user is invalid: %v", err)
+			}
 			for _, r := range userMappings {
-				if r.UserARN == user.UserARN {
-					return fmt.Errorf("cannot add duplicate user ARN %q", user.UserARN)
+				if r.Key() == user.Key() {
+					return fmt.Errorf("cannot add duplicate user ARN %q", user.Key())
 				}
 			}
 			userMappings = append(userMappings, *user)
