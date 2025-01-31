@@ -31,7 +31,9 @@ const (
 	SSORoleMatch featuregate.Feature = "SSORoleMatch"
 )
 
-var SSORoleMatchEnabled bool
+var (
+	SSORoleMatchEnabled bool
+)
 
 var DefaultFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ConfiguredInitDirectories: {Default: false, PreRelease: featuregate.Alpha},

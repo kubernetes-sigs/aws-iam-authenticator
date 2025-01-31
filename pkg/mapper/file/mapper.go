@@ -34,7 +34,7 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 			return nil, err
 		}
 		if m.RoleARN != "" {
-			canonicalizedARN, err := arn.Canonicalize(m.RoleARN)
+			_, canonicalizedARN, err := arn.Canonicalize(m.RoleARN)
 			if err != nil {
 				return nil, err
 			}
@@ -49,13 +49,11 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 		}
 		var key string
 		if m.UserARN != "" {
-			_, canonicalizedARN, err := arn.Canonicalize(m.UserARN)
+			_, canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.UserARN))
 			if err != nil {
 				return nil, fmt.Errorf("error canonicalizing ARN: %v", err)
 			}
 			key = canonicalizedARN
-		} else {
-			key = m.Key()
 		}
 		fileMapper.userMap[key] = m
 	}
@@ -89,15 +87,15 @@ func (m *FileMapper) Start(_ <-chan struct{}) error {
 
 func (m *FileMapper) Map(identity *token.Identity) (*config.IdentityMapping, error) {
 	canonicalARN := strings.ToLower(identity.CanonicalARN)
-
-	if roleMapping, exists := m.roleMap[canonicalARN]; exists {
-		return &config.IdentityMapping{
-			IdentityARN: canonicalARN,
-			Username:    roleMapping.Username,
-			Groups:      roleMapping.Groups,
-		}, nil
+	for _, roleMapping := range m.roleMap {
+		if roleMapping.Matches(canonicalARN) {
+			return &config.IdentityMapping{
+				IdentityARN: canonicalARN,
+				Username:    roleMapping.Username,
+				Groups:      roleMapping.Groups,
+			}, nil
+		}
 	}
-
 	if userMapping, exists := m.userMap[canonicalARN]; exists {
 		return &config.IdentityMapping{
 			IdentityARN: canonicalARN,
