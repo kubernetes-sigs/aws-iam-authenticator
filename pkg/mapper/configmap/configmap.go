@@ -101,7 +101,7 @@ func (ms *MapStore) startLoadConfigMap(stopCh <-chan struct{}) {
 
 					}
 				}
-				logrus.Error("Watch channel closed.")
+				logrus.Warn("Watch channel closed. Reconnecting...")
 			}
 		}
 	}()
