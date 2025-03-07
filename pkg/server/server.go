@@ -133,6 +133,7 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 	listener, err := tls.Listen("tcp", c.ListenAddr(), &tls.Config{
 		MinVersion:   tls.VersionTLS12,
 		Certificates: []tls.Certificate{*cert},
+		NextProtos:   []string{"h2", "http/1.1"},
 	})
 	if err != nil {
 		logrus.WithError(err).Fatal("could not open TLS listener")
