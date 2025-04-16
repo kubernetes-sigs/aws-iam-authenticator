@@ -23,7 +23,7 @@ ARG TARGETOS TARGETARCH
 RUN GOPROXY=direct GOOS=$TARGETOS GOARCH=$TARGETARCH make bin
 RUN chown 65532 _output/bin/aws-iam-authenticator
 
-FROM --platform=$TARGETPLATFORM public.ecr.aws/eks-distro/kubernetes/go-runner:v0.18.0-eks-1-33-latest AS go-runner
+FROM --platform=$TARGETPLATFORM public.ecr.aws/eks-distro/kubernetes/go-runner:v0.18.0-eks-1-32-latest AS go-runner
 
 FROM --platform=$TARGETPLATFORM $image
 COPY --from=go-runner /go-runner /usr/local/bin/go-runner
