@@ -53,7 +53,9 @@ var serverCmd = &cobra.Command{
 		var err error
 		fmt.Printf("Authenticator Version: %q, %q\n", pkg.Version, pkg.CommitID)
 		metrics.InitMetrics(prometheus.DefaultRegisterer)
-		stopCh := signals.SetupSignalHandler()
+		
+		ctx    := signals.SetupSignalHandler()
+		stopCh := ctx.Done()
 
 		cfg, err := getConfig()
 		if err != nil {
