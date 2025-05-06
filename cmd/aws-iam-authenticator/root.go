@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
@@ -59,6 +60,9 @@ func init() {
 
 	rootCmd.PersistentFlags().StringP("log-format", "l", "text", "Specify log format to use when logging to stderr [text or json]")
 
+	rootCmd.PersistentFlags().String("log-level", "info", "Specify log level to use when logging to stderr ["+strings.Join(getValidLogLevels(), ", ")+"]")
+	viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level"))
+
 	rootCmd.PersistentFlags().StringP(
 		"cluster-id",
 		"i",
@@ -75,6 +79,15 @@ func init() {
 
 func initConfig() {
 	logrus.SetFormatter(getLogFormatter())
+
+	logLevel := viper.GetString("log-level")
+	if level, err := logrus.ParseLevel(logLevel); err == nil {
+		logrus.SetLevel(level)
+	} else {
+		fmt.Printf("Invalid log level %q. Valid values are: %s\n", logLevel, strings.Join(getValidLogLevels(), ", "))
+		os.Exit(1)
+	}
+
 	if cfgFile == "" {
 		return
 	}
@@ -184,4 +197,12 @@ func getLogFormatter() logrus.Formatter {
 	}
 
 	return &logrus.TextFormatter{FullTimestamp: true}
+}
+
+func getValidLogLevels() []string {
+	var levels []string
+	for _, level := range logrus.AllLevels {
+		levels = append(levels, level.String())
+	}
+	return levels
 }
