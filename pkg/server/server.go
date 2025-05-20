@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
-	awsarn "github.com/aws/aws-sdk-go/aws/arn"
+	awsarn "github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
