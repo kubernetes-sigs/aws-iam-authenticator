@@ -28,8 +28,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
@@ -199,12 +199,16 @@ func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2
 			panic(fmt.Sprintf("describeinstancesrole %s is not a valid arn", c.ServerEC2DescribeInstancesRoleARN))
 		}
 	}
-	sess := session.Must(session.NewSession())
-	ec2metadata := ec2metadata.New(sess)
-	instanceRegion, err := ec2metadata.Region()
+	cfg, err := awsconfig.LoadDefaultConfig(context.Background())
+	if err != nil {
+		logrus.WithError(err).Errorln("Could not load config")
+	}
+	imdsClient := imds.NewFromConfig(cfg)
+	instanceRegionOutput, err := imdsClient.GetRegion(context.TODO(), &imds.GetRegionInput{})
 	if err != nil {
 		logrus.WithError(err).Errorln("Region not found in instance metadata.")
 	}
+	instanceRegion := instanceRegionOutput.Region
 
 	h := &handler{
 		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
