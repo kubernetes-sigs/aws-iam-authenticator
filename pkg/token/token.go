@@ -17,6 +17,7 @@ limitations under the License.
 package token
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -28,15 +29,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	v4 "github.com/aws/aws-sdk-go/aws/signer/v4"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -188,7 +189,7 @@ type Generator interface {
 	// Get a token using the provided options
 	GetWithOptions(options *GetTokenOptions) (Token, error)
 	// GetWithSTS returns a token valid for clusterID using the given STS client.
-	GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, error)
+	GetWithSTS(clusterID string, stsClient *sts.Client) (Token, error)
 	// FormatJSON returns the client auth formatted json for the ExecCredential auth
 	FormatJSON(Token) string
 }
@@ -226,20 +227,19 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 
 	// create a session with the "base" credentials available
 	// (from environment variable, profile files, EC2 metadata, etc)
-	sess, err := session.NewSessionWithOptions(session.Options{
-		AssumeRoleTokenProvider: StdinStderrTokenProvider,
-		SharedConfigState:       session.SharedConfigEnable,
-	})
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithAssumeRoleCredentialOptions(func(options *stscreds.AssumeRoleOptions) {
+			options.TokenProvider = StdinStderrTokenProvider
+		}),
+	)
 	if err != nil {
 		return Token{}, fmt.Errorf("could not create session: %v", err)
 	}
-	sess.Handlers.Build.PushFrontNamed(request.NamedHandler{
-		Name: "authenticatorUserAgent",
-		Fn: request.MakeAddToUserAgentHandler(
-			"aws-iam-authenticator", pkg.Version),
-	})
-	if options.Region != "" {
-		sess = sess.Copy(aws.NewConfig().WithRegion(options.Region).WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint))
+	cfg.APIOptions = append(cfg.APIOptions,
+		middleware.AddUserAgentKeyValue("aws-iam-authenticator", pkg.Version),
+	)
+	if cfg.Region == "" {
+		cfg.Region = options.Region
 	}
 
 	if g.cache {
@@ -248,30 +248,30 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 		if v := os.Getenv("AWS_PROFILE"); len(v) > 0 {
 			profile = v
 		} else {
-			profile = session.DefaultSharedConfigProfile
+			profile = "default"
 		}
 		// create a cacheing Provider wrapper around the Credentials
 		if cacheProvider, err := filecache.NewFileCacheProvider(
 			options.ClusterID,
 			profile,
 			options.AssumeRoleARN,
-			filecache.V1CredentialToV2Provider(sess.Config.Credentials)); err == nil {
-			sess.Config.Credentials = credentials.NewCredentials(cacheProvider)
+			cfg.Credentials); err == nil {
+			cfg.Credentials = cacheProvider
 		} else {
 			fmt.Fprintf(os.Stderr, "unable to use cache: %v\n", err)
 		}
 	}
 
 	// use an STS client based on the direct credentials
-	stsAPI := sts.New(sess)
+	stsClient := sts.NewFromConfig(cfg)
 
 	// if a roleARN was specified, replace the STS client with one that uses
 	// temporary credentials from that role.
 	if options.AssumeRoleARN != "" {
-		var sessionSetters []func(*stscreds.AssumeRoleProvider)
+		var sessionSetters []func(*stscreds.AssumeRoleOptions)
 
 		if options.AssumeRoleExternalID != "" {
-			sessionSetters = append(sessionSetters, func(provider *stscreds.AssumeRoleProvider) {
+			sessionSetters = append(sessionSetters, func(provider *stscreds.AssumeRoleOptions) {
 				provider.ExternalID = &options.AssumeRoleExternalID
 			})
 		}
@@ -280,65 +280,85 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 			// If the current session is already a federated identity, carry through
 			// this session name onto the new session to provide better debugging
 			// capabilities
-			resp, err := stsAPI.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+			resp, err := stsClient.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
 			if err != nil {
 				return Token{}, err
 			}
 
 			userIDParts := strings.Split(*resp.UserId, ":")
 			if len(userIDParts) == 2 {
-				sessionSetters = append(sessionSetters, func(provider *stscreds.AssumeRoleProvider) {
+				sessionSetters = append(sessionSetters, func(provider *stscreds.AssumeRoleOptions) {
 					provider.RoleSessionName = userIDParts[1]
 				})
 			}
 		} else if options.SessionName != "" {
-			sessionSetters = append(sessionSetters, func(provider *stscreds.AssumeRoleProvider) {
+			sessionSetters = append(sessionSetters, func(provider *stscreds.AssumeRoleOptions) {
 				provider.RoleSessionName = options.SessionName
 			})
 		}
 
 		// create STS-based credentials that will assume the given role
-		creds := stscreds.NewCredentials(sess, options.AssumeRoleARN, sessionSetters...)
-
+		creds := stscreds.NewAssumeRoleProvider(stsClient, options.AssumeRoleARN, sessionSetters...)
+		cfg.Credentials = creds
 		// create an STS API interface that uses the assumed role's temporary credentials
-		stsAPI = sts.New(sess, &aws.Config{Credentials: creds})
+		stsClient = sts.NewFromConfig(cfg)
 	}
 
-	return g.GetWithSTS(options.ClusterID, stsAPI)
+	return g.GetWithSTS(options.ClusterID, stsClient)
 }
 
-func getNamedSigningHandler(nowFunc func() time.Time) request.NamedHandler {
-	return request.NamedHandler{
-		Name: "v4.SignRequestHandler", Fn: func(req *request.Request) {
-			v4.SignSDKRequestWithCurrentTime(req, nowFunc)
-		},
+type presignFixedTime struct {
+	p           sts.HTTPPresignerV4
+	signingTime time.Time
+}
+
+func (w *presignFixedTime) PresignHTTP(
+	ctx context.Context, credentials aws.Credentials, r *http.Request,
+	payloadHash string, service string, region string, signingTime time.Time,
+	optFns ...func(*v4.SignerOptions),
+) (url string, signedHeader http.Header, err error) {
+	return w.p.PresignHTTP(ctx, credentials, r,
+		payloadHash, service, region, w.signingTime,
+		optFns...)
+}
+
+func withPresignFixedTime(t time.Time) func(*sts.PresignOptions) {
+	return func(o *sts.PresignOptions) {
+		o.Presigner = &presignFixedTime{
+			p:           o.Presigner,
+			signingTime: t,
+		}
 	}
 }
 
 // GetWithSTS returns a token valid for clusterID using the given STS client.
-func (g generator) GetWithSTS(clusterID string, stsAPI stsiface.STSAPI) (Token, error) {
-	// generate an sts:GetCallerIdentity request and add our custom cluster ID header
-	request, _ := stsAPI.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
-	request.HTTPRequest.Header.Add(clusterIDHeader, clusterID)
+func (g generator) GetWithSTS(clusterID string, stsClient *sts.Client) (Token, error) {
+	// Generate an sts:GetCallerIdentity presigned request
+	presignClient := sts.NewPresignClient(stsClient)
 
-	// override the Sign handler so we can control the now time for testing.
-	request.Handlers.Sign.Swap("v4.SignRequestHandler", getNamedSigningHandler(g.nowFunc))
+	presignedRequest, err := presignClient.PresignGetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{},
+		func(presignOptions *sts.PresignOptions) {
+			// Configure the presigned request with a fixed time so we can control the now time for testing
+			withPresignFixedTime(g.nowFunc())(presignOptions)
 
-	// Sign the request.  The expires parameter (sets the x-amz-expires header) is
-	// currently ignored by STS, and the token expires 15 minutes after the x-amz-date
-	// timestamp regardless.  We set it to 60 seconds for backwards compatibility (the
-	// parameter is a required argument to Presign(), and authenticators 0.3.0 and older are expecting a value between
-	// 0 and 60 on the server side).
-	// https://github.com/aws/aws-sdk-go/issues/2167
-	presignedURLString, err := request.Presign(requestPresignParam * time.Second)
+			presignOptions.ClientOptions = append(presignOptions.ClientOptions, func(stsOptions *sts.Options) {
+				stsOptions.APIOptions = append(stsOptions.APIOptions,
+					// Add our custom cluster ID header
+					smithyhttp.SetHeaderValue(clusterIDHeader, clusterID),
+					// For backwards compatability, add the unused X-Amz-Expires header
+					smithyhttp.SetHeaderValue("X-Amz-Expires", "60"))
+			})
+		})
+
 	if err != nil {
 		return Token{}, err
 	}
 
 	// Set token expiration to 1 minute before the presigned URL expires for some cushion
 	tokenExpiration := g.nowFunc().Local().Add(presignedURLExpiration - 1*time.Minute)
+
 	// TODO: this may need to be a constant-time base64 encoding
-	return Token{v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedURLString)), tokenExpiration}, nil
+	return Token{v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedRequest.URL)), tokenExpiration}, nil
 }
 
 // FormatJSON formats the json to support ExecCredential authentication
