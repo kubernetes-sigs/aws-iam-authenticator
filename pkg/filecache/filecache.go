@@ -123,7 +123,7 @@ func WithFileLockerCreator(f func(string) FileLocker) FileCacheOpt {
 	}
 }
 
-// FileCacheProvider is a credentials.Provider implementation that wraps an underlying Provider
+// FileCacheProvider is a aws.CredentialsProvider implementation that wraps an underlying Provider
 // (contained in Credentials) and provides caching support for credentials for the
 // specified clusterID, profile, and roleARN (contained in cacheKey)
 type FileCacheProvider struct {
@@ -203,7 +203,7 @@ func NewFileCacheProvider(clusterID, profile, roleARN string, provider aws.Crede
 // otherwise fetching the credential from the underlying Provider and caching the results on disk
 // with an expiration time.
 func (f *FileCacheProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
-	return f.RetrieveWithContext(context.Background())
+	return f.RetrieveWithContext(ctx)
 }
 
 // Retrieve() implements the Provider interface, returning the cached credential if is not expired,

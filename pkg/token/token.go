@@ -187,7 +187,7 @@ type getCallerIdentityWrapper struct {
 // Generator provides new tokens for the AWS IAM Authenticator.
 type Generator interface {
 	// Get a token using the provided options
-	GetWithOptions(options *GetTokenOptions) (Token, error)
+	GetWithOptions(ctx context.Context, options *GetTokenOptions) (Token, error)
 	// GetWithSTS returns a token valid for clusterID using the given STS client.
 	GetWithSTS(clusterID string, stsClient *sts.Client) (Token, error)
 	// FormatJSON returns the client auth formatted json for the ExecCredential auth
@@ -220,14 +220,14 @@ func StdinStderrTokenProvider() (string, error) {
 // GetWithOptions takes a GetTokenOptions struct, builds the STS client, and wraps GetWithSTS.
 // If no session has been passed in options, it will build a new session. If an
 // AssumeRoleARN was passed in then assume the role for the session.
-func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
+func (g generator) GetWithOptions(ctx context.Context, options *GetTokenOptions) (Token, error) {
 	if options.ClusterID == "" {
 		return Token{}, fmt.Errorf("ClusterID is required")
 	}
 
 	// create a session with the "base" credentials available
 	// (from environment variable, profile files, EC2 metadata, etc)
-	cfg, err := config.LoadDefaultConfig(context.Background(),
+	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithAssumeRoleCredentialOptions(func(options *stscreds.AssumeRoleOptions) {
 			options.TokenProvider = StdinStderrTokenProvider
 		}),
@@ -238,7 +238,7 @@ func (g generator) GetWithOptions(options *GetTokenOptions) (Token, error) {
 	cfg.APIOptions = append(cfg.APIOptions,
 		middleware.AddUserAgentKeyValue("aws-iam-authenticator", pkg.Version),
 	)
-	if cfg.Region == "" {
+	if options.Region != "" {
 		cfg.Region = options.Region
 	}
 

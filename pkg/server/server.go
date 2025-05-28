@@ -81,7 +81,7 @@ type handler struct {
 }
 
 // New authentication webhook server.
-func New(cfg config.Config, stopCh <-chan struct{}) *Server {
+func New(ctx context.Context, cfg config.Config) *Server {
 	c := &Server{
 		Config: cfg,
 	}
@@ -145,7 +145,7 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 
 	logrus.Infof("listening on %s", listener.Addr())
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
-	internalHandler := c.getHandler(backendMapper, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst, stopCh)
+	internalHandler := c.getHandler(ctx, backendMapper, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst)
 	c.httpServer = http.Server{
 		ErrorLog: log.New(errLog, "", 0),
 		Handler:  internalHandler,
@@ -192,19 +192,20 @@ type healthzHandler struct{}
 func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
-func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int, stopCh <-chan struct{}) *handler {
+func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int) *handler {
+	stopCh := ctx.Done()
 	if c.ServerEC2DescribeInstancesRoleARN != "" {
 		_, err := awsarn.Parse(c.ServerEC2DescribeInstancesRoleARN)
 		if err != nil {
 			panic(fmt.Sprintf("describeinstancesrole %s is not a valid arn", c.ServerEC2DescribeInstancesRoleARN))
 		}
 	}
-	cfg, err := awsconfig.LoadDefaultConfig(context.Background())
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		logrus.WithError(err).Errorln("Could not load config")
+		panic(fmt.Sprintf("could not load config, %v", err))
 	}
 	imdsClient := imds.NewFromConfig(cfg)
-	instanceRegionOutput, err := imdsClient.GetRegion(context.TODO(), &imds.GetRegionInput{})
+	instanceRegionOutput, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
 	if err != nil {
 		logrus.WithError(err).Errorln("Region not found in instance metadata.")
 	}
