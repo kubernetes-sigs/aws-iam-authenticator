@@ -206,10 +206,12 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 	}
 	imdsClient := imds.NewFromConfig(cfg)
 	instanceRegionOutput, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
+	instanceRegion := ""
 	if err != nil {
 		logrus.WithError(err).Errorln("Region not found in instance metadata.")
+	} else {
+		instanceRegion = instanceRegionOutput.Region
 	}
-	instanceRegion := instanceRegionOutput.Region
 
 	h := &handler{
 		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
