@@ -34,8 +34,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
-	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 
@@ -234,7 +234,7 @@ func (g generator) GetWithOptions(ctx context.Context, options *GetTokenOptions)
 		}),
 	)
 	if err != nil {
-		return Token{}, fmt.Errorf("could not create session: %v", err)
+		return Token{}, fmt.Errorf("could not create config: %v", err)
 	}
 	cfg.APIOptions = append(cfg.APIOptions,
 		middleware.AddUserAgentKeyValue("aws-iam-authenticator", pkg.Version),
@@ -243,14 +243,13 @@ func (g generator) GetWithOptions(ctx context.Context, options *GetTokenOptions)
 		cfg.Region = options.Region
 	}
 	if cfg.Region == "" {
-		ec2 := imds.NewFromConfig(cfg)
-		region, err := ec2.GetRegion(context.Background(), &imds.GetRegionInput{})
+		imdsClient := imds.NewFromConfig(cfg)
+		region, err := imdsClient.GetRegion(context.Background(), &imds.GetRegionInput{})
 		if err != nil {
-			return Token{}, fmt.Errorf("error: failed to call the metadata server's region API, %v\n", err)
+			return Token{}, fmt.Errorf("failed to get region from instance metadata %v\n", err)
 		}
 		cfg.Region = region.Region
 	}
-
 
 	if g.cache {
 		// figure out what profile we're using
