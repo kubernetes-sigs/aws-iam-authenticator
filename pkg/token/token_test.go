@@ -2,6 +2,7 @@ package token
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -14,11 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -592,7 +593,7 @@ func TestGetWithSTS(t *testing.T) {
 
 	cases := []struct {
 		name    string
-		creds   *credentials.Credentials
+		creds   aws.CredentialsProvider
 		nowTime time.Time
 		want    Token
 		wantErr error
@@ -600,10 +601,10 @@ func TestGetWithSTS(t *testing.T) {
 		{
 			"Non-zero time",
 			// Example non-real credentials
-			func() *credentials.Credentials {
+			func() aws.CredentialsProvider {
 				decodedAkid, _ := base64.StdEncoding.DecodeString("QVNJQVIyVEc0NFY2QVMzWlpFN0M=")
 				decodedSk, _ := base64.StdEncoding.DecodeString("NEtENWNudEdjVm1MV1JkRjV3dk5SdXpOTDVReG1wNk9LVlk2RnovUQ==")
-				return credentials.NewStaticCredentials(
+				return credentials.NewStaticCredentialsProvider(
 					string(decodedAkid),
 					string(decodedSk),
 					"",
@@ -620,13 +621,14 @@ func TestGetWithSTS(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := sts.New(session.Must(session.NewSession(
-				&aws.Config{
-					Credentials:         tc.creds,
-					Region:              aws.String("us-west-2"),
-					STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
-				},
-			)))
+			cfg, err := config.LoadDefaultConfig(context.Background(),
+				config.WithCredentialsProvider(tc.creds),
+				config.WithRegion("us-west-2"),
+			)
+			if err != nil {
+
+			}
+			svc := sts.NewFromConfig(cfg)
 
 			gen := &generator{
 				forwardSessionName: false,

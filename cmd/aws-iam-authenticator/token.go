@@ -19,6 +19,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -63,7 +64,7 @@ var tokenCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		tok, err = gen.GetWithOptions(&token.GetTokenOptions{
+		tok, err = gen.GetWithOptions(context.Background(), &token.GetTokenOptions{
 			ClusterID:            clusterID,
 			AssumeRoleARN:        roleARN,
 			AssumeRoleExternalID: externalID,

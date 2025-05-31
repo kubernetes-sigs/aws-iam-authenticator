@@ -407,7 +407,7 @@ func TestFileCacheProvider_Retrieve_NoExpirer(t *testing.T) {
 	)
 	validateFileCacheProvider(t, p, err, provider)
 
-	credential, err := p.Retrieve()
+	credential, err := p.Retrieve(context.TODO())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -442,12 +442,12 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Unlockable(t *testing.T) {
 	tfl.success = false
 	tfl.err = errors.New("lock stuck, needs wd-40")
 
-	credential, err := p.Retrieve()
+	credential, err := p.Retrieve(context.TODO())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 	if credential.AccessKeyID != "AKID" || credential.SecretAccessKey != "SECRET" ||
-		credential.SessionToken != "TOKEN" || credential.ProviderName != "stubProvider" {
+		credential.SessionToken != "TOKEN" || credential.Source != "stubProvider" {
 		t.Errorf("cached credential not extracted correctly, got %v", p.cachedCredential)
 	}
 }
@@ -471,14 +471,14 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Unwritable(t *testing.T) {
 	)
 	validateFileCacheProvider(t, p, err, provider)
 
-	credential, err := p.Retrieve()
+	credential, err := p.Retrieve(context.TODO())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 	if credential.AccessKeyID != provider.creds.AccessKeyID ||
 		credential.SecretAccessKey != provider.creds.SecretAccessKey ||
 		credential.SessionToken != provider.creds.SessionToken ||
-		credential.ProviderName != provider.creds.Source {
+		credential.Source != provider.creds.Source {
 		t.Errorf("cached credential not extracted correctly, got %v", p.cachedCredential)
 	}
 
@@ -525,14 +525,14 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Writable(t *testing.T) {
 	// retrieve credential, which will fetch from underlying Provider
 	// same as TestFileCacheProvider_Retrieve_WithExpirer_Unwritable,
 	// but write to disk (code coverage)
-	credential, err := p.Retrieve()
+	credential, err := p.Retrieve(context.TODO())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 	if credential.AccessKeyID != provider.creds.AccessKeyID ||
 		credential.SecretAccessKey != provider.creds.SecretAccessKey ||
 		credential.SessionToken != provider.creds.SessionToken ||
-		credential.ProviderName != provider.creds.Source {
+		credential.Source != provider.creds.Source {
 		t.Errorf("cached credential not extracted correctly, got %v", p.cachedCredential)
 	}
 }
@@ -567,12 +567,12 @@ func TestFileCacheProvider_Retrieve_CacheHit(t *testing.T) {
 		}))
 	validateFileCacheProvider(t, p, err, provider)
 
-	credential, err := p.Retrieve()
+	credential, err := p.Retrieve(context.TODO())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 	if credential.AccessKeyID != "ABC" || credential.SecretAccessKey != "DEF" ||
-		credential.SessionToken != "GHI" || credential.ProviderName != "JKL" {
+		credential.SessionToken != "GHI" || credential.Source != "JKL" {
 		t.Errorf("cached credential not returned")
 	}
 
