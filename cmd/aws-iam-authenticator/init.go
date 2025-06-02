@@ -21,7 +21,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
@@ -74,10 +73,6 @@ var initCmd = &cobra.Command{
 }
 
 func init() {
-	viper.AutomaticEnv()
-	viper.SetEnvPrefix("aws_iam_authenticator")
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-
 	initCmd.Flags().String(
 		"hostname",
 		"localhost",
