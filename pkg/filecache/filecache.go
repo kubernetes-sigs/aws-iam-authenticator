@@ -216,7 +216,7 @@ func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (credential
 		// use the cached credential
 		return V2CredentialToV1Value(f.cachedCredential), nil
 	} else {
-		logrus.Info("No cached credential available. Refreshing...")
+		logrus.Debug("No cached credential available. Refreshing...")
 		// fetch the credentials from the underlying Provider
 		credential, err := f.provider.Retrieve(ctx)
 		if err != nil {
@@ -248,7 +248,7 @@ func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (credential
 				logrus.Warnf("Unable to update credential cache %s: %v", f.filename, err)
 				err = nil
 			} else {
-				logrus.Info("Updated cached credential")
+				logrus.Debug("Updated cached credential")
 			}
 		} else {
 			// credential doesn't support expiration time, so can't cache, but still return the credential
