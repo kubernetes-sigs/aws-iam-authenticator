@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/gofrs/flock"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 )
@@ -190,7 +191,7 @@ func NewFileCacheProvider(clusterID, profile, roleARN string, provider aws.Crede
 	} else {
 		if errors.Is(err, fs.ErrNotExist) {
 			// cache file is missing.  maybe this is the very first run?  continue to use cache.
-			_, _ = fmt.Fprintf(os.Stderr, "Cache file %s does not exist.\n", resp.filename)
+			logrus.Warnf("Cache file %s does not exist.", resp.filename)
 		} else {
 			return nil, fmt.Errorf("couldn't stat cache file: %w", err)
 		}
@@ -214,7 +215,7 @@ func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (aws.Creden
 		// use the cached credential
 		return f.cachedCredential, nil
 	} else {
-		_, _ = fmt.Fprintf(os.Stderr, "No cached credential available.  Refreshing...\n")
+		logrus.Debug("No cached credential available. Refreshing...")
 		// fetch the credentials from the underlying Provider
 		credential, err := f.provider.Retrieve(ctx)
 		if err != nil {
@@ -233,7 +234,7 @@ func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (aws.Creden
 			ok, err := lock.TryLockContext(ctx, 250*time.Millisecond) // try to lock every 1/4 second
 			if !ok {
 				// can't get write lock to create/update cache, but still return the credential
-				_, _ = fmt.Fprintf(os.Stderr, "Unable to write lock file %s: %v\n", f.filename, err)
+				logrus.Warnf("Unable to write lock file %s: %v", f.filename, err)
 				return credential, nil
 			}
 			f.cachedCredential = credential
@@ -243,14 +244,14 @@ func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (aws.Creden
 			err = writeCacheWhileLocked(f.fs, f.filename, cache)
 			if err != nil {
 				// can't write cache, but still return the credential
-				_, _ = fmt.Fprintf(os.Stderr, "Unable to update credential cache %s: %v\n", f.filename, err)
+				logrus.Warnf("Unable to update credential cache %s: %v", f.filename, err)
 				err = nil
 			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "Updated cached credential\n")
+				logrus.Debug("Updated cached credential")
 			}
 		} else {
 			// credential doesn't support expiration time, so can't cache, but still return the credential
-			_, _ = fmt.Fprint(os.Stderr, "Unable to cache credential: credential doesn't support expiration\n")
+			logrus.Warn("Unable to cache credential: credential doesn't support expiration")
 		}
 		return credential, err
 	}
