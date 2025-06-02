@@ -244,7 +244,7 @@ func (g generator) GetWithOptions(ctx context.Context, options *GetTokenOptions)
 	}
 	if cfg.Region == "" {
 		imdsClient := imds.NewFromConfig(cfg)
-		region, err := imdsClient.GetRegion(context.Background(), &imds.GetRegionInput{})
+		region, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
 		if err != nil {
 			return Token{}, fmt.Errorf("failed to get region from instance metadata %v\n", err)
 		}
@@ -289,7 +289,7 @@ func (g generator) GetWithOptions(ctx context.Context, options *GetTokenOptions)
 			// If the current session is already a federated identity, carry through
 			// this session name onto the new session to provide better debugging
 			// capabilities
-			resp, err := stsClient.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
+			resp, err := stsClient.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 			if err != nil {
 				return Token{}, err
 			}
@@ -354,8 +354,14 @@ func (g generator) GetWithSTS(clusterID string, stsClient *sts.Client) (Token, e
 				stsOptions.APIOptions = append(stsOptions.APIOptions,
 					// Add our custom cluster ID header
 					smithyhttp.SetHeaderValue(clusterIDHeader, clusterID),
-					// For backwards compatability, add the unused X-Amz-Expires header
-					smithyhttp.SetHeaderValue("X-Amz-Expires", "60"))
+					// Sign the request.  The expires parameter (sets the x-amz-expires header) is
+					// currently ignored by STS, and the token expires 15 minutes after the x-amz-date
+					// timestamp regardless.  We set it to 60 seconds for backwards compatibility (the
+					// parameter is a required argument to Presign(), and authenticators 0.3.0 and older are expecting a value between
+					// 0 and 60 on the server side).
+					// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/aws/signer/v4#:~:text=request%20add%20the%20%22-,X%2DAmz%2DExpires,-%22%20query%20parameter%20on
+					// Broader context: https://github.com/aws/aws-sdk-go/issues/2167
+					smithyhttp.SetHeaderValue("X-Amz-Expires", strconv.Itoa(requestPresignParam)))
 			})
 		})
 

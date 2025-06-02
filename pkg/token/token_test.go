@@ -626,7 +626,7 @@ func TestGetWithSTS(t *testing.T) {
 				config.WithRegion("us-west-2"),
 			)
 			if err != nil {
-
+				t.Errorf("Error loading config: %v", err)
 			}
 			svc := sts.NewFromConfig(cfg)
 

@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -71,7 +72,7 @@ type testEC2Provider struct {
 	burst int
 }
 
-func (p *testEC2Provider) GetPrivateDNSName(id string) (string, error) {
+func (p *testEC2Provider) GetPrivateDNSName(ctx context.Context, id string) (string, error) {
 	return p.name, nil
 }
 

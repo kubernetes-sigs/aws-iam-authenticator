@@ -215,7 +215,7 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 
 	h := &handler{
 		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
-		ec2Provider:               ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
+		ec2Provider:               ec2provider.New(ctx, c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
 		clusterID:                 c.ClusterID,
 		backendMapper:             backendMapper,
 		scrubbedAccounts:          c.Config.ScrubbedAWSAccounts,
@@ -489,7 +489,7 @@ func (h *handler) renderTemplate(template string, identity *token.Identity) (str
 		if !instanceIDPattern.MatchString(identity.SessionName) {
 			return "", fmt.Errorf("SessionName did not contain an instance id")
 		}
-		privateDNSName, err := h.ec2Provider.GetPrivateDNSName(identity.SessionName)
+		privateDNSName, err := h.ec2Provider.GetPrivateDNSName(context.Background(), identity.SessionName)
 		if err != nil {
 			return "", err
 		}

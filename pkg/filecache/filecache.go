@@ -204,13 +204,6 @@ func NewFileCacheProvider(clusterID, profile, roleARN string, provider aws.Crede
 // otherwise fetching the credential from the underlying Provider and caching the results on disk
 // with an expiration time.
 func (f *FileCacheProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
-	return f.RetrieveWithContext(ctx)
-}
-
-// Retrieve() implements the Provider interface, returning the cached credential if is not expired,
-// otherwise fetching the credential from the underlying Provider and caching the results on disk
-// with an expiration time.
-func (f *FileCacheProvider) RetrieveWithContext(ctx context.Context) (aws.Credentials, error) {
 	if !f.cachedCredential.Expired() && f.cachedCredential.HasKeys() {
 		// use the cached credential
 		return f.cachedCredential, nil

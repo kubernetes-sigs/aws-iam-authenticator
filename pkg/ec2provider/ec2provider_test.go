@@ -71,7 +71,7 @@ func TestGetPrivateDNSName(t *testing.T) {
 	ec2Provider := newMockedEC2ProviderImpl()
 	ec2Provider.ec2 = &mockEc2Client{Reservations: prepareSingleInstanceOutput()}
 	go ec2Provider.StartEc2DescribeBatchProcessing()
-	dns_name, err := ec2Provider.GetPrivateDNSName("ec2-1")
+	dns_name, err := ec2Provider.GetPrivateDNSName(context.TODO(), "ec2-1")
 	if err != nil {
 		t.Error("There is an error which is not expected when calling ec2 API with setting up mocks")
 	}
@@ -120,7 +120,7 @@ func TestGetPrivateDNSNameWithBatching(t *testing.T) {
 
 func getPrivateDNSName(ec2provider *ec2ProviderImpl, instanceString string, dnsString string, t *testing.T, wg *sync.WaitGroup) {
 	defer wg.Done()
-	dnsName, err := ec2provider.GetPrivateDNSName(instanceString)
+	dnsName, err := ec2provider.GetPrivateDNSName(context.TODO(), instanceString)
 	if err != nil {
 		t.Error("There is an error which is not expected when calling ec2 API with setting up mocks")
 	}
@@ -206,24 +206,20 @@ func TestApplySTSRequestHeaders(t *testing.T) {
 		{
 			name: "header with source arn",
 			args: map[string]string{
-				headerSourceAccount: "123456789012",
-				headerSourceArn:     "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
+				headerSourceArn: "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
 			},
 			want: map[string]string{
-				headerSourceAccount: "123456789012",
-				headerSourceArn:     "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
+				headerSourceArn: "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
 			},
 			wantErr: false,
 		},
 		{
 			name: "header without source arn",
 			args: map[string]string{
-				headerSourceAccount: "123456789012",
-				headerSourceArn:     "",
+				headerSourceArn: "",
 			},
 			want: map[string]string{
-				headerSourceAccount: "",
-				headerSourceArn:     "",
+				headerSourceArn: "",
 			},
 			wantErr: false,
 		},
@@ -250,7 +246,7 @@ func TestApplySTSRequestHeaders(t *testing.T) {
 				},
 			}
 			stsClient := sts.NewFromConfig(*applySTSRequestHeaders(&cfg, tt.args[headerSourceArn]))
-			_, err := stsClient.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
+			_, err := stsClient.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 			if err != nil {
 				t.Errorf("error making sts client call, %v", err)
 			}

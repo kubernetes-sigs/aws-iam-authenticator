@@ -50,7 +50,7 @@ type EC2API interface {
 
 // Get a node name from instance ID
 type EC2Provider interface {
-	GetPrivateDNSName(string) (string, error)
+	GetPrivateDNSName(ctx context.Context, id string) (string, error)
 	StartEc2DescribeBatchProcessing()
 }
 
@@ -71,7 +71,7 @@ type ec2ProviderImpl struct {
 	instanceIdsChannel chan string
 }
 
-func New(roleARN, sourceARN, region string, qps int, burst int) EC2Provider {
+func New(ctx context.Context, roleARN, sourceARN, region string, qps int, burst int) EC2Provider {
 	dnsCache := ec2PrivateDNSCache{
 		cache: make(map[string]string),
 		lock:  sync.RWMutex{},
@@ -81,15 +81,14 @@ func New(roleARN, sourceARN, region string, qps int, burst int) EC2Provider {
 		lock: sync.RWMutex{},
 	}
 	return &ec2ProviderImpl{
-		ec2:                newEC2Client(roleARN, sourceARN, region, qps, burst),
+		ec2:                newEC2Client(ctx, roleARN, sourceARN, region, qps, burst),
 		privateDNSCache:    dnsCache,
 		ec2Requests:        ec2Requests,
 		instanceIdsChannel: make(chan string, maxChannelSize),
 	}
 }
 
-func newEC2Client(roleARN, sourceARN, region string, qps int, burst int) EC2API {
-	ctx := context.Background()
+func newEC2Client(ctx context.Context, roleARN, sourceARN, region string, qps int, burst int) EC2API {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		logrus.Fatalf("Failed to load AWS config: %v", err)
@@ -112,9 +111,9 @@ func newEC2Client(roleARN, sourceARN, region string, qps int, burst int) EC2API 
 			logrus.Errorf("Getting error = %s while creating rate limited client ", err)
 		}
 
-		stsCfg, err := config.LoadDefaultConfig(ctx,
-			config.WithRegion(region),
-			config.WithHTTPClient(rateLimitedClient))
+		stsCfg := cfg
+		stsCfg.HTTPClient = rateLimitedClient
+
 		if err != nil {
 			logrus.Fatalf("Failed to load AWS config: %v", err)
 		}
@@ -174,7 +173,7 @@ func (p *ec2ProviderImpl) getPrivateDNSNameCache(id string) (string, error) {
 }
 
 // Only calls API if its not in the cache
-func (p *ec2ProviderImpl) GetPrivateDNSName(id string) (string, error) {
+func (p *ec2ProviderImpl) GetPrivateDNSName(ctx context.Context, id string) (string, error) {
 	privateDNSName, err := p.getPrivateDNSNameCache(id)
 	if err == nil {
 		return privateDNSName, nil
@@ -200,13 +199,13 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(id string) (string, error) {
 	if requestQueueLength > maxAllowedInflightRequest {
 		logrus.Debugf("Writing to buffered channel for instance Id %s ", id)
 		p.instanceIdsChannel <- id
-		return p.GetPrivateDNSName(id)
+		return p.GetPrivateDNSName(ctx, id)
 	}
 
 	logrus.Infof("Calling ec2:DescribeInstances for the InstanceId = %s ", id)
 	metrics.Get().EC2DescribeInstanceCallCount.Inc()
 	// Look up instance from EC2 API
-	output, err := p.ec2.DescribeInstances(context.Background(), &ec2.DescribeInstancesInput{
+	output, err := p.ec2.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: []string{id},
 	})
 	if err != nil {
