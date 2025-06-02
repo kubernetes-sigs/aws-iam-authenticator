@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
@@ -59,6 +60,11 @@ func init() {
 
 	rootCmd.PersistentFlags().StringP("log-format", "l", "text", "Specify log format to use when logging to stderr [text or json]")
 
+	rootCmd.PersistentFlags().StringP("log-verbosity", "v", "info",
+		"Specify log level to use when logging to stderr ["+strings.Join(getValidLogLevels(), ", ")+"]")
+	viper.BindPFlag("log-verbosity", rootCmd.PersistentFlags().Lookup("log-verbosity"))
+	viper.BindEnv("log-verbosity", "AWS_IAM_AUTHENTICATOR_LOG_VERBOSITY")
+
 	rootCmd.PersistentFlags().StringP(
 		"cluster-id",
 		"i",
@@ -75,6 +81,15 @@ func init() {
 
 func initConfig() {
 	logrus.SetFormatter(getLogFormatter())
+
+	logLevel := viper.GetString("log-verbosity")
+	if level, err := logrus.ParseLevel(logLevel); err == nil {
+		logrus.SetLevel(level)
+	} else {
+		fmt.Printf("Invalid log level %q. Valid values are: %s\n", logLevel, strings.Join(getValidLogLevels(), ", "))
+		os.Exit(1)
+	}
+
 	if cfgFile == "" {
 		return
 	}
@@ -86,7 +101,6 @@ func initConfig() {
 }
 
 func getConfig() (config.Config, error) {
-
 	cfg := config.Config{
 		PartitionID:                       viper.GetString("server.partition"),
 		ClusterID:                         viper.GetString("clusterID"),
@@ -104,12 +118,12 @@ func getConfig() (config.Config, error) {
 		EC2DescribeInstancesQps:           viper.GetInt("server.ec2DescribeInstancesQps"),
 		EC2DescribeInstancesBurst:         viper.GetInt("server.ec2DescribeInstancesBurst"),
 		ScrubbedAWSAccounts:               viper.GetStringSlice("server.scrubbedAccounts"),
-		//flags for dynamicfile mode
-		//DynamicFilePath: the file path containing the roleMapping and userMapping
+		// flags for dynamicfile mode
+		// DynamicFilePath: the file path containing the roleMapping and userMapping
 		DynamicFilePath: viper.GetString("server.dynamicfilepath"),
-		//DynamicFileUserIDStrict: if true, then aws UserId from sts will be used to look up the roleMapping/userMapping; or aws IdentityArn is used
+		// DynamicFileUserIDStrict: if true, then aws UserId from sts will be used to look up the roleMapping/userMapping; or aws IdentityArn is used
 		DynamicFileUserIDStrict: viper.GetBool("server.dynamicfileUserIDStrict"),
-		//DynamicBackendModePath: the file path containing the backend mode
+		// DynamicBackendModePath: the file path containing the backend mode
 		DynamicBackendModePath: viper.GetString("server.dynamicBackendModePath"),
 	}
 	if err := viper.UnmarshalKey("server.mapRoles", &cfg.RoleMappings); err != nil {
@@ -184,4 +198,12 @@ func getLogFormatter() logrus.Formatter {
 	}
 
 	return &logrus.TextFormatter{FullTimestamp: true}
+}
+
+func getValidLogLevels() []string {
+	var levels []string
+	for _, level := range logrus.AllLevels {
+		levels = append(levels, level.String())
+	}
+	return levels
 }
