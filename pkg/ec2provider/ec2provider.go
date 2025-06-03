@@ -51,7 +51,7 @@ type EC2API interface {
 // Get a node name from instance ID
 type EC2Provider interface {
 	GetPrivateDNSName(ctx context.Context, id string) (string, error)
-	StartEc2DescribeBatchProcessing()
+	StartEc2DescribeBatchProcessing(ctx context.Context)
 }
 
 type ec2PrivateDNSCache struct {
@@ -113,10 +113,6 @@ func newEC2Client(ctx context.Context, roleARN, sourceARN, region string, qps in
 
 		stsCfg := cfg
 		stsCfg.HTTPClient = rateLimitedClient
-
-		if err != nil {
-			logrus.Fatalf("Failed to load AWS config: %v", err)
-		}
 
 		stsClient := sts.NewFromConfig(*applySTSRequestHeaders(&stsCfg, sourceARN))
 		ap := stscreds.NewAssumeRoleProvider(stsClient, roleARN, func(o *stscreds.AssumeRoleOptions) {
@@ -228,7 +224,7 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(ctx context.Context, id string) (str
 	return privateDNSName, nil
 }
 
-func (p *ec2ProviderImpl) StartEc2DescribeBatchProcessing() {
+func (p *ec2ProviderImpl) StartEc2DescribeBatchProcessing(ctx context.Context) {
 	startTime := time.Now()
 	var instanceIdList []string
 	for {
@@ -256,17 +252,17 @@ func (p *ec2ProviderImpl) StartEc2DescribeBatchProcessing() {
 			startTime = time.Now()
 			dupInstanceList := make([]string, len(instanceIdList))
 			copy(dupInstanceList, instanceIdList)
-			go p.getPrivateDnsAndPublishToCache(dupInstanceList)
+			go p.getPrivateDnsAndPublishToCache(ctx, dupInstanceList)
 			instanceIdList = nil
 		}
 	}
 }
 
-func (p *ec2ProviderImpl) getPrivateDnsAndPublishToCache(instanceIdList []string) {
+func (p *ec2ProviderImpl) getPrivateDnsAndPublishToCache(ctx context.Context, instanceIdList []string) {
 	// Look up instance from EC2 API
 	logrus.Infof("Making Batch Query to DescribeInstances for %v instances ", len(instanceIdList))
 	metrics.Get().EC2DescribeInstanceCallCount.Inc()
-	output, err := p.ec2.DescribeInstances(context.Background(), &ec2.DescribeInstancesInput{
+	output, err := p.ec2.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: instanceIdList,
 	})
 	if err != nil {

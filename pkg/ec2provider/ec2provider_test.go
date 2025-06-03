@@ -70,7 +70,7 @@ func TestGetPrivateDNSName(t *testing.T) {
 	metrics.InitMetrics(prometheus.NewRegistry())
 	ec2Provider := newMockedEC2ProviderImpl()
 	ec2Provider.ec2 = &mockEc2Client{Reservations: prepareSingleInstanceOutput()}
-	go ec2Provider.StartEc2DescribeBatchProcessing()
+	go ec2Provider.StartEc2DescribeBatchProcessing(context.TODO())
 	dns_name, err := ec2Provider.GetPrivateDNSName(context.TODO(), "ec2-1")
 	if err != nil {
 		t.Error("There is an error which is not expected when calling ec2 API with setting up mocks")
@@ -103,7 +103,7 @@ func TestGetPrivateDNSNameWithBatching(t *testing.T) {
 	ec2Provider := newMockedEC2ProviderImpl()
 	reservations := prepare100InstanceOutput()
 	ec2Provider.ec2 = &mockEc2Client{Reservations: reservations}
-	go ec2Provider.StartEc2DescribeBatchProcessing()
+	go ec2Provider.StartEc2DescribeBatchProcessing(context.TODO())
 	var wg sync.WaitGroup
 	for i := 1; i < 101; i++ {
 		instanceString := "ec2-" + strconv.Itoa(i)
@@ -206,20 +206,24 @@ func TestApplySTSRequestHeaders(t *testing.T) {
 		{
 			name: "header with source arn",
 			args: map[string]string{
-				headerSourceArn: "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
+				headerSourceAccount: "123456789012",
+				headerSourceArn:     "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
 			},
 			want: map[string]string{
-				headerSourceArn: "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
+				headerSourceAccount: "123456789012",
+				headerSourceArn:     "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
 			},
 			wantErr: false,
 		},
 		{
 			name: "header without source arn",
 			args: map[string]string{
-				headerSourceArn: "",
+				headerSourceAccount: "123456789012",
+				headerSourceArn:     "",
 			},
 			want: map[string]string{
-				headerSourceArn: "",
+				headerSourceAccount: "",
+				headerSourceArn:     "",
 			},
 			wantErr: false,
 		},

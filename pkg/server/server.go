@@ -223,13 +223,15 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 		backendModeConfigInitDone: false,
 	}
 
-	h.HandleFunc("/authenticate", h.authenticateEndpoint)
+	h.HandleFunc("/authenticate", func(w http.ResponseWriter, r *http.Request) {
+		h.authenticateEndpoint(ctx, w, r)
+	})
 	h.Handle("/metrics", promhttp.Handler())
 	h.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "ok")
 	})
 	logrus.Infof("Starting the h.ec2Provider.startEc2DescribeBatchProcessing ")
-	go h.ec2Provider.StartEc2DescribeBatchProcessing()
+	go h.ec2Provider.StartEc2DescribeBatchProcessing(ctx)
 	if strings.TrimSpace(c.DynamicBackendModePath) != "" {
 		fileutil.StartLoadDynamicFile(c.DynamicBackendModePath, h, stopCh)
 	}
@@ -303,7 +305,7 @@ func (h *handler) isLoggableIdentity(identity *token.Identity) bool {
 	return true
 }
 
-func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request) {
+func (h *handler) authenticateEndpoint(ctx context.Context, w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 	log := logrus.WithFields(logrus.Fields{
 		"path":   req.URL.Path,
@@ -372,7 +374,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 		log = log.WithField("arn", identity.CanonicalARN)
 	}
 
-	username, groups, err := h.doMapping(identity)
+	username, groups, err := h.doMapping(ctx, identity)
 	if err != nil {
 		metrics.Get().Latency.WithLabelValues(metrics.Unknown).Observe(duration(start))
 		log.WithError(err).Warn("access denied")
@@ -429,14 +431,14 @@ func ReservedPrefixExists(username string, reservedList []string) bool {
 	return false
 }
 
-func (h *handler) doMapping(identity *token.Identity) (string, []string, error) {
+func (h *handler) doMapping(ctx context.Context, identity *token.Identity) (string, []string, error) {
 	var errs []error
 
 	for _, m := range h.backendMapper.mappers {
 		mapping, err := m.Map(identity)
 		if err == nil {
 			// Mapping found, try to render any templates like {{EC2PrivateDNSName}}
-			username, groups, err := h.renderTemplates(*mapping, identity)
+			username, groups, err := h.renderTemplates(ctx, *mapping, identity)
 			if err != nil {
 				return "", nil, fmt.Errorf("mapper %s renderTemplates error: %v", m.Name(), err)
 			}
@@ -461,19 +463,19 @@ func (h *handler) doMapping(identity *token.Identity) (string, []string, error) 
 	return "", nil, errutil.ErrNotMapped
 }
 
-func (h *handler) renderTemplates(mapping config.IdentityMapping, identity *token.Identity) (string, []string, error) {
+func (h *handler) renderTemplates(ctx context.Context, mapping config.IdentityMapping, identity *token.Identity) (string, []string, error) {
 	var username string
 	groups := []string{}
 	var err error
 
 	userPattern := mapping.Username
-	username, err = h.renderTemplate(userPattern, identity)
+	username, err = h.renderTemplate(ctx, userPattern, identity)
 	if err != nil {
 		return "", nil, fmt.Errorf("error rendering username template %q: %s", userPattern, err.Error())
 	}
 
 	for _, groupPattern := range mapping.Groups {
-		group, err := h.renderTemplate(groupPattern, identity)
+		group, err := h.renderTemplate(ctx, groupPattern, identity)
 		if err != nil {
 			return "", nil, fmt.Errorf("error rendering group template %q: %s", groupPattern, err.Error())
 		}
@@ -483,13 +485,13 @@ func (h *handler) renderTemplates(mapping config.IdentityMapping, identity *toke
 	return username, groups, nil
 }
 
-func (h *handler) renderTemplate(template string, identity *token.Identity) (string, error) {
+func (h *handler) renderTemplate(ctx context.Context, template string, identity *token.Identity) (string, error) {
 	// Private DNS requires EC2 API call
 	if strings.Contains(template, "{{EC2PrivateDNSName}}") {
 		if !instanceIDPattern.MatchString(identity.SessionName) {
 			return "", fmt.Errorf("SessionName did not contain an instance id")
 		}
-		privateDNSName, err := h.ec2Provider.GetPrivateDNSName(context.Background(), identity.SessionName)
+		privateDNSName, err := h.ec2Provider.GetPrivateDNSName(ctx, identity.SessionName)
 		if err != nil {
 			return "", err
 		}
