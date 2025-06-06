@@ -198,17 +198,14 @@ func TestGetSourceAcctAndArn(t *testing.T) {
 
 func TestApplySTSRequestHeaders(t *testing.T) {
 	tests := []struct {
-		name    string
-		args    map[string]string
-		want    map[string]string
-		wantErr bool
+		name            string
+		headerSourceArn string
+		want            map[string]string
+		wantErr         bool
 	}{
 		{
-			name: "header with source arn",
-			args: map[string]string{
-				headerSourceAccount: "123456789012",
-				headerSourceArn:     "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
-			},
+			name:            "header with source arn",
+			headerSourceArn: "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
 			want: map[string]string{
 				headerSourceAccount: "123456789012",
 				headerSourceArn:     "arn:aws:eks:us-east-1:123456789012:MyCluster/res1",
@@ -216,11 +213,8 @@ func TestApplySTSRequestHeaders(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "header without source arn",
-			args: map[string]string{
-				headerSourceAccount: "123456789012",
-				headerSourceArn:     "",
-			},
+			name:            "header without source arn",
+			headerSourceArn: "",
 			want: map[string]string{
 				headerSourceAccount: "",
 				headerSourceArn:     "",
@@ -249,7 +243,7 @@ func TestApplySTSRequestHeaders(t *testing.T) {
 					Transport: mockRT,
 				},
 			}
-			stsClient := sts.NewFromConfig(*applySTSRequestHeaders(&cfg, tt.args[headerSourceArn]))
+			stsClient := sts.NewFromConfig(*applySTSRequestHeaders(&cfg, tt.headerSourceArn))
 			_, err := stsClient.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 			if err != nil {
 				t.Errorf("error making sts client call, %v", err)

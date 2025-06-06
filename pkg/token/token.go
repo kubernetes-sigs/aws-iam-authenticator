@@ -34,7 +34,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
@@ -243,12 +242,7 @@ func (g generator) GetWithOptions(ctx context.Context, options *GetTokenOptions)
 		cfg.Region = options.Region
 	}
 	if cfg.Region == "" {
-		imdsClient := imds.NewFromConfig(cfg)
-		region, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
-		if err != nil {
-			return Token{}, fmt.Errorf("failed to get region from instance metadata %v\n", err)
-		}
-		cfg.Region = region.Region
+		return Token{}, fmt.Errorf("no region configured: %v", err)
 	}
 
 	if g.cache {
@@ -371,7 +365,6 @@ func (g generator) GetWithSTS(clusterID string, stsClient *sts.Client) (Token, e
 
 	// Set token expiration to 1 minute before the presigned URL expires for some cushion
 	tokenExpiration := g.nowFunc().Local().Add(presignedURLExpiration - 1*time.Minute)
-
 	// TODO: this may need to be a constant-time base64 encoding
 	return Token{v1Prefix + base64.RawURLEncoding.EncodeToString([]byte(presignedRequest.URL)), tokenExpiration}, nil
 }
