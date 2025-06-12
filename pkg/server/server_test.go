@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -71,11 +72,11 @@ type testEC2Provider struct {
 	burst int
 }
 
-func (p *testEC2Provider) GetPrivateDNSName(id string) (string, error) {
+func (p *testEC2Provider) GetPrivateDNSName(ctx context.Context, id string) (string, error) {
 	return p.name, nil
 }
 
-func (p *testEC2Provider) StartEc2DescribeBatchProcessing() {}
+func (p *testEC2Provider) StartEc2DescribeBatchProcessing(ctx context.Context) {}
 
 func newTestEC2Provider(name string, qps int, burst int) *testEC2Provider {
 	return &testEC2Provider{
@@ -216,7 +217,7 @@ func TestAuthenticateNonPostError(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://k8s.io/authenticate", nil)
 	h := setup(nil)
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusMethodNotAllowed {
 		t.Errorf("Expected status code %d, was %d", http.StatusMethodNotAllowed, resp.Code)
 	}
@@ -228,7 +229,7 @@ func TestAuthenticateNonPostErrorCRD(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://k8s.io/authenticate", nil)
 	h := setup(nil)
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusMethodNotAllowed {
 		t.Errorf("Expected status code %d, was %d", http.StatusMethodNotAllowed, resp.Code)
 	}
@@ -240,7 +241,7 @@ func TestAuthenticateEmptyBody(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", nil)
 	h := setup(nil)
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusBadRequest {
 		t.Errorf("Expected status code %d, was %d", http.StatusBadRequest, resp.Code)
 	}
@@ -252,7 +253,7 @@ func TestAuthenticateEmptyBodyCRD(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", nil)
 	h := setup(nil)
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusBadRequest {
 		t.Errorf("Expected status code %d, was %d", http.StatusBadRequest, resp.Code)
 	}
@@ -264,7 +265,7 @@ func TestAuthenticateUnableToDecodeBody(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", strings.NewReader("not valid json"))
 	h := setup(nil)
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusBadRequest {
 		t.Errorf("Expected status code %d, was %d", http.StatusBadRequest, resp.Code)
 	}
@@ -276,7 +277,7 @@ func TestAuthenticateUnableToDecodeBodyCRD(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", strings.NewReader("not valid json"))
 	h := setup(nil)
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusBadRequest {
 		t.Errorf("Expected status code %d, was %d", http.StatusBadRequest, resp.Code)
 	}
@@ -338,7 +339,7 @@ func TestAuthenticateVerifierError(t *testing.T) {
 	}
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
 	h := setup(&testVerifier{err: errors.New("There was an error")})
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusForbidden {
 		t.Errorf("Expected status code %d, was %d", http.StatusForbidden, resp.Code)
 	}
@@ -359,7 +360,7 @@ func TestAuthenticateVerifierErrorCRD(t *testing.T) {
 	}
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
 	h := setup(&testVerifier{err: errors.New("There was an error")})
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusForbidden {
 		t.Errorf("Expected status code %d, was %d", http.StatusForbidden, resp.Code)
 	}
@@ -380,7 +381,7 @@ func TestAuthenticateVerifierSTSThrottling(t *testing.T) {
 	}
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
 	h := setup(&testVerifier{err: token.STSThrottling{}})
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusTooManyRequests {
 		t.Errorf("Expected status code %d, was %d", http.StatusTooManyRequests, resp.Code)
 	}
@@ -401,7 +402,7 @@ func TestAuthenticateVerifierSTSError(t *testing.T) {
 	}
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
 	h := setup(&testVerifier{err: token.NewSTSError("There was an error")})
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusForbidden {
 		t.Errorf("Expected status code %d, was %d", http.StatusForbidden, resp.Code)
 	}
@@ -422,7 +423,7 @@ func TestAuthenticateVerifierSTSErrorCRD(t *testing.T) {
 	}
 	req := httptest.NewRequest("POST", "http://k8s.io/authenticate", bytes.NewReader(data))
 	h := setup(&testVerifier{err: token.NewSTSError("There was an error")})
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusForbidden {
 		t.Errorf("Expected status code %d, was %d", http.StatusForbidden, resp.Code)
 	}
@@ -449,7 +450,7 @@ func TestAuthenticateVerifierNotMapped(t *testing.T) {
 		UserID:       "",
 		SessionName:  "",
 	}})
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusForbidden {
 		t.Errorf("Expected status code %d, was %d", http.StatusForbidden, resp.Code)
 	}
@@ -476,7 +477,7 @@ func TestAuthenticateVerifierNotMappedCRD(t *testing.T) {
 		UserID:       "",
 		SessionName:  "",
 	}})
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusForbidden {
 		t.Errorf("Expected status code %d, was %d", http.StatusForbidden, resp.Code)
 	}
@@ -515,7 +516,7 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 		}, nil, nil)},
 		mapperStopCh: make(chan struct{}),
 	}
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
@@ -559,7 +560,7 @@ func TestAuthenticateVerifierRoleMappingCRD(t *testing.T) {
 		mappers:      []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)},
 		mapperStopCh: make(chan struct{}),
 	}
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
@@ -607,7 +608,7 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 		}, nil)},
 		mapperStopCh: make(chan struct{}),
 	}
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
@@ -651,7 +652,7 @@ func TestAuthenticateVerifierUserMappingCRD(t *testing.T) {
 		mappers:      []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)},
 		mapperStopCh: make(chan struct{}),
 	}
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
@@ -695,7 +696,7 @@ func TestAuthenticateVerifierAccountMappingForUser(t *testing.T) {
 		})},
 		mapperStopCh: make(chan struct{}),
 	}
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
@@ -739,7 +740,7 @@ func TestAuthenticateVerifierAccountMappingForUserCRD(t *testing.T) {
 		})},
 		mapperStopCh: make(chan struct{}),
 	}
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
@@ -783,7 +784,7 @@ func TestAuthenticateVerifierAccountMappingForRole(t *testing.T) {
 		})},
 		mapperStopCh: make(chan struct{}),
 	}
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
@@ -827,7 +828,7 @@ func TestAuthenticateVerifierAccountMappingForRoleCRD(t *testing.T) {
 		})},
 		mapperStopCh: make(chan struct{}),
 	}
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
@@ -876,7 +877,7 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 		}, nil, nil)},
 		mapperStopCh: make(chan struct{}),
 	}
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
@@ -922,7 +923,7 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 		mappers:      []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)},
 		mapperStopCh: make(chan struct{}),
 	}
-	h.authenticateEndpoint(resp, req)
+	h.authenticateEndpoint(context.TODO(), resp, req)
 	if resp.Code != http.StatusOK {
 		t.Errorf("Expected status code %d, was %d", http.StatusOK, resp.Code)
 	}
@@ -1012,7 +1013,7 @@ func TestRenderTemplate(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.template, func(t *testing.T) {
-			got, err := h.renderTemplate(c.template, &c.identity)
+			got, err := h.renderTemplate(context.TODO(), c.template, &c.identity)
 			if err != nil {
 				if c.err {
 					return
