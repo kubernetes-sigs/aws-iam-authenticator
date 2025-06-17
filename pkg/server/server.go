@@ -204,11 +204,13 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 	if err != nil {
 		panic(fmt.Sprintf("could not load config, %v", err))
 	}
+	// Attempt to get the region from IMDS (applicable if run on an EC2 instance)
 	imdsClient := imds.NewFromConfig(cfg)
 	instanceRegionOutput, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
 	instanceRegion := ""
 	if err != nil {
-		logrus.WithError(err).Errorln("Region not found in instance metadata.")
+		// Default to the global region
+		cfg.Region = "us-east-1"
 	} else {
 		instanceRegion = instanceRegionOutput.Region
 	}

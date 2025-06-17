@@ -243,13 +243,19 @@ func (g generator) GetWithOptions(ctx context.Context, options *GetTokenOptions)
 	if options.Region != "" {
 		cfg.Region = options.Region
 	}
+
+	// The SDK requires a region for clients
+	// https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html
 	if cfg.Region == "" {
+		// Attempt to get the region from IMDS (applicable if run on an EC2 instance)
 		imdsClient := imds.NewFromConfig(cfg)
 		region, err := imdsClient.GetRegion(context.Background(), &imds.GetRegionInput{})
 		if err != nil {
-			return Token{}, fmt.Errorf("failed to get region from instance metadata %v\n", err)
+			// Default to the global region
+			cfg.Region = "us-east-1"
+		} else {
+			cfg.Region = region.Region
 		}
-		cfg.Region = region.Region
 	}
 
 	if g.cache {
