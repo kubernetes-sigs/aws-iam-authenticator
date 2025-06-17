@@ -252,6 +252,7 @@ func (g generator) GetWithOptions(ctx context.Context, options *GetTokenOptions)
 		region, err := imdsClient.GetRegion(context.Background(), &imds.GetRegionInput{})
 		if err != nil {
 			// Default to the global region
+			logrus.Infof("failed to get region from IMDS for token generation, defaulting to us-east-1. imds error: %v", err)
 			cfg.Region = "us-east-1"
 		} else {
 			cfg.Region = region.Region

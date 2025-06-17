@@ -210,6 +210,7 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 	instanceRegion := ""
 	if err != nil {
 		// Default to the global region
+		logrus.Infof("failed to get region from IMDS for handler configuration, defaulting to us-east-1. imds error: %v", err)
 		cfg.Region = "us-east-1"
 	} else {
 		instanceRegion = instanceRegionOutput.Region
