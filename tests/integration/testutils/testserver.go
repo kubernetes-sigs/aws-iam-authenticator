@@ -75,7 +75,7 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 	}
 
 	stopCh := make(chan struct{})
-	httpServer := server.New(cfg, stopCh)
+	httpServer := server.New(context.TODO(), cfg)
 	go func() {
 		httpServer.Run(stopCh)
 	}()

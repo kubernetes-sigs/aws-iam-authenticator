@@ -28,8 +28,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
-	awsarn "github.com/aws/aws-sdk-go/aws/arn"
+	awsarn "github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
@@ -81,7 +81,7 @@ type handler struct {
 }
 
 // New authentication webhook server.
-func New(cfg config.Config, stopCh <-chan struct{}) *Server {
+func New(ctx context.Context, cfg config.Config) *Server {
 	c := &Server{
 		Config: cfg,
 	}
@@ -145,7 +145,7 @@ func New(cfg config.Config, stopCh <-chan struct{}) *Server {
 
 	logrus.Infof("listening on %s", listener.Addr())
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
-	internalHandler := c.getHandler(backendMapper, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst, stopCh)
+	internalHandler := c.getHandler(ctx, backendMapper, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst)
 	c.httpServer = http.Server{
 		ErrorLog: log.New(errLog, "", 0),
 		Handler:  internalHandler,
@@ -192,23 +192,33 @@ type healthzHandler struct{}
 func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
-func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int, stopCh <-chan struct{}) *handler {
+func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int) *handler {
+	stopCh := ctx.Done()
 	if c.ServerEC2DescribeInstancesRoleARN != "" {
 		_, err := awsarn.Parse(c.ServerEC2DescribeInstancesRoleARN)
 		if err != nil {
 			panic(fmt.Sprintf("describeinstancesrole %s is not a valid arn", c.ServerEC2DescribeInstancesRoleARN))
 		}
 	}
-	sess := session.Must(session.NewSession())
-	ec2metadata := ec2metadata.New(sess)
-	instanceRegion, err := ec2metadata.Region()
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		logrus.WithError(err).Errorln("Region not found in instance metadata.")
+		panic(fmt.Sprintf("could not load config, %v", err))
+	}
+	// Attempt to get the region from IMDS (applicable if run on an EC2 instance)
+	imdsClient := imds.NewFromConfig(cfg)
+	instanceRegionOutput, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
+	instanceRegion := ""
+	if err != nil {
+		// Default to the global region
+		logrus.Infof("failed to get region from IMDS for handler configuration, defaulting to us-east-1. imds error: %v", err)
+		cfg.Region = "us-east-1"
+	} else {
+		instanceRegion = instanceRegionOutput.Region
 	}
 
 	h := &handler{
 		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
-		ec2Provider:               ec2provider.New(c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
+		ec2Provider:               ec2provider.New(ctx, c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
 		clusterID:                 c.ClusterID,
 		backendMapper:             backendMapper,
 		scrubbedAccounts:          c.Config.ScrubbedAWSAccounts,
@@ -216,13 +226,15 @@ func (c *Server) getHandler(backendMapper BackendMapper, ec2DescribeQps int, ec2
 		backendModeConfigInitDone: false,
 	}
 
-	h.HandleFunc("/authenticate", h.authenticateEndpoint)
+	h.HandleFunc("/authenticate", func(w http.ResponseWriter, r *http.Request) {
+		h.authenticateEndpoint(ctx, w, r)
+	})
 	h.Handle("/metrics", promhttp.Handler())
 	h.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "ok")
 	})
 	logrus.Infof("Starting the h.ec2Provider.startEc2DescribeBatchProcessing ")
-	go h.ec2Provider.StartEc2DescribeBatchProcessing()
+	go h.ec2Provider.StartEc2DescribeBatchProcessing(ctx)
 	if strings.TrimSpace(c.DynamicBackendModePath) != "" {
 		fileutil.StartLoadDynamicFile(c.DynamicBackendModePath, h, stopCh)
 	}
@@ -296,7 +308,7 @@ func (h *handler) isLoggableIdentity(identity *token.Identity) bool {
 	return true
 }
 
-func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request) {
+func (h *handler) authenticateEndpoint(ctx context.Context, w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 	log := logrus.WithFields(logrus.Fields{
 		"path":   req.URL.Path,
@@ -365,7 +377,7 @@ func (h *handler) authenticateEndpoint(w http.ResponseWriter, req *http.Request)
 		log = log.WithField("arn", identity.CanonicalARN)
 	}
 
-	username, groups, err := h.doMapping(identity)
+	username, groups, err := h.doMapping(ctx, identity)
 	if err != nil {
 		metrics.Get().Latency.WithLabelValues(metrics.Unknown).Observe(duration(start))
 		log.WithError(err).Warn("access denied")
@@ -422,14 +434,14 @@ func ReservedPrefixExists(username string, reservedList []string) bool {
 	return false
 }
 
-func (h *handler) doMapping(identity *token.Identity) (string, []string, error) {
+func (h *handler) doMapping(ctx context.Context, identity *token.Identity) (string, []string, error) {
 	var errs []error
 
 	for _, m := range h.backendMapper.mappers {
 		mapping, err := m.Map(identity)
 		if err == nil {
 			// Mapping found, try to render any templates like {{EC2PrivateDNSName}}
-			username, groups, err := h.renderTemplates(*mapping, identity)
+			username, groups, err := h.renderTemplates(ctx, *mapping, identity)
 			if err != nil {
 				return "", nil, fmt.Errorf("mapper %s renderTemplates error: %v", m.Name(), err)
 			}
@@ -454,19 +466,19 @@ func (h *handler) doMapping(identity *token.Identity) (string, []string, error) 
 	return "", nil, errutil.ErrNotMapped
 }
 
-func (h *handler) renderTemplates(mapping config.IdentityMapping, identity *token.Identity) (string, []string, error) {
+func (h *handler) renderTemplates(ctx context.Context, mapping config.IdentityMapping, identity *token.Identity) (string, []string, error) {
 	var username string
 	groups := []string{}
 	var err error
 
 	userPattern := mapping.Username
-	username, err = h.renderTemplate(userPattern, identity)
+	username, err = h.renderTemplate(ctx, userPattern, identity)
 	if err != nil {
 		return "", nil, fmt.Errorf("error rendering username template %q: %s", userPattern, err.Error())
 	}
 
 	for _, groupPattern := range mapping.Groups {
-		group, err := h.renderTemplate(groupPattern, identity)
+		group, err := h.renderTemplate(ctx, groupPattern, identity)
 		if err != nil {
 			return "", nil, fmt.Errorf("error rendering group template %q: %s", groupPattern, err.Error())
 		}
@@ -476,13 +488,13 @@ func (h *handler) renderTemplates(mapping config.IdentityMapping, identity *toke
 	return username, groups, nil
 }
 
-func (h *handler) renderTemplate(template string, identity *token.Identity) (string, error) {
+func (h *handler) renderTemplate(ctx context.Context, template string, identity *token.Identity) (string, error) {
 	// Private DNS requires EC2 API call
 	if strings.Contains(template, "{{EC2PrivateDNSName}}") {
 		if !instanceIDPattern.MatchString(identity.SessionName) {
 			return "", fmt.Errorf("SessionName did not contain an instance id")
 		}
-		privateDNSName, err := h.ec2Provider.GetPrivateDNSName(identity.SessionName)
+		privateDNSName, err := h.ec2Provider.GetPrivateDNSName(ctx, identity.SessionName)
 		if err != nil {
 			return "", err
 		}
