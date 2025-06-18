@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ARG image=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-nonroot:2024-10-01-1727740884.2023
-ARG golang_image=public.ecr.aws/docker/library/golang:1.24.2
+ARG golang_image=public.ecr.aws/docker/library/golang:1.24.4
 
 FROM --platform=$BUILDPLATFORM $golang_image AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-iam-authenticator
@@ -23,7 +23,7 @@ ARG TARGETOS TARGETARCH
 RUN GOPROXY=direct GOOS=$TARGETOS GOARCH=$TARGETARCH make bin
 RUN chown 65532 _output/bin/aws-iam-authenticator
 
-FROM --platform=$TARGETPLATFORM public.ecr.aws/eks-distro/kubernetes/go-runner:v0.18.0-eks-1-32-latest AS go-runner
+FROM --platform=$TARGETPLATFORM public.ecr.aws/eks-distro/kubernetes/go-runner:v0.18.0-eks-1-33-latest AS go-runner
 
 FROM --platform=$TARGETPLATFORM $image
 COPY --from=go-runner /go-runner /usr/local/bin/go-runner
