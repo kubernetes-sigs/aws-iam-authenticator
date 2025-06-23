@@ -33,11 +33,17 @@ updates:
         patterns:
           - 'k8s.io*'
           - 'sigs.k8s.io*'
+      observability-dependencies:
+        patterns:
+          - 'github.com/prometheus/*'
+          - 'go.opentelemetry.io/*'
       misc-dependencies:
         patterns:
           - '*'
         exclude-patterns:
           - 'github.com/aws/*'
+          - 'github.com/prometheus/*'
+          - 'go.opentelemetry.io/*'
           - 'k8s.io*'
           - 'sigs.k8s.io*'
     labels:
