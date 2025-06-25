@@ -2,10 +2,10 @@ package arn
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	awsarn "github.com/aws/aws-sdk-go-v2/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 type PrincipalType int
@@ -19,6 +19,16 @@ const (
 	FEDERATED_USER
 	ASSUMED_ROLE
 )
+
+var PartitionKeys = []string{
+	"aws",
+	"aws-cn",
+	"aws-us-gov",
+	"aws-iso",
+	"aws-iso-b",
+	"aws-iso-e",
+	"aws-iso-f",
+}
 
 // Canonicalize validates IAM resources are appropriate for the authenticator
 // and converts STS assumed roles into the IAM role resource.
@@ -101,10 +111,8 @@ func StripPath(arn string) (string, error) {
 }
 
 func checkPartition(partition string) error {
-	for _, p := range endpoints.DefaultPartitions() {
-		if partition == p.ID() {
-			return nil
-		}
+	if !slices.Contains(PartitionKeys, partition) {
+		return fmt.Errorf("partition %s is not recognized", partition)
 	}
-	return fmt.Errorf("partition %s is not recognized", partition)
+	return nil
 }

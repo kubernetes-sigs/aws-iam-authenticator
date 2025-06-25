@@ -18,14 +18,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication"
 	clientauthv1 "k8s.io/client-go/pkg/apis/clientauthentication/v1"
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
@@ -37,7 +38,19 @@ func TestMain(m *testing.M) {
 func validationErrorTest(t *testing.T, partition string, token string, expectedErr string) {
 	t.Helper()
 
-	_, err := NewVerifier("", partition, "").(tokenVerifier).Verify(token)
+	regions := []ec2types.Region{
+		{RegionName: aws.String("sa-east-1")},
+		{RegionName: aws.String("us-east-2")},
+		{RegionName: aws.String("us-west-2")},
+		{RegionName: aws.String("ap-northeast-2")},
+		{RegionName: aws.String("ca-central-1")},
+		{RegionName: aws.String("eu-west-1")},
+		{RegionName: aws.String("cn-north-1")},
+	}
+
+	ec2Client := &ec2provider.MockEc2Client{Regions: regions}
+
+	_, err := NewVerifier(context.TODO(), "", partition, "", ec2Client).(tokenVerifier).Verify(token)
 	errorContains(t, err, expectedErr)
 }
 
@@ -89,6 +102,16 @@ func newVerifier(partition string, statusCode int, body string, err error) Verif
 	if body != "" {
 		rc = io.NopCloser(bytes.NewReader([]byte(body)))
 	}
+	regions := []ec2types.Region{
+		{RegionName: aws.String("sa-east-1")},
+		{RegionName: aws.String("us-east-2")},
+		{RegionName: aws.String("us-west-2")},
+		{RegionName: aws.String("ap-northeast-2")},
+		{RegionName: aws.String("ca-central-1")},
+		{RegionName: aws.String("eu-west-1")},
+	}
+	ec2Client := &ec2provider.MockEc2Client{Regions: regions}
+
 	return tokenVerifier{
 		client: &http.Client{
 			Transport: &roundTripper{
@@ -99,7 +122,7 @@ func newVerifier(partition string, statusCode int, body string, err error) Verif
 				},
 			},
 		},
-		validSTShostnames: stsHostsForPartition(partition, ""),
+		validSTShostnames: stsHostsForPartition(context.TODO(), partition, "", ec2Client),
 	}
 }
 
@@ -171,8 +194,32 @@ func TestSTSEndpoints(t *testing.T) {
 		{"aws-not-a-partition", "sts.amazonaws.com", false, ""},
 	}
 
+	regions := []ec2types.Region{
+		{RegionName: aws.String("cn-northwest-1")},
+		{RegionName: aws.String("cn-north-1")},
+		{RegionName: aws.String("us-iso-east-1")},
+		{RegionName: aws.String("us-east-1")},
+		{RegionName: aws.String("us-east-2")},
+		{RegionName: aws.String("us-west-1")},
+		{RegionName: aws.String("us-west-2")},
+		{RegionName: aws.String("ap-south-1")},
+		{RegionName: aws.String("ap-northeast-1")},
+		{RegionName: aws.String("ap-northeast-2")},
+		{RegionName: aws.String("ap-southeast-1")},
+		{RegionName: aws.String("ap-southeast-2")},
+		{RegionName: aws.String("ca-central-1")},
+		{RegionName: aws.String("eu-central-1")},
+		{RegionName: aws.String("eu-west-1")},
+		{RegionName: aws.String("eu-west-2")},
+		{RegionName: aws.String("eu-west-3")},
+		{RegionName: aws.String("eu-north-1")},
+		{RegionName: aws.String("us-gov-east-1")},
+		{RegionName: aws.String("default-region")},
+	}
+	ec2Client := &ec2provider.MockEc2Client{Regions: regions}
+
 	for _, c := range cases {
-		verifier := NewVerifier("", c.partition, c.region).(tokenVerifier)
+		verifier := NewVerifier(context.TODO(), "", c.partition, c.region, ec2Client).(tokenVerifier)
 		if err := verifier.verifyHost(c.domain); err != nil && c.valid {
 			t.Errorf("%s is not valid endpoint for partition %s", c.domain, c.partition)
 		}
@@ -237,7 +284,9 @@ func TestVerifyNoRedirectsFollowed(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	tokVerifier := NewVerifier("", "aws", "").(tokenVerifier)
+	ec2Client := &ec2provider.MockEc2Client{Regions: []ec2types.Region{}}
+
+	tokVerifier := NewVerifier(context.TODO(), "", "aws", "", ec2Client).(tokenVerifier)
 
 	resp, err := tokVerifier.client.Get(ts.URL)
 	if err != nil {
@@ -254,6 +303,8 @@ func TestVerifyNoRedirectsFollowed(t *testing.T) {
 }
 
 func TestVerifyBodyReadError(t *testing.T) {
+	ec2Client := &ec2provider.MockEc2Client{Regions: []ec2types.Region{}}
+
 	verifier := tokenVerifier{
 		client: &http.Client{
 			Transport: &roundTripper{
@@ -264,7 +315,7 @@ func TestVerifyBodyReadError(t *testing.T) {
 				},
 			},
 		},
-		validSTShostnames: stsHostsForPartition("aws", ""),
+		validSTShostnames: stsHostsForPartition(context.TODO(), "aws", "", ec2Client),
 	}
 	_, err := verifier.Verify(validToken)
 	errorContains(t, err, "error reading HTTP result")
@@ -519,73 +570,6 @@ func response(account, userID, arn string) getCallerIdentityWrapper {
 	wrapper.GetCallerIdentityResponse.GetCallerIdentityResult.UserID = userID
 	wrapper.GetCallerIdentityResponse.ResponseMetadata.RequestID = "id1234"
 	return wrapper
-}
-
-func Test_getDefaultHostNameForRegion(t *testing.T) {
-	type args struct {
-		partition endpoints.Partition
-		region    string
-		service   string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
-	}{
-		{
-			name: "service doesn't exist should return default host name",
-			args: args{
-				partition: endpoints.AwsIsoEPartition(),
-				region:    "eu-isoe-west-1",
-				service:   "test",
-			},
-			want:    "test.eu-isoe-west-1.cloud.adc-e.uk",
-			wantErr: false,
-		},
-		{
-			name: "service and region doesn't exist should return default host name",
-			args: args{
-				partition: endpoints.AwsIsoEPartition(),
-				region:    "eu-isoe-test-1",
-				service:   "test",
-			},
-			want:    "test.eu-isoe-test-1.cloud.adc-e.uk",
-			wantErr: false,
-		},
-		{
-			name: "region doesn't exist should return default host name",
-			args: args{
-				partition: endpoints.AwsIsoPartition(),
-				region:    "us-iso-test-1",
-				service:   "sts",
-			},
-			want:    "sts.us-iso-test-1.c2s.ic.gov",
-			wantErr: false,
-		},
-		{
-			name: "invalid region should return error",
-			args: args{
-				partition: endpoints.AwsIsoPartition(),
-				region:    "test_123",
-				service:   "sts",
-			},
-			want:    "",
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getDefaultHostNameForRegion(&tt.args.partition, tt.args.region, tt.args.service)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getDefaultHostNameForRegion() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("getDefaultHostNameForRegion() = %v, want %v", got, tt.want)
-			}
-		})
-	}
 }
 
 func TestGetWithSTS(t *testing.T) {

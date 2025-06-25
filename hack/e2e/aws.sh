@@ -28,6 +28,13 @@ function create_role() {
       --assume-role-policy-document "$POLICY" \
       --output text \
       --query 'Role.Arn')
+
+    ## attach describe-regions policy to the role
+    aws iam put-role-policy \
+      --region "${REGION}" \
+      --role-name "$ROLE_NAME" \
+      --policy-name "DescribeRegionsPolicy" \
+      --policy-document "file://${BASE_DIR}/../dev/describe-regions-policy.json"
   else
     set -e
     loudecho "${ROLE_NAME} role already exists" >&2

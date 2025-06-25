@@ -30,6 +30,7 @@ import (
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
@@ -214,10 +215,12 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 		cfg.Region = "us-east-1"
 	} else {
 		instanceRegion = instanceRegionOutput.Region
+		cfg.Region = instanceRegion
 	}
+	ec2Client := ec2.NewFromConfig(cfg)
 
 	h := &handler{
-		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
+		verifier:                  token.NewVerifier(ctx, c.ClusterID, c.PartitionID, instanceRegion, ec2Client),
 		ec2Provider:               ec2provider.New(ctx, c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
 		clusterID:                 c.ClusterID,
 		backendMapper:             backendMapper,

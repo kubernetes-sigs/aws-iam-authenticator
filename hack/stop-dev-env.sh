@@ -34,6 +34,7 @@ set -o nounset
 # between them is over localhost and fixed port.
 
 REPO_ROOT="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
+DESCRIBEREGIONS_ROLE_NAME="authenticator-describeregions-role"
 
 source "${REPO_ROOT}/hack/lib/dev-env.sh"
 
@@ -47,3 +48,13 @@ sleep 5
 
 # Tear down network
 delete_network
+
+# Delete role used to run tests
+# List inline policies
+aws iam list-role-policies --role-name ${DESCRIBEREGIONS_ROLE_NAME} --query "PolicyNames[]" --output text |
+while read policy_name; do
+  echo "Deleting inline policy: $policy_name"
+  aws iam delete-role-policy --role-name ${DESCRIBEREGIONS_ROLE_NAME} --policy-name "$policy_name"
+done
+
+aws iam delete-role --role-name ${DESCRIBEREGIONS_ROLE_NAME}

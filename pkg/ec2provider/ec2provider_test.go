@@ -10,66 +10,16 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
-const (
-	DescribeDelay = 100
-)
-
-type mockEc2Client struct {
-	EC2API
-	Reservations []*ec2types.Reservation
-}
-
-func (c *mockEc2Client) DescribeInstances(ctx context.Context, in *ec2.DescribeInstancesInput, opts ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
-	// simulate the time it takes for aws to return
-	time.Sleep(DescribeDelay * time.Millisecond)
-	var reservations []ec2types.Reservation
-	for _, res := range c.Reservations {
-		var reservation ec2types.Reservation
-		for _, inst := range res.Instances {
-			for _, id := range in.InstanceIds {
-				if id == aws.ToString(inst.InstanceId) {
-					reservation.Instances = append(reservation.Instances, inst)
-				}
-			}
-		}
-		if len(reservation.Instances) > 0 {
-			reservations = append(reservations, reservation)
-		}
-	}
-	return &ec2.DescribeInstancesOutput{
-		Reservations: reservations,
-	}, nil
-}
-
-func newMockedEC2ProviderImpl() *ec2ProviderImpl {
-	dnsCache := ec2PrivateDNSCache{
-		cache: make(map[string]string),
-		lock:  sync.RWMutex{},
-	}
-	ec2Requests := ec2Requests{
-		set:  make(map[string]bool),
-		lock: sync.RWMutex{},
-	}
-	return &ec2ProviderImpl{
-		ec2:                &mockEc2Client{},
-		privateDNSCache:    dnsCache,
-		ec2Requests:        ec2Requests,
-		instanceIdsChannel: make(chan string, maxChannelSize),
-	}
-
-}
-
 func TestGetPrivateDNSName(t *testing.T) {
 	metrics.InitMetrics(prometheus.NewRegistry())
 	ec2Provider := newMockedEC2ProviderImpl()
-	ec2Provider.ec2 = &mockEc2Client{Reservations: prepareSingleInstanceOutput()}
+	ec2Provider.ec2 = &MockEc2Client{Reservations: prepareSingleInstanceOutput()}
 	go ec2Provider.StartEc2DescribeBatchProcessing(context.TODO())
 	dns_name, err := ec2Provider.GetPrivateDNSName(context.TODO(), "ec2-1")
 	if err != nil {
@@ -102,7 +52,7 @@ func TestGetPrivateDNSNameWithBatching(t *testing.T) {
 	metrics.InitMetrics(prometheus.NewRegistry())
 	ec2Provider := newMockedEC2ProviderImpl()
 	reservations := prepare100InstanceOutput()
-	ec2Provider.ec2 = &mockEc2Client{Reservations: reservations}
+	ec2Provider.ec2 = &MockEc2Client{Reservations: reservations}
 	go ec2Provider.StartEc2DescribeBatchProcessing(context.TODO())
 	var wg sync.WaitGroup
 	for i := 1; i < 101; i++ {

@@ -258,7 +258,18 @@ if [[ "${CLEAN}" == true ]]; then
     "${CLUSTER_NAME}" \
     "${KOPS_STATE_FILE}"
 
+  aws iam list-role-policies --role-name ${ADMIN_ROLE_NAME} --query "PolicyNames[]" --output text |
+  while read policy_name; do
+    echo "Deleting inline policy: $policy_name"
+    aws iam delete-role-policy --role-name ${ADMIN_ROLE_NAME} --policy-name "$policy_name"
+  done
   aws iam delete-role --role-name "${ADMIN_ROLE_NAME}" --region ${REGION}
+
+  aws iam list-role-policies --role-name ${USER_ROLE_NAME} --query "PolicyNames[]" --output text |
+  while read policy_name; do
+    echo "Deleting inline policy: $policy_name"
+    aws iam delete-role-policy --role-name ${USER_ROLE_NAME} --policy-name "$policy_name"
+  done
   aws iam delete-role --role-name "${USER_ROLE_NAME}" --region ${REGION}
 else
   loudecho "Not cleaning"

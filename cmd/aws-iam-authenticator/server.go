@@ -25,11 +25,11 @@ import (
 
 	"k8s.io/sample-controller/pkg/signals"
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/server"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -67,14 +67,8 @@ var serverCmd = &cobra.Command{
 }
 
 func init() {
-	partitionKeys := []string{}
-	for _, p := range endpoints.DefaultPartitions() {
-		partitionKeys = append(partitionKeys, p.ID())
-	}
-
-	serverCmd.Flags().String("partition",
-		endpoints.AwsPartitionID,
-		fmt.Sprintf("The AWS partition. Must be one of: %v", partitionKeys))
+	serverCmd.Flags().String("partition", "aws",
+		fmt.Sprintf("The AWS partition. Must be one of: %v", arn.PartitionKeys))
 	viper.BindPFlag("server.partition", serverCmd.Flags().Lookup("partition"))
 
 	serverCmd.Flags().String("generate-kubeconfig",
