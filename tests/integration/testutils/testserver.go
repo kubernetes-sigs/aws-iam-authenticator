@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/prometheus/client_golang/prometheus"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -20,6 +20,7 @@ import (
 	"k8s.io/kubernetes/pkg/controlplane"
 	"k8s.io/kubernetes/test/integration/framework"
 
+	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
@@ -149,14 +150,8 @@ func testConfig(t *testing.T, setup AuthenticatorTestFrameworkSetup) (config.Con
 		return cfg, errors.New("cluster ID cannot be empty")
 	}
 
-	partitionKeys := []string{}
-	partitionMap := map[string]endpoints.Partition{}
-	for _, p := range endpoints.DefaultPartitions() {
-		partitionMap[p.ID()] = p
-		partitionKeys = append(partitionKeys, p.ID())
-	}
-	if _, ok := partitionMap[cfg.PartitionID]; !ok {
-		return cfg, errors.New("Invalid partition")
+	if !slices.Contains(arn.PartitionKeys, cfg.PartitionID) {
+		return cfg, errors.New("Invalid partition in test config")
 	}
 
 	if errs := mapper.ValidateBackendMode(cfg.BackendMode); len(errs) > 0 {

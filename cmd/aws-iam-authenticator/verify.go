@@ -19,15 +19,17 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -54,14 +56,17 @@ var verifyCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		sess := session.Must(session.NewSession())
-		ec2metadata := ec2metadata.New(sess)
-		instanceRegion, err := ec2metadata.Region()
-		if err != nil {
-			fmt.Printf("[Warn] Region not found in instance metadata, err: %v", err)
-		}
+		ctx := context.Background()
+		instanceRegion := getInstanceRegion(ctx)
 
-		id, err := token.NewVerifier(clusterID, partition, instanceRegion).Verify(tok)
+		cfg, err := config.LoadDefaultConfig(ctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "unable to create sdk client configuration: %v\n", err)
+			os.Exit(1)
+		}
+		ec2Client := ec2.NewFromConfig(cfg)
+
+		id, err := token.NewVerifier(ctx, clusterID, partition, instanceRegion, ec2Client).Verify(tok)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not verify token: %v\n", err)
 			os.Exit(1)
@@ -77,6 +82,24 @@ var verifyCmd = &cobra.Command{
 			fmt.Printf("%+v\n", id)
 		}
 	},
+}
+
+// Uses EC2 metadata to get the region. Returns "" if no region found.
+func getInstanceRegion(ctx context.Context) string {
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[Warn] Unable to create config for metadata client, err: %v", err)
+		panic(err)
+	}
+
+	imdsClient := imds.NewFromConfig(cfg)
+	getRegionOutput, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[Warn] Region not found in instance metadata, err: %v\n", err)
+		return ""
+	}
+
+	return getRegionOutput.Region
 }
 
 func init() {

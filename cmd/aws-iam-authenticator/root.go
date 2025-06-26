@@ -20,12 +20,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
+	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -157,14 +158,8 @@ func getConfig() (config.Config, error) {
 		return cfg, errors.New("cluster ID cannot be empty")
 	}
 
-	partitionKeys := []string{}
-	partitionMap := map[string]endpoints.Partition{}
-	for _, p := range endpoints.DefaultPartitions() {
-		partitionMap[p.ID()] = p
-		partitionKeys = append(partitionKeys, p.ID())
-	}
-	if _, ok := partitionMap[cfg.PartitionID]; !ok {
-		return cfg, errors.New("Invalid partition")
+	if !slices.Contains(arn.PartitionKeys, cfg.PartitionID) {
+		return cfg, errors.New("Invalid partition when getting config")
 	}
 
 	// DynamicFile BackendMode and DynamicFilePath are mutually inclusive.

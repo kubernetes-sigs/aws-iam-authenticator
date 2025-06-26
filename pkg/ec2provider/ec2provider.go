@@ -46,6 +46,7 @@ const (
 // EC2API defines the interface for EC2 client operations
 type EC2API interface {
 	DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error)
+	DescribeRegions(ctx context.Context, params *ec2.DescribeRegionsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeRegionsOutput, error)
 }
 
 // Get a node name from instance ID
