@@ -3,7 +3,6 @@ module sigs.k8s.io/aws-iam-authenticator/tests/integration
 go 1.24.4
 
 require (
-	github.com/aws/aws-sdk-go v1.55.7
 	github.com/prometheus/client_golang v1.22.0
 	github.com/sirupsen/logrus v1.9.3
 	k8s.io/api v0.33.3
@@ -25,7 +24,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.37 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.37 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.233.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.235.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.18 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.25.6 // indirect

@@ -2,10 +2,11 @@ package arn
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	awsarn "github.com/aws/aws-sdk-go-v2/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/endpoints"
 )
 
 type PrincipalType int
@@ -101,10 +102,8 @@ func StripPath(arn string) (string, error) {
 }
 
 func checkPartition(partition string) error {
-	for _, p := range endpoints.DefaultPartitions() {
-		if partition == p.ID() {
-			return nil
-		}
+	if !slices.Contains(endpoints.PARTITIONS, partition) {
+		return fmt.Errorf("partition %s is not recognized", partition)
 	}
-	return fmt.Errorf("partition %s is not recognized", partition)
+	return nil
 }
