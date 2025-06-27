@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -19,13 +20,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication"
 	clientauthv1 "k8s.io/client-go/pkg/apis/clientauthentication/v1"
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/endpoints"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
@@ -139,12 +141,26 @@ func TestSTSEndpoints(t *testing.T) {
 		valid     bool
 		region    string
 	}{
+		// CN partition
 		{"aws-cn", "sts.cn-northwest-1.amazonaws.com.cn", true, ""},
 		{"aws-cn", "sts.cn-north-1.amazonaws.com.cn", true, ""},
-		{"aws-cn", "sts.us-iso-east-1.c2s.ic.gov", false, ""},
+		{"aws-cn", "sts.us-iso-east-1.c2s.ic.gov", false, ""}, // cross partition
+
+		 // STS global endpoint is only supported in the commerical partition
 		{"aws", "sts.amazonaws.com", true, ""},
+		{"aws-cn", "sts.amazonaws.com", false, ""},
+		{"aws-us-gov", "sts.amazonaws.com", false, ""},
+		{"aws-iso", "sts.amazonaws.com", false, ""},
+		{"aws-iso-b", "sts.amazonaws.com", false, ""},
+		{"aws-iso-e", "sts.amazonaws.com", false, ""},
+		{"aws-iso-f", "sts.amazonaws.com", false, ""},
+		{"aws-not-a-partition", "sts.amazonaws.com", false, ""},
+
+		// FIPS endpoints
 		{"aws", "sts-fips.us-west-2.amazonaws.com", true, ""},
 		{"aws", "sts-fips.us-east-1.amazonaws.com", true, ""},
+		
+		// AWS partition
 		{"aws", "sts.us-east-1.amazonaws.com", true, ""},
 		{"aws", "sts.us-east-2.amazonaws.com", true, ""},
 		{"aws", "sts.us-west-1.amazonaws.com", true, ""},
@@ -161,11 +177,16 @@ func TestSTSEndpoints(t *testing.T) {
 		{"aws", "sts.eu-west-3.amazonaws.com", true, ""},
 		{"aws", "sts.eu-north-1.amazonaws.com", true, ""},
 		{"aws", "sts.amazonaws.com.cn", false, ""},
+
+		// Should generate a custom regional endpoint when a service exists in partition, but the given region doesn't
 		{"aws", "sts.not-a-region.amazonaws.com", false, ""},
 		{"aws", "sts.default-region.amazonaws.com", true, "default-region"},
+		{"aws-iso-b", "sts.us-west-2.sc2s.sgov.gov", true, "us-west-2"}, 
+		{"aws-iso-b", "sts.us-west-2.sc2s.sgov.gov", false, "default-region"}, 
+
 		{"aws-iso", "sts.us-iso-east-1.c2s.ic.gov", true, ""},
-		{"aws-iso", "sts.cn-north-1.amazonaws.com.cn", false, ""},
-		{"aws-iso-b", "sts.cn-north-1.amazonaws.com.cn", false, ""},
+		{"aws-iso", "sts.cn-north-1.amazonaws.com.cn", false, ""}, // cross partition
+		{"aws-iso-b", "sts.cn-north-1.amazonaws.com.cn", false, ""}, // cross partition
 		{"aws-us-gov", "sts.us-gov-east-1.amazonaws.com", true, ""},
 		{"aws-us-gov", "sts.amazonaws.com", false, ""},
 		{"aws-not-a-partition", "sts.amazonaws.com", false, ""},
@@ -173,6 +194,7 @@ func TestSTSEndpoints(t *testing.T) {
 
 	for _, c := range cases {
 		verifier := NewVerifier("", c.partition, c.region).(tokenVerifier)
+
 		if err := verifier.verifyHost(c.domain); err != nil && c.valid {
 			t.Errorf("%s is not valid endpoint for partition %s", c.domain, c.partition)
 		}
@@ -523,7 +545,7 @@ func response(account, userID, arn string) getCallerIdentityWrapper {
 
 func Test_getDefaultHostNameForRegion(t *testing.T) {
 	type args struct {
-		partition endpoints.Partition
+		partition string
 		region    string
 		service   string
 	}
@@ -536,7 +558,7 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 		{
 			name: "service doesn't exist should return default host name",
 			args: args{
-				partition: endpoints.AwsIsoEPartition(),
+				partition: endpoints.AwsIsoEPartitionID,
 				region:    "eu-isoe-west-1",
 				service:   "test",
 			},
@@ -546,7 +568,7 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 		{
 			name: "service and region doesn't exist should return default host name",
 			args: args{
-				partition: endpoints.AwsIsoEPartition(),
+				partition: endpoints.AwsIsoEPartitionID,
 				region:    "eu-isoe-test-1",
 				service:   "test",
 			},
@@ -556,7 +578,7 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 		{
 			name: "region doesn't exist should return default host name",
 			args: args{
-				partition: endpoints.AwsIsoPartition(),
+				partition: endpoints.AwsIsoPartitionID,
 				region:    "us-iso-test-1",
 				service:   "sts",
 			},
@@ -566,7 +588,7 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 		{
 			name: "invalid region should return error",
 			args: args{
-				partition: endpoints.AwsIsoPartition(),
+				partition: endpoints.AwsIsoPartitionID,
 				region:    "test_123",
 				service:   "sts",
 			},
@@ -576,7 +598,7 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getDefaultHostNameForRegion(&tt.args.partition, tt.args.region, tt.args.service)
+			got, err := getDefaultHostNameForRegion(tt.args.partition, tt.args.region, tt.args.service)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getDefaultHostNameForRegion() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -671,5 +693,47 @@ func TestGetStsRegion(t *testing.T) {
 		if result != test.expected {
 			t.Errorf("getStsRegion(%q) = %q; expected %q", test.host, result, test.expected)
 		}
+	}
+}
+
+// Testing AWS SDK Go V1 function validateInputRegion()
+// https://github.com/aws/aws-sdk-go/blob/163aada692ed32951f979aacf452ded4c03b8a7c/aws/endpoints/v3model_test.go#L721
+func TestRegionValidator(t *testing.T) {
+	cases := []struct {
+		Region string
+		Valid  bool
+	}{
+		0: {
+			Region: "us-east-1",
+			Valid:  true,
+		},
+		1: {
+			Region: "invalid.com",
+			Valid:  false,
+		},
+		2: {
+			Region: "@invalid.com/%23",
+			Valid:  false,
+		},
+		3: {
+			Region: "local",
+			Valid:  true,
+		},
+		4: {
+			Region: "9-west-1",
+			Valid:  true,
+		},
+		5: {
+			Region: "us_east_1",
+			Valid:  false,
+		},
+	}
+
+	for i, tt := range cases {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			if e, a := tt.Valid, validateInputRegion(tt.Region); e != a {
+				t.Errorf("expected %v, got %v", e, a)
+			}
+		})
 	}
 }

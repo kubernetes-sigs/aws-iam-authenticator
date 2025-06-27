@@ -25,6 +25,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -36,7 +38,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -46,6 +47,7 @@ import (
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/endpoints"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/filecache"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
@@ -420,39 +422,56 @@ type tokenVerifier struct {
 	validSTShostnames map[string]bool
 }
 
-func getDefaultHostNameForRegion(partition *endpoints.Partition, region, service string) (string, error) {
-	rep, err := partition.EndpointFor(service, region, endpoints.STSRegionalEndpointOption, endpoints.ResolveUnknownServiceOption)
-	if err != nil {
-		return "", fmt.Errorf("Error resolving endpoint for %s in partition %s. err: %v", region, partition.ID(), err)
+func getDefaultHostNameForRegion(partition, region, service string) (string, error) {
+	if !validateInputRegion(region) {
+		return "", fmt.Errorf("invalid region identifier format provided: %s", region)
 	}
-	parsedURL, err := url.Parse(rep.URL)
-	if err != nil {
-		return "", fmt.Errorf("Error parsing STS URL %s. err: %v", rep.URL, err)
+
+	var endpointHost string
+
+	// Source: https://github.com/aws/aws-sdk-go/blob/main/aws/endpoints/defaults.go
+	switch partition {
+	case endpoints.AwsPartitionID:
+		endpointHost = "amazonaws.com"
+	case endpoints.AwsCnPartitionID:
+		endpointHost = "amazonaws.com.cn"
+	case endpoints.AwsUsGovPartitionID:
+		endpointHost = "amazonaws.com"
+	case endpoints.AwsIsoPartitionID:
+		endpointHost = "c2s.ic.gov"
+	case endpoints.AwsIsoBPartitionID:
+		endpointHost = "sc2s.sgov.gov"
+	case endpoints.AwsIsoEPartitionID:
+		endpointHost = "cloud.adc-e.uk"
+	case endpoints.AwsIsoFPartitionID:
+		endpointHost = "csp.hci.ic.gov"
+	default:
+		return "", fmt.Errorf("Partition %s not valid", partition)
 	}
-	return parsedURL.Hostname(), nil
+	return fmt.Sprintf("%s.%s.%s", service, region, endpointHost), nil
+}
+
+// Ported over from the AWS SDK Go V1 endpoints package, which validated regions as part of endpoint resolution
+// https://github.com/aws/aws-sdk-go/blob/163aada692ed32951f979aacf452ded4c03b8a7c/aws/endpoints/v3model.go#L592
+func validateInputRegion(region string) bool {
+	regionValidationRegex := regexp.MustCompile(`^[[:alnum:]]([[:alnum:]\-]*[[:alnum:]])?$`)
+	return regionValidationRegex.MatchString(region)
 }
 
 func stsHostsForPartition(partitionID, region string) map[string]bool {
 	validSTShostnames := map[string]bool{}
 
-	var partition *endpoints.Partition
-	for _, p := range endpoints.DefaultPartitions() {
-		if partitionID == p.ID() {
-			partition = &p
-			break
-		}
-	}
-	if partition == nil {
+	if !slices.Contains(endpoints.PARTITIONS, partitionID) {
 		logrus.Errorf("Partition %s not valid", partitionID)
 		return validSTShostnames
 	}
 
-	stsSvc, ok := partition.Services()[stsServiceID]
-	if !ok {
+	hostnames := endpoints.GetSTSEndpoints(partitionID)
+	if len(hostnames) == 0 {
 		logrus.Errorf("STS service not found in partition %s", partitionID)
 		// Add the host of the current instances region if the service doesn't already exists in the partition
 		// so we don't fail if the service is not present in the go sdk but matches the instances region.
-		stsHostName, err := getDefaultHostNameForRegion(partition, region, stsServiceID)
+		stsHostName, err := getDefaultHostNameForRegion(partitionID, region, stsServiceID)
 		if err != nil {
 			logrus.WithError(err).Error("Error getting default hostname")
 		} else {
@@ -460,30 +479,20 @@ func stsHostsForPartition(partitionID, region string) map[string]bool {
 		}
 		return validSTShostnames
 	}
-	stsSvcEndPoints := stsSvc.Endpoints()
-	for epName, ep := range stsSvcEndPoints {
-		rep, err := ep.ResolveEndpoint(endpoints.STSRegionalEndpointOption)
-		if err != nil {
-			logrus.WithError(err).Errorf("Error resolving endpoint for %s in partition %s", epName, partitionID)
-			continue
-		}
-		parsedURL, err := url.Parse(rep.URL)
-		if err != nil {
-			logrus.WithError(err).Errorf("Error parsing STS URL %s", rep.URL)
-			continue
-		}
-		validSTShostnames[parsedURL.Hostname()] = true
+
+	for _, hostname := range hostnames {
+		validSTShostnames[hostname] = true
 	}
 
 	// Add the host of the current instances region if not already exists so we don't fail if the region is not
 	// present in the go sdk but matches the instances region.
-	if _, ok := stsSvcEndPoints[region]; !ok {
-		stsHostName, err := getDefaultHostNameForRegion(partition, region, stsServiceID)
-		if err != nil {
-			logrus.WithError(err).Error("Error getting default hostname")
-			return validSTShostnames
-		}
-		validSTShostnames[stsHostName] = true
+	currRegionSTSHost, err := getDefaultHostNameForRegion(partitionID, region, stsServiceID)
+	if err != nil {
+		logrus.WithError(err).Error("Error getting default hostname")
+		return validSTShostnames
+	}
+	if !slices.Contains(hostnames, currRegionSTSHost) {
+		validSTShostnames[currRegionSTSHost] = true
 	}
 
 	return validSTShostnames
