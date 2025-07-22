@@ -29,6 +29,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -420,35 +421,29 @@ type tokenVerifier struct {
 	client            *http.Client
 	clusterID         string
 	validSTShostnames map[string]bool
+	partition         string
+	region            string
+	mutex             sync.RWMutex
 }
 
-func getDefaultHostNameForRegion(partition, region, service string) (string, error) {
+// Returns the hostnames (regular and dualstack) for a service given a certain region and partition.
+// This hostname is not validated, but follows the format of what the hostname would be given
+// these parameters.
+func getDefaultHostNamesForRegion(partition, region, service string) ([]string, error) {
 	if !validateInputRegion(region) {
-		return "", fmt.Errorf("invalid region identifier format provided: %s", region)
+		return []string{}, fmt.Errorf("invalid region identifier format provided: %s", region)
 	}
 
-	var endpointHost string
-
-	// Source: https://github.com/aws/aws-sdk-go/blob/main/aws/endpoints/defaults.go
-	switch partition {
-	case endpoints.AwsPartitionID:
-		endpointHost = "amazonaws.com"
-	case endpoints.AwsCnPartitionID:
-		endpointHost = "amazonaws.com.cn"
-	case endpoints.AwsUsGovPartitionID:
-		endpointHost = "amazonaws.com"
-	case endpoints.AwsIsoPartitionID:
-		endpointHost = "c2s.ic.gov"
-	case endpoints.AwsIsoBPartitionID:
-		endpointHost = "sc2s.sgov.gov"
-	case endpoints.AwsIsoEPartitionID:
-		endpointHost = "cloud.adc-e.uk"
-	case endpoints.AwsIsoFPartitionID:
-		endpointHost = "csp.hci.ic.gov"
-	default:
-		return "", fmt.Errorf("Partition %s not valid", partition)
+	partitionDomain, err := endpoints.GetSTSPartitionDomain(partition)
+	if err != nil {
+		return []string{}, fmt.Errorf("couldn't get domain for partition %s, %w", partition, err)
 	}
-	return fmt.Sprintf("%s.%s.%s", service, region, endpointHost), nil
+	dualStackPartitionDomain := endpoints.GetSTSDualStackPartitionDomain(partition)
+
+	return []string{
+		fmt.Sprintf("%s.%s.%s", service, region, partitionDomain),          // hostname
+		fmt.Sprintf("%s.%s.%s", service, region, dualStackPartitionDomain), // dual-stack hostname
+	}, nil
 }
 
 // Ported over from the AWS SDK Go V1 endpoints package, which validated regions as part of endpoint resolution
@@ -456,46 +451,6 @@ func getDefaultHostNameForRegion(partition, region, service string) (string, err
 func validateInputRegion(region string) bool {
 	regionValidationRegex := regexp.MustCompile(`^[[:alnum:]]([[:alnum:]\-]*[[:alnum:]])?$`)
 	return regionValidationRegex.MatchString(region)
-}
-
-func stsHostsForPartition(partitionID, region string) map[string]bool {
-	validSTShostnames := map[string]bool{}
-
-	if !slices.Contains(endpoints.PARTITIONS, partitionID) {
-		logrus.Errorf("Partition %s not valid", partitionID)
-		return validSTShostnames
-	}
-
-	hostnames := endpoints.GetSTSEndpoints(partitionID)
-	if len(hostnames) == 0 {
-		logrus.Errorf("STS service not found in partition %s", partitionID)
-		// Add the host of the current instances region if the service doesn't already exists in the partition
-		// so we don't fail if the service is not present in the go sdk but matches the instances region.
-		stsHostName, err := getDefaultHostNameForRegion(partitionID, region, stsServiceID)
-		if err != nil {
-			logrus.WithError(err).Error("Error getting default hostname")
-		} else {
-			validSTShostnames[stsHostName] = true
-		}
-		return validSTShostnames
-	}
-
-	for _, hostname := range hostnames {
-		validSTShostnames[hostname] = true
-	}
-
-	// Add the host of the current instances region if not already exists so we don't fail if the region is not
-	// present in the go sdk but matches the instances region.
-	currRegionSTSHost, err := getDefaultHostNameForRegion(partitionID, region, stsServiceID)
-	if err != nil {
-		logrus.WithError(err).Error("Error getting default hostname")
-		return validSTShostnames
-	}
-	if !slices.Contains(hostnames, currRegionSTSHost) {
-		validSTShostnames[currRegionSTSHost] = true
-	}
-
-	return validSTShostnames
 }
 
 // NewVerifier creates a Verifier that is bound to the clusterID and uses the default http client.
@@ -506,7 +461,7 @@ func NewVerifier(clusterID, partitionID, region string) Verifier {
 		metrics.InitMetrics(prometheus.NewRegistry())
 	}
 
-	return tokenVerifier{
+	return &tokenVerifier{
 		client: &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
@@ -514,22 +469,123 @@ func NewVerifier(clusterID, partitionID, region string) Verifier {
 			Timeout: 10 * time.Second,
 		},
 		clusterID:         clusterID,
-		validSTShostnames: stsHostsForPartition(partitionID, region),
+		validSTShostnames: make(map[string]bool),
+		partition:         partitionID,
+		region:            region,
 	}
 }
 
-// verify a sts host, doc: http://docs.amazonaws.cn/en_us/general/latest/gr/rande.html#sts_region
-func (v tokenVerifier) verifyHost(host string) error {
-	if _, ok := v.validSTShostnames[host]; !ok {
+// Ensures that a given host is following the appropriate STS hostname format, e.g. sts.{region}.{suffix} for
+// the verifier's partition.
+//
+// Does not run any validation, so hostnames that contain invalid regions (e.g. sts.not-a-region.amazonaws.com) or
+// regions where STS/FIPS/Dualstack are not supported will be verified.
+// doc: http://docs.amazonaws.cn/en_us/general/latest/gr/rande.html#sts_region
+func (v *tokenVerifier) verifyHost(host string) error {
+	v.mutex.RLock()
+	if _, ok := v.validSTShostnames[host]; ok {
+		v.mutex.RUnlock()
+		return nil
+	}
+	v.mutex.RUnlock()
+
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
+	// Double-check after acquiring write lock
+	if _, ok := v.validSTShostnames[host]; ok {
+		return nil
+	}
+
+	// If not in cache, verify the hostname format
+	if err := v.verifySTSHostnameFormat(host); err != nil {
+		return err
+	}
+	// Cache the valid hostname for future checks
+	v.validSTShostnames[host] = true
+	return nil
+}
+
+func (v *tokenVerifier) verifySTSHostnameFormat(host string) error {
+	hostRegion, err := getStsRegion(host)
+	if err != nil {
 		return FormatError{fmt.Sprintf("unexpected hostname %q in pre-signed URL", host)}
 	}
+	if hostRegion == "global" && v.partition == endpoints.AwsPartitionID {
+		return nil
+	} else if hostRegion == "global" && v.partition != endpoints.AwsPartitionID {
+		return FormatError{fmt.Sprintf("global endpoint unsupported in partition %s", v.partition)}
+	}
+	// Ensure that the region follows valid formatting, as was done in the Go SDK V1:
+	// https://github.com/aws/aws-sdk-go/blob/163aada692ed32951f979aacf452ded4c03b8a7c/aws/endpoints/v3model.go#L500
+	if !validateInputRegion(hostRegion) {
+		return FormatError{fmt.Sprintf("invalid region identifier format provided: %s", hostRegion)}
+	}
+
+	stsResolver := sts.NewDefaultEndpointResolverV2()
+
+	// Generate all possible endpoints given this region
+	var resolvedHosts []string
+	options := []bool{true, false}
+	for _, useFIPS := range options {
+		for _, useDualStack := range options {
+			// If the resolver cannot find the region in any partition, it will fall back to the commerical
+			// format, resulting in something like sts.{region}.amazonaws.com. So, if the hostRegion is invalid
+			// or unsupported by STS, then we expect to see an endpoint that follows the commerical partition format.
+			endpoint, err := stsResolver.ResolveEndpoint(context.TODO(), sts.EndpointParameters{
+				Region:       aws.String(hostRegion),
+				UseFIPS:      aws.Bool(useFIPS),
+				UseDualStack: aws.Bool(useDualStack),
+			})
+			if err != nil {
+				continue
+			}
+
+			resolvedHosts = append(resolvedHosts, endpoint.URI.Host)
+		}
+	}
+
+	if !slices.Contains(resolvedHosts, host) {
+		// If neither of them match the host, check what the hostname should be using the given region and partition.
+		// This is to account for regions that aren't yet supported by the SDK, but are
+		// present in the instance metadata.
+		defaultHostnames, err := getDefaultHostNamesForRegion(v.partition, v.region, stsServiceID)
+		if err != nil {
+			logrus.Infof("Error resolving default hostnames for partition %s, region %s, %v", v.partition, v.region, err)
+		}
+		if slices.Contains(defaultHostnames, host) {
+			return nil
+		}
+
+		return FormatError{fmt.Sprintf("unexpected hostname %q in pre-signed URL", host)}
+	}
+
+	// Verify that the hostname's domain matches that of the verifier's partition
+	// Hostname format: sts.{region_identifier}.{partition_domain}
+	// (source https://docs.aws.amazon.com/sdkref/latest/guide/feature-sts-regionalized-endpoints.html)
+	parts := strings.Split(host, ".")
+	if len(parts) < 4 {
+		return fmt.Errorf("invalid host format, too few labels: %v", host)
+	}
+	actualDomain := strings.Join(parts[2:], ".")
+
+	expectedDomain, err := endpoints.GetSTSPartitionDomain(v.partition)
+	if err != nil {
+		return err
+	}
+	expectedDualStackDomain := endpoints.GetSTSDualStackPartitionDomain(v.partition)
+
+	if actualDomain != expectedDomain && actualDomain != expectedDualStackDomain {
+		return FormatError{fmt.Sprintf("partition {%s} does not support hostname %s", v.partition, host)}
+	}
+
 	return nil
 }
 
 // Verify a token is valid for the specified clusterID. On success, returns an
 // Identity that contains information about the AWS principal that created the
 // token. On failure, returns nil and a non-nil error.
-func (v tokenVerifier) Verify(token string) (*Identity, error) {
+func (v *tokenVerifier) Verify(token string) (*Identity, error) {
 	if len(token) > maxTokenLenBytes {
 		return nil, FormatError{"token is too large"}
 	}
