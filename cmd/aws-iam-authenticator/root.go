@@ -20,17 +20,18 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/component-base/featuregate"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/endpoints"
 )
 
 var cfgFile string
@@ -157,13 +158,7 @@ func getConfig() (config.Config, error) {
 		return cfg, errors.New("cluster ID cannot be empty")
 	}
 
-	partitionKeys := []string{}
-	partitionMap := map[string]endpoints.Partition{}
-	for _, p := range endpoints.DefaultPartitions() {
-		partitionMap[p.ID()] = p
-		partitionKeys = append(partitionKeys, p.ID())
-	}
-	if _, ok := partitionMap[cfg.PartitionID]; !ok {
+	if !slices.Contains(endpoints.PARTITIONS, cfg.PartitionID) {
 		return cfg, errors.New("Invalid partition")
 	}
 
