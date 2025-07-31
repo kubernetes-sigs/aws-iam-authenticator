@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -19,13 +21,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication"
 	clientauthv1 "k8s.io/client-go/pkg/apis/clientauthentication/v1"
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/endpoints"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
@@ -37,7 +40,7 @@ func TestMain(m *testing.M) {
 func validationErrorTest(t *testing.T, partition string, token string, expectedErr string) {
 	t.Helper()
 
-	_, err := NewVerifier("", partition, "").(tokenVerifier).Verify(token)
+	_, err := NewVerifier("", partition, "").(*tokenVerifier).Verify(token)
 	errorContains(t, err, expectedErr)
 }
 
@@ -89,7 +92,7 @@ func newVerifier(partition string, statusCode int, body string, err error) Verif
 	if body != "" {
 		rc = io.NopCloser(bytes.NewReader([]byte(body)))
 	}
-	return tokenVerifier{
+	return &tokenVerifier{
 		client: &http.Client{
 			Transport: &roundTripper{
 				err: err,
@@ -99,7 +102,8 @@ func newVerifier(partition string, statusCode int, body string, err error) Verif
 				},
 			},
 		},
-		validSTShostnames: stsHostsForPartition(partition, ""),
+		validSTShostnames: make(map[string]bool),
+		partition:         partition,
 	}
 }
 
@@ -139,9 +143,24 @@ func TestSTSEndpoints(t *testing.T) {
 		valid     bool
 		region    string
 	}{
+		// STS global endpoint is only supported in the commerical partition
+		{"aws", "sts.amazonaws.com", true, ""},
+		{"aws-cn", "sts.amazonaws.com", false, ""},
+		{"aws-us-gov", "sts.amazonaws.com", false, ""},
+		{"aws-iso", "sts.amazonaws.com", false, ""},
+		{"aws-iso-b", "sts.amazonaws.com", false, ""},
+		{"aws-iso-e", "sts.amazonaws.com", false, ""},
+		{"aws-iso-f", "sts.amazonaws.com", false, ""},
+		{"aws-not-a-partition", "sts.amazonaws.com", false, ""},
+
+		// CN partition
 		{"aws-cn", "sts.cn-northwest-1.amazonaws.com.cn", true, ""},
 		{"aws-cn", "sts.cn-north-1.amazonaws.com.cn", true, ""},
-		{"aws-cn", "sts.us-iso-east-1.c2s.ic.gov", false, ""},
+		{"aws-cn", "sts.us-iso-east-1.c2s.ic.gov", false, ""}, // cross partition
+		{"aws-cn", "sts.not-a-region1.amazonaws.com.cn", false, ""},
+		{"aws-cn", "sts.not-a-region2.amazonaws.com.cn", true, "not-a-region2"},
+
+		// AWS partition
 		{"aws", "sts.amazonaws.com", true, ""},
 		{"aws", "sts-fips.us-west-2.amazonaws.com", true, ""},
 		{"aws", "sts-fips.us-east-1.amazonaws.com", true, ""},
@@ -160,21 +179,95 @@ func TestSTSEndpoints(t *testing.T) {
 		{"aws", "sts.eu-west-2.amazonaws.com", true, ""},
 		{"aws", "sts.eu-west-3.amazonaws.com", true, ""},
 		{"aws", "sts.eu-north-1.amazonaws.com", true, ""},
-		{"aws", "sts.amazonaws.com.cn", false, ""},
-		{"aws", "sts.not-a-region.amazonaws.com", false, ""},
+		{"aws", "sts.amazonaws.com.cn", false, ""},  // incorrectly formatted hostname for partition
+		{"aws", "website.amazonaws.com", false, ""}, // unsupported hostname format
 		{"aws", "sts.default-region.amazonaws.com", true, "default-region"},
+
+		// iso/gov regions
 		{"aws-iso", "sts.us-iso-east-1.c2s.ic.gov", true, ""},
-		{"aws-iso", "sts.cn-north-1.amazonaws.com.cn", false, ""},
-		{"aws-iso-b", "sts.cn-north-1.amazonaws.com.cn", false, ""},
+		{"aws-iso", "sts.cn-north-1.amazonaws.com.cn", false, ""},   // incorrectly formatted hostname for partition
+		{"aws-iso-b", "sts.cn-north-1.amazonaws.com.cn", false, ""}, // incorrectly formatted hostname for partition
 		{"aws-us-gov", "sts.us-gov-east-1.amazonaws.com", true, ""},
-		{"aws-us-gov", "sts.amazonaws.com", false, ""},
-		{"aws-not-a-partition", "sts.amazonaws.com", false, ""},
+		{"aws-not-a-partition", "sts.amazonaws.com", false, ""}, // invalid partition
+
+		// FIPS
+		{"aws", "sts-fips.us-east-1.amazonaws.com", true, ""},
+		{"aws-cn", "sts-fips.us-east-1.amazonaws.com", false, ""},
+
+		// Valid region, wrong (but valid) partition format
+		{"aws-cn", "sts.us-isob-east-1.amazonaws.com.cn", false, ""},
+		{"aws-cn", "sts.us-isob-east-1.amazonaws.com.cn", true, "us-isob-east-1"},
+		{"aws-iso-b", "sts.us-isob-east-1.amazonaws.com.cn", false, ""},
+		{"aws-iso-b", "sts.us-isob-east-1.amazonaws.com.cn", false, "us-isob-east-1"},
+
+		// Dual stack endpoints
+		{"aws", "sts.us-west-2.api.aws", true, ""},
+		{"aws-cn", "sts.cn-north-1.api.amazonwebservices.com.cn", true, ""},
+		{"aws", "sts.cn-north-1.api.amazonwebservices.com.cn", false, ""},
+
+		// Due to the Go SDK migration, if a hostname follows the commerical partition format,
+		// there's no longer a way to check if a region is valid. So, verifications on such hosts
+		// will pass even if the region is invalid/the hostname doesn't exist.
+		{"aws", "sts.not-a-region.amazonaws.com", true, ""},
+		{"aws", "sts.not-a-region.amazonaws.com", true, "not-a-region"},
+		{"aws", "sts.not-a-region.amazonaws.com", true, "us-west-2"},
+		// However, hostnames that fall into other partitions will not face the same issues, and
+		// will correctly resolve to a valid hostname.
+		{"aws-cn", "sts.not-a-region3.amazonaws.com.cn", false, ""},
+		{"aws-cn", "sts.not-a-region4.amazonaws.com.cn", true, "not-a-region4"},
+		{"aws-cn", "sts.not-a-region5.amazonaws.com.cn", false, "us-west-2"},
 	}
 
 	for _, c := range cases {
-		verifier := NewVerifier("", c.partition, c.region).(tokenVerifier)
-		if err := verifier.verifyHost(c.domain); err != nil && c.valid {
-			t.Errorf("%s is not valid endpoint for partition %s", c.domain, c.partition)
+		verifier := NewVerifier("", c.partition, c.region).(*tokenVerifier)
+		err := verifier.verifyHost(c.domain)
+		if err != nil && c.valid {
+			t.Errorf("%s is not valid endpoint for partition %s, %v", c.domain, c.partition, err)
+		} else if err == nil && !c.valid {
+			t.Errorf("%s should not be valid endpoint for partition %s", c.domain, c.partition)
+		}
+	}
+}
+
+// Document behavior of STS's endpoint resolver to track impact on hostname verification
+func TestSTSEndpointResolution(t *testing.T) {
+	cases := []struct {
+		partition string
+		domain    string
+		valid     bool
+		region    string
+	}{
+		// STS's endpoint resolver (used in verifyHost()) takes in a region and returns an STS hostname.
+		// If it cannot find a region, it puts the region in a commercial domain hostname.
+
+		// This means that the resolver works well in verifying non-commerical hostnames.
+		// If a region doesn't exist in the hostname's partition, the resolver's hostname will either map
+		// it to the correct region or fallback to commerical, either way not matching the given hostname.
+		{"aws-cn", "sts.not-a-region3.amazonaws.com.cn", false, ""},
+		{"aws-cn", "sts.not-a-region4.amazonaws.com.cn", true, "not-a-region4"},
+		{"aws-cn", "sts.not-a-region5.amazonaws.com.cn", false, "us-west-2"},
+		{"aws-cn", "sts.us-west-2.amazonaws.com.cn", false, ""},
+		{"aws", "sts.us-west-2.amazonaws.com.cn", false, ""},
+		{"aws", "sts.us-west-2.amazonaws.com.cn", false, "us-west-2"},
+
+		// However, this fallback means that if the verifier is given a commerical hostname,
+		// the resolver is weaker as a tool for verification. All commerical STS hostnames will
+		// be verified as long as they follow the proper format, even if the host is invalid.
+		{"aws", "sts.not-a-region.amazonaws.com", true, ""},
+		{"aws", "sts.not-a-region.amazonaws.com", true, "not-a-region"},
+		{"aws", "sts.not-a-region.amazonaws.com", true, "us-west-2"},
+
+		// Partition isolation still remains
+		{"aws-cn", "sts.not-a-region.amazonaws.com", false, "not-a-region"},
+	}
+
+	for _, c := range cases {
+		verifier := NewVerifier("", c.partition, c.region).(*tokenVerifier)
+		err := verifier.verifyHost(c.domain)
+		if err != nil && c.valid {
+			t.Errorf("%s is not valid endpoint for partition %s, %v", c.domain, c.partition, err)
+		} else if err == nil && !c.valid {
+			t.Errorf("%s should not be valid endpoint for partition %s", c.domain, c.partition)
 		}
 	}
 }
@@ -188,7 +281,7 @@ func TestVerifyTokenPreSTSValidations(t *testing.T) {
 
 	validationErrorTest(t, "aws", toToken(":ab:cd.af:/asda"), "missing protocol scheme")
 	validationErrorTest(t, "aws", toToken("http://"), "unexpected scheme")
-	validationErrorTest(t, "aws", toToken("https://google.com"), fmt.Sprintf("unexpected hostname %q in pre-signed URL", "google.com"))
+	validationErrorTest(t, "aws", toToken("https://google.com"), fmt.Sprintf("input token was not properly formatted: could not parse region for pre-signed URL %s, invalid host format: %s", "google.com", "google.com"))
 	validationErrorTest(t, "aws-cn", toToken("https://sts.cn-north-1.amazonaws.com.cn/abc"), "unexpected path in pre-signed URL")
 	validationErrorTest(t, "aws", toToken("https://sts.amazonaws.com/abc"), "unexpected path in pre-signed URL")
 	validationErrorTest(t, "aws", toToken("https://sts.amazonaws.com/?NoInWhiteList=abc"), "non-whitelisted query parameter")
@@ -237,7 +330,7 @@ func TestVerifyNoRedirectsFollowed(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	tokVerifier := NewVerifier("", "aws", "").(tokenVerifier)
+	tokVerifier := NewVerifier("", "aws", "").(*tokenVerifier)
 
 	resp, err := tokVerifier.client.Get(ts.URL)
 	if err != nil {
@@ -264,7 +357,8 @@ func TestVerifyBodyReadError(t *testing.T) {
 				},
 			},
 		},
-		validSTShostnames: stsHostsForPartition("aws", ""),
+		validSTShostnames: make(map[string]bool),
+		partition:         "aws",
 	}
 	_, err := verifier.Verify(validToken)
 	errorContains(t, err, "error reading HTTP result")
@@ -523,7 +617,7 @@ func response(account, userID, arn string) getCallerIdentityWrapper {
 
 func Test_getDefaultHostNameForRegion(t *testing.T) {
 	type args struct {
-		partition endpoints.Partition
+		partition string
 		region    string
 		service   string
 	}
@@ -536,7 +630,7 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 		{
 			name: "service doesn't exist should return default host name",
 			args: args{
-				partition: endpoints.AwsIsoEPartition(),
+				partition: endpoints.AwsIsoEPartitionID,
 				region:    "eu-isoe-west-1",
 				service:   "test",
 			},
@@ -546,7 +640,7 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 		{
 			name: "service and region doesn't exist should return default host name",
 			args: args{
-				partition: endpoints.AwsIsoEPartition(),
+				partition: endpoints.AwsIsoEPartitionID,
 				region:    "eu-isoe-test-1",
 				service:   "test",
 			},
@@ -556,7 +650,7 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 		{
 			name: "region doesn't exist should return default host name",
 			args: args{
-				partition: endpoints.AwsIsoPartition(),
+				partition: endpoints.AwsIsoPartitionID,
 				region:    "us-iso-test-1",
 				service:   "sts",
 			},
@@ -566,7 +660,7 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 		{
 			name: "invalid region should return error",
 			args: args{
-				partition: endpoints.AwsIsoPartition(),
+				partition: endpoints.AwsIsoPartitionID,
 				region:    "test_123",
 				service:   "sts",
 			},
@@ -576,12 +670,15 @@ func Test_getDefaultHostNameForRegion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getDefaultHostNameForRegion(&tt.args.partition, tt.args.region, tt.args.service)
+			got, err := getDefaultHostNamesForRegion(tt.args.partition, tt.args.region, tt.args.service)
+			if tt.want == "" && len(got) == 0 {
+				return
+			}
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getDefaultHostNameForRegion() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
+			if !slices.Contains(got, tt.want) {
 				t.Errorf("getDefaultHostNameForRegion() = %v, want %v", got, tt.want)
 			}
 		})
@@ -671,5 +768,118 @@ func TestGetStsRegion(t *testing.T) {
 		if result != test.expected {
 			t.Errorf("getStsRegion(%q) = %q; expected %q", test.host, result, test.expected)
 		}
+	}
+}
+
+// Testing AWS SDK Go V1 function validateInputRegion()
+// https://github.com/aws/aws-sdk-go/blob/163aada692ed32951f979aacf452ded4c03b8a7c/aws/endpoints/v3model_test.go#L721
+func TestRegionValidator(t *testing.T) {
+	cases := []struct {
+		Region string
+		Valid  bool
+	}{
+		0: {
+			Region: "us-east-1",
+			Valid:  true,
+		},
+		1: {
+			Region: "invalid.com",
+			Valid:  false,
+		},
+		2: {
+			Region: "@invalid.com/%23",
+			Valid:  false,
+		},
+		3: {
+			Region: "local",
+			Valid:  true,
+		},
+		4: {
+			Region: "9-west-1",
+			Valid:  true,
+		},
+		5: {
+			Region: "us_east_1",
+			Valid:  false,
+		},
+	}
+
+	for i, tt := range cases {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			if e, a := tt.Valid, validateInputRegion(tt.Region); e != a {
+				t.Errorf("expected %v, got %v", e, a)
+			}
+		})
+	}
+}
+
+func TestVerifyHostCaching(t *testing.T) {
+	tests := []struct {
+		name               string
+		initialCache       map[string]bool
+		expectedCacheHosts map[string]bool
+	}{
+		{
+			name:         "All valid hostnames",
+			initialCache: make(map[string]bool),
+			expectedCacheHosts: map[string]bool{
+				"sts.us-east-1.amazonaws.com":      true,
+				"sts.eu-west-2.amazonaws.com":      true,
+				"sts.ap-southeast-1.amazonaws.com": true,
+			},
+		},
+		{
+			name:         "All invalid hostnames",
+			initialCache: make(map[string]bool),
+			expectedCacheHosts: map[string]bool{
+				"invalid.amazonaws.com":  false,
+				"invalid2.amazonaws.com": false,
+			},
+		},
+		{
+			name:         "Mix of valid and invalid hostnames",
+			initialCache: make(map[string]bool),
+			expectedCacheHosts: map[string]bool{
+				"sts.us-west-2.amazonaws.com":    true,
+				"sts.ca-central-1.amazonaws.com": true,
+				"invalid.amazonaws.com":          false,
+				"invalid2.amazonaws.com":         false,
+			},
+		},
+		{
+			name: "Hostname already in cache",
+			initialCache: map[string]bool{
+				"sts.sa-east-1.amazonaws.com": true,
+			},
+			expectedCacheHosts: map[string]bool{
+				"sts.sa-east-1.amazonaws.com":    true,
+				"sts.eu-central-1.amazonaws.com": true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := tokenVerifier{
+				validSTShostnames: tt.initialCache,
+				partition:         "aws",
+			}
+
+			// Verify all hosts that are in expectedCacheHosts
+			for host := range tt.expectedCacheHosts {
+				err := v.verifyHost(host)
+				if tt.expectedCacheHosts[host] && err != nil {
+					t.Errorf("verifyHost(%q) unexpected error: %v", host, err)
+				} else if !tt.expectedCacheHosts[host] && err == nil {
+					t.Errorf("verifyHost(%q) expected error but got none", host)
+				}
+			}
+
+			for host, expected := range tt.expectedCacheHosts {
+				if actual, exists := v.validSTShostnames[host]; exists != expected {
+					t.Errorf("Cache state for %q is %v, want %v", host, actual, expected)
+				}
+			}
+		})
 	}
 }
