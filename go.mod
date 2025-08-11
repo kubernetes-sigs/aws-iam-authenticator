@@ -27,7 +27,7 @@ require (
 	k8s.io/code-generator v0.33.3
 	k8s.io/component-base v0.33.3
 	k8s.io/sample-controller v0.33.3
-	sigs.k8s.io/yaml v1.5.0
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
