@@ -5,10 +5,10 @@ go 1.24.4
 require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/sirupsen/logrus v1.9.3
-	k8s.io/api v0.33.3
-	k8s.io/apimachinery v0.33.3
-	k8s.io/client-go v0.33.3
-	k8s.io/kubernetes v1.33.3
+	k8s.io/api v0.33.4
+	k8s.io/apimachinery v0.33.4
+	k8s.io/client-go v0.33.4
+	k8s.io/kubernetes v1.33.4
 	sigs.k8s.io/aws-iam-authenticator v0.0.0-00010101000000-000000000000
 )
 
@@ -126,12 +126,12 @@ require (
 	k8s.io/apiserver v0.33.0 // indirect
 	k8s.io/cloud-provider v0.33.0 // indirect
 	k8s.io/cluster-bootstrap v0.0.0 // indirect
-	k8s.io/component-base v0.33.3 // indirect
+	k8s.io/component-base v0.33.4 // indirect
 	k8s.io/component-helpers v0.33.0 // indirect
 	k8s.io/controller-manager v0.33.0 // indirect
 	k8s.io/csi-translation-lib v0.0.0 // indirect
 	k8s.io/dynamic-resource-allocation v0.0.0 // indirect
-	k8s.io/endpointslice v0.33.3 // indirect
+	k8s.io/endpointslice v0.33.4 // indirect
 	k8s.io/externaljwt v0.33.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kms v0.33.0 // indirect
