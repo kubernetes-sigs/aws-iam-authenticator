@@ -424,6 +424,7 @@ type tokenVerifier struct {
 	partition         string
 	region            string
 	mutex             sync.RWMutex
+	disabledRegions   map[string]bool
 }
 
 // Returns the hostnames (regular and dualstack) for a service given a certain region and partition.
@@ -458,7 +459,7 @@ func validateInputRegion(region string) bool {
 }
 
 // NewVerifier creates a Verifier that is bound to the clusterID and uses the default http client.
-func NewVerifier(clusterID, partitionID, region string) Verifier {
+func NewVerifier(clusterID, partitionID, region string, disabledRegions map[string]bool) Verifier {
 	// Initialize metrics if they haven't already been initialized to avoid a
 	// nil pointer panic when setting metric values.
 	if !metrics.Initialized() {
@@ -476,6 +477,7 @@ func NewVerifier(clusterID, partitionID, region string) Verifier {
 		validSTShostnames: make(map[string]bool),
 		partition:         partitionID,
 		region:            region,
+		disabledRegions:   disabledRegions,
 	}
 }
 
@@ -621,6 +623,12 @@ func (v *tokenVerifier) Verify(token string) (*Identity, error) {
 	stsRegion, err := getStsRegion(parsedURL.Host)
 	if err != nil {
 		return nil, err
+	}
+
+	if v.disabledRegions != nil {
+		if _, ok := v.disabledRegions[stsRegion]; ok {
+			metrics.Get().StsDisableRegionRequests.Inc()
+		}
 	}
 
 	if parsedURL.Path != "/" {
