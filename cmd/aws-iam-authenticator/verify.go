@@ -57,7 +57,7 @@ var verifyCmd = &cobra.Command{
 
 		instanceRegion := getInstanceRegion(context.Background())
 
-		id, err := token.NewVerifier(clusterID, partition, instanceRegion).Verify(tok)
+		id, err := token.NewVerifier(clusterID, partition, instanceRegion, nil).Verify(tok)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not verify token: %v\n", err)
 			os.Exit(1)

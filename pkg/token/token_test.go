@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication"
 	clientauthv1 "k8s.io/client-go/pkg/apis/clientauthentication/v1"
@@ -40,7 +41,7 @@ func TestMain(m *testing.M) {
 func validationErrorTest(t *testing.T, partition string, token string, expectedErr string) {
 	t.Helper()
 
-	_, err := NewVerifier("", partition, "").(*tokenVerifier).Verify(token)
+	_, err := NewVerifier("", partition, "", nil).(*tokenVerifier).Verify(token)
 	errorContains(t, err, expectedErr)
 }
 
@@ -53,6 +54,45 @@ func validationSuccessTest(t *testing.T, partition, token string) {
 	if err != nil {
 		t.Errorf("received unexpected error: %s", err)
 	}
+}
+
+func validationDisabledRegionMetricsTest(t *testing.T, partition, token string) {
+	t.Helper()
+	arn := "arn:aws:iam::123456789012:user/Alice"
+	account := "123456789012"
+	userID := "Alice"
+
+	body := jsonResponse(arn, account, userID)
+	statusCode := 200
+
+	var rc io.ReadCloser
+	if body != "" {
+		rc = io.NopCloser(bytes.NewReader([]byte(body)))
+	}
+	verifier := &tokenVerifier{
+		client: &http.Client{
+			Transport: &roundTripper{
+				err: nil,
+				resp: &http.Response{
+					StatusCode: statusCode,
+					Body:       rc,
+				},
+			},
+		},
+		validSTShostnames: make(map[string]bool),
+		partition:         partition,
+		disabledRegions:   map[string]bool{"sa-east-1": true},
+	}
+
+	_, err := verifier.Verify(token)
+	if err != nil {
+		t.Errorf("received unexpected error: %s", err)
+	}
+
+	if value := testutil.ToFloat64(metrics.Get().StsDisableRegionRequests); value != 1.0 {
+		t.Errorf("disable region requests metrics value must be 1")
+	}
+
 }
 
 func errorContains(t *testing.T, err error, expectedErr string) {
@@ -219,7 +259,7 @@ func TestSTSEndpoints(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		verifier := NewVerifier("", c.partition, c.region).(*tokenVerifier)
+		verifier := NewVerifier("", c.partition, c.region, nil).(*tokenVerifier)
 		err := verifier.verifyHost(c.domain)
 		if err != nil && c.valid {
 			t.Errorf("%s is not valid endpoint for partition %s, %v", c.domain, c.partition, err)
@@ -262,7 +302,7 @@ func TestSTSEndpointResolution(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		verifier := NewVerifier("", c.partition, c.region).(*tokenVerifier)
+		verifier := NewVerifier("", c.partition, c.region, nil).(*tokenVerifier)
 		err := verifier.verifyHost(c.domain)
 		if err != nil && c.valid {
 			t.Errorf("%s is not valid endpoint for partition %s, %v", c.domain, c.partition, err)
@@ -297,6 +337,7 @@ func TestVerifyTokenPreSTSValidations(t *testing.T) {
 	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.ca-central-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
 	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.eu-west-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
 	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.sa-east-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
+	validationDisabledRegionMetricsTest(t, "aws", toToken(fmt.Sprintf("https://sts.sa-east-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
 	validationErrorTest(t, "aws", toToken(fmt.Sprintf("https://sts.us-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAAAAAAAAAAAAAAAAA%%2F20220601%%2Fus-west-2%%2Fsts%%2Faws4_request&X-Amz-Date=%s&X-Amz-Expires=900&X-Amz-Security-Token=XXXXXXXXXXXXX&X-Amz-SignedHeaders=host%%3Bx-k8s-aws-id&x-amz-credential=eve&X-Amz-Signature=999999999999999999", timeStr)), "input token was not properly formatted: duplicate query parameter found:")
 }
 
@@ -330,7 +371,7 @@ func TestVerifyNoRedirectsFollowed(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	tokVerifier := NewVerifier("", "aws", "").(*tokenVerifier)
+	tokVerifier := NewVerifier("", "aws", "", nil).(*tokenVerifier)
 
 	resp, err := tokVerifier.client.Get(ts.URL)
 	if err != nil {

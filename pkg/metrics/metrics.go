@@ -40,6 +40,7 @@ type Metrics struct {
 	EC2DescribeInstanceCallCount prometheus.Counter
 	StsConnectionFailure         *prometheus.CounterVec
 	StsResponses                 *prometheus.CounterVec
+	StsDisableRegionRequests     prometheus.Counter
 	DynamicFileFailures          prometheus.Counter
 	StsThrottling                *prometheus.CounterVec
 	E2ELatency                   *prometheus.HistogramVec
@@ -85,6 +86,13 @@ func createMetrics(reg prometheus.Registerer) Metrics {
 				Name:      "sts_responses_total",
 				Help:      "Sts responses with error code label",
 			}, []string{"ResponseCode", "StsRegion"},
+		),
+		StsDisableRegionRequests: factory.NewCounter(
+			prometheus.CounterOpts{
+				Name:      "sts_disabled_region_call",
+				Namespace: Namespace,
+				Help:      "Number of STS calls made to regions that are disabled / disabling",
+			},
 		),
 		Latency: factory.NewHistogramVec(
 			prometheus.HistogramOpts{

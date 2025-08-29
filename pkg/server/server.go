@@ -30,6 +30,8 @@ import (
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/account"
+	"github.com/aws/aws-sdk-go-v2/service/account/types"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/ec2provider"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/errutil"
@@ -78,6 +80,7 @@ type handler struct {
 	backendModeConfigInitDone bool
 	scrubbedAccounts          []string
 	cfg                       config.Config
+	disabledRegions           map[string]bool
 }
 
 // New authentication webhook server.
@@ -216,14 +219,21 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 		instanceRegion = instanceRegionOutput.Region
 	}
 
+	acctClient := account.NewFromConfig(cfg)
+	disabledRegions, err := listDisabledRegions(ctx, acctClient)
+	if err != nil {
+		logrus.Errorf("failed to list region status for account : %v", err)
+	}
+
 	h := &handler{
-		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
+		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion, disabledRegions),
 		ec2Provider:               ec2provider.New(ctx, c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
 		clusterID:                 c.ClusterID,
 		backendMapper:             backendMapper,
 		scrubbedAccounts:          c.Config.ScrubbedAWSAccounts,
 		cfg:                       c.Config,
 		backendModeConfigInitDone: false,
+		disabledRegions:           disabledRegions,
 	}
 
 	h.HandleFunc("/authenticate", func(w http.ResponseWriter, r *http.Request) {
@@ -240,6 +250,28 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 	}
 
 	return h
+}
+
+func listDisabledRegions(ctx context.Context, client *account.Client) (map[string]bool, error) {
+	disabledRegions := make(map[string]bool)
+	listInput := &account.ListRegionsInput{
+		RegionOptStatusContains: []types.RegionOptStatus{types.RegionOptStatusDisabled, types.RegionOptStatusDisabling},
+	}
+
+	for {
+		listResult, err := client.ListRegions(ctx, listInput)
+		if err != nil {
+			return nil, fmt.Errorf("Error listing region status for account %v", err)
+		}
+		for _, res := range listResult.Regions {
+			disabledRegions[*res.RegionName] = true
+		}
+		if listResult.NextToken == nil {
+			break
+		}
+	}
+	return disabledRegions, nil
+
 }
 
 func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) {
