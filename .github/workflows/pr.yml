@@ -13,11 +13,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v6
+        with:
+          go-version-file: .go-version
 
       - name: Lint
         uses: golangci/golangci-lint-action@v8.0.0
