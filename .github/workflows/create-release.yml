@@ -30,7 +30,7 @@ jobs:
           hack/tag-release.sh
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
