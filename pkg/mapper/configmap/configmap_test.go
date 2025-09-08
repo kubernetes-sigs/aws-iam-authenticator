@@ -34,8 +34,8 @@ var (
 	}
 )
 
-func makeStore() MapStore {
-	ms := MapStore{
+func makeStore() *MapStore {
+	ms := &MapStore{
 		users:       make(map[string]config.UserMapping),
 		roles:       make(map[string]config.RoleMapping),
 		awsAccounts: make(map[string]interface{}),
@@ -47,11 +47,11 @@ func makeStore() MapStore {
 	return ms
 }
 
-func makeStoreWClient() (MapStore, *fakeConfigMaps) {
+func makeStoreWClient() (*MapStore, *fakeConfigMaps) {
 	fakeCore := &fake.FakeCoreV1{}
 	fakeCore.Fake = &k8stesting.Fake{}
 	fakeConfigMaps := newFakeConfigMaps(fakeCore, "")
-	ms := MapStore{
+	ms := &MapStore{
 		users:     make(map[string]config.UserMapping),
 		roles:     make(map[string]config.RoleMapping),
 		configMap: typedcorev1.ConfigMapInterface(fakeConfigMaps),
@@ -70,8 +70,8 @@ func TestUserMapping(t *testing.T) {
 	}
 
 	user, err = ms.UserMapping("nic")
-	if err != UserNotFound {
-		t.Errorf("UserNotFound error was not returned for user 'nic'")
+	if err != ErrUserNotFound {
+		t.Errorf("ErrUserNotFound error was not returned for user 'nic'")
 	}
 	if !reflect.DeepEqual(user, config.UserMapping{}) {
 		t.Errorf("User value returned when user is not in the map was not empty: %+v", user)
@@ -89,11 +89,11 @@ func TestRoleMapping(t *testing.T) {
 	}
 
 	role, err = ms.RoleMapping("borg")
-	if err != RoleNotFound {
-		t.Errorf("RoleNotFound error was not returend for role 'borg'")
+	if err != ErrRoleNotFound {
+		t.Errorf("ErrRoleNotFound error was not returend for role 'borg'")
 	}
 	if !reflect.DeepEqual(role, config.RoleMapping{}) {
-		t.Errorf("Role value returend when role is not in map was not empty: %+v", role)
+		t.Errorf("Role value returned when role is not in map was not empty: %+v", role)
 	}
 }
 
@@ -179,7 +179,7 @@ func TestLoadConfigMap(t *testing.T) {
 
 	watcher := watch.NewFake()
 
-	fakeConfigMaps.Fake.Fake.AddWatchReactor("configmaps",
+	fakeConfigMaps.Fake.AddWatchReactor("configmaps",
 		func(action k8stesting.Action) (handled bool, ret watch.Interface, err error) {
 			return true, watcher, nil
 		})
@@ -240,7 +240,7 @@ func TestLoadConfigMap(t *testing.T) {
 	}
 
 	expectedUser.Groups = append(expectedUser.Groups, "test")
-	user, err = ms.UserMapping("arn:aws:iam::012345678912:user/NIC")
+	user, _ = ms.UserMapping("arn:aws:iam::012345678912:user/NIC")
 	if !reflect.DeepEqual(user, expectedUser) {
 		t.Errorf("Updated returned from mapping does not match expected user. (Actual: %+v, Expected: %+v", user, expectedUser)
 	}
@@ -252,15 +252,14 @@ func TestLoadConfigMap(t *testing.T) {
 	}
 
 	user, err = ms.UserMapping("arn:iam:beswar")
-	if !reflect.DeepEqual(user, expectedUser) {
+	if err != nil || !reflect.DeepEqual(user, expectedUser) {
 		t.Errorf("Updated did not return new user 'arn:iam:beswar', matching expected value. (Actual: %+v, Expected: %+v", user, expectedUser)
 	}
 
-	user, err = ms.UserMapping("arn:iam:matlan")
-	if err != UserNotFound {
+	_, err = ms.UserMapping("arn:iam:matlan")
+	if err != ErrUserNotFound {
 		t.Errorf("Expected updated mapping not to contain user 'arn:iam:matlan', got err: %v", err)
 	}
-
 }
 
 func TestParseMap(t *testing.T) {

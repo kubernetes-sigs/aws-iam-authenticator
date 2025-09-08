@@ -49,11 +49,11 @@ func (c *mockEc2Client) DescribeInstances(ctx context.Context, in *ec2.DescribeI
 }
 
 func newMockedEC2ProviderImpl() *ec2ProviderImpl {
-	dnsCache := ec2PrivateDNSCache{
+	dnsCache := &ec2PrivateDNSCache{
 		cache: make(map[string]string),
 		lock:  sync.RWMutex{},
 	}
-	ec2Requests := ec2Requests{
+	ec2Requests := &ec2Requests{
 		set:  make(map[string]bool),
 		lock: sync.RWMutex{},
 	}

@@ -63,21 +63,40 @@ func init() {
 
 	rootCmd.PersistentFlags().StringP("log-verbosity", "v", "info",
 		"Specify log level to use when logging to stderr ["+strings.Join(getValidLogLevels(), ", ")+"]")
-	viper.BindPFlag("log-verbosity", rootCmd.PersistentFlags().Lookup("log-verbosity"))
-	viper.BindEnv("log-verbosity", "AWS_IAM_AUTHENTICATOR_LOG_VERBOSITY")
+	if err := viper.BindPFlag("log-verbosity", rootCmd.PersistentFlags().Lookup("log-verbosity")); err != nil {
+		fmt.Printf("Failed to bind flag '%s' - %+v\n", "log-verbosity", err)
+		os.Exit(1)
+	}
+
+	if err := viper.BindEnv("log-verbosity", "AWS_IAM_AUTHENTICATOR_LOG_VERBOSITY"); err != nil {
+		fmt.Printf("Failed to bind env '%s' - %+v\n", "log-verbosity", err)
+		os.Exit(1)
+	}
 
 	rootCmd.PersistentFlags().StringP(
 		"cluster-id",
 		"i",
 		"",
 		"Specify the cluster `ID`, a unique-per-cluster identifier for your aws-iam-authenticator installation.")
-	viper.BindPFlag("clusterID", rootCmd.PersistentFlags().Lookup("cluster-id"))
-	viper.BindEnv("clusterID", "KUBERNETES_AWS_AUTHENTICATOR_CLUSTER_ID")
+	if err := viper.BindPFlag("clusterID", rootCmd.PersistentFlags().Lookup("cluster-id")); err != nil {
+		fmt.Printf("Failed to bind flag '%s' - %+v\n", "clusterID", err)
+		os.Exit(1)
+	}
+	if err := viper.BindEnv("clusterID", "KUBERNETES_AWS_AUTHENTICATOR_CLUSTER_ID"); err != nil {
+		fmt.Printf("Failed to bind env '%s' - %+v\n", "clusterID", err)
+		os.Exit(1)
+	}
 
-	featureGates.Add(config.DefaultFeatureGates)
+	if err := featureGates.Add(config.DefaultFeatureGates); err != nil {
+		fmt.Printf("Failed to add feature gates - %+v\n", err)
+		os.Exit(1)
+	}
 	featureGates.AddFlag(rootCmd.PersistentFlags())
 
-	viper.BindPFlag("feature-gates", rootCmd.PersistentFlags().Lookup("feature-gates"))
+	if err := viper.BindPFlag("feature-gates", rootCmd.PersistentFlags().Lookup("feature-gates")); err != nil {
+		fmt.Printf("Failed to bind flag '%s' - %+v\n", "feature-gates", err)
+		os.Exit(1)
+	}
 }
 
 func initConfig() {
@@ -159,7 +178,7 @@ func getConfig() (config.Config, error) {
 	}
 
 	if !slices.Contains(endpoints.PARTITIONS, cfg.PartitionID) {
-		return cfg, errors.New("Invalid partition")
+		return cfg, errors.New("invalid partition")
 	}
 
 	// DynamicFile BackendMode and DynamicFilePath are mutually inclusive.

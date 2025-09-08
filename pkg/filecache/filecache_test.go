@@ -143,12 +143,18 @@ func validateFileCacheProvider(t *testing.T, p *FileCacheProvider, err error, c 
 func testSetEnv(t *testing.T, key, value string) func() {
 	t.Helper()
 	old := os.Getenv(key)
-	os.Setenv(key, value)
+	if err := os.Setenv(key, value); err != nil {
+		t.Fatalf("Failed to set env var %s: %v", key, err)
+	}
 	return func() {
 		if old == "" {
-			os.Unsetenv(key)
+			if err := os.Unsetenv(key); err != nil {
+				t.Fatalf("Failed to unset env var %s: %v", key, err)
+			}
 		} else {
-			os.Setenv(key, old)
+			if err := os.Setenv(key, old); err != nil {
+				t.Fatalf("Failed to set env var %s: %v", key, err)
+			}
 		}
 	}
 }
@@ -220,7 +226,9 @@ func TestNewFileCacheProvider_Unlockable(t *testing.T) {
 	provider := &stubProvider{}
 
 	tfs, tfl := getMocks()
-	tfs.Create(testFilename)
+	if _, err := tfs.Create(testFilename); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
 
 	// unable to lock
 	tfl.success = false
@@ -242,7 +250,9 @@ func TestNewFileCacheProvider_Unreadable(t *testing.T) {
 	provider := &stubProvider{}
 
 	tfs, tfl := getMocks()
-	tfs.Create(testFilename)
+	if _, err := tfs.Create(testFilename); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
 	tfl.err = fmt.Errorf("open %s: permission denied", testFilename)
 	tfl.success = false
 
@@ -267,17 +277,21 @@ func TestNewFileCacheProvider_Unparseable(t *testing.T) {
 	provider := &stubProvider{}
 
 	tfs, tfl := getMocks()
-	tfs.Create(testFilename)
+	if _, err := tfs.Create(testFilename); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
 
 	_, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
-			afero.WriteFile(
+			if err := afero.WriteFile(
 				tfs,
 				testFilename,
 				[]byte("invalid: yaml: file"),
-				0700)
+				0700); err != nil {
+				t.Fatalf("Failed to write test file: %v", err)
+			}
 			return tfl
 		}),
 	)
@@ -300,7 +314,9 @@ func TestNewFileCacheProvider_Empty(t *testing.T) {
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
-			tfs.Create(testFilename)
+			if _, err := tfs.Create(testFilename); err != nil {
+				t.Fatalf("Failed to create test file: %v", err)
+			}
 			return tfl
 		}))
 	if err != nil {
@@ -317,22 +333,25 @@ func TestNewFileCacheProvider_ExistingCluster(t *testing.T) {
 	provider := &stubProvider{}
 
 	tfs, tfl := getMocks()
-	tfs.Create(testFilename)
+	if _, err := tfs.Create(testFilename); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
 
 	// successfully parse existing cluster without matching arn
 	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
-
-			afero.WriteFile(
+			if err := afero.WriteFile(
 				tfs,
 				testFilename,
 				[]byte(`clusters:
   CLUSTER:
     PROFILE2: {}
 `),
-				0700)
+				0700); err != nil {
+				t.Fatalf("Failed to write test file: %v", err)
+			}
 			return tfl
 		}),
 	)
@@ -357,15 +376,21 @@ func TestNewFileCacheProvider_ExistingARN(t *testing.T) {
         expires: ` + expiry.Format(time.RFC3339Nano) + `
 `)
 	tfs, tfl := getMocks()
-	tfs.Create(testFilename)
+	if _, err := tfs.Create(testFilename); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
 
 	// successfully parse cluster with matching arn
 	p, err := NewFileCacheProvider("CLUSTER", "PROFILE", "ARN", provider,
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
-			tfs.Create(testFilename)
-			afero.WriteFile(tfs, testFilename, content, 0700)
+			if _, err := tfs.Create(testFilename); err != nil {
+				t.Fatalf("Failed to create test file: %v", err)
+			}
+			if err := afero.WriteFile(tfs, testFilename, content, 0700); err != nil {
+				t.Fatalf("Failed to write test file: %v", err)
+			}
 			return tfl
 		}),
 	)
@@ -401,7 +426,9 @@ func TestFileCacheProvider_Retrieve_NoExpirer(t *testing.T) {
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
-			tfs.Create(testFilename)
+			if _, err := tfs.Create(testFilename); err != nil {
+				t.Fatalf("Failed to create test file: %v", err)
+			}
 			return tfl
 		}),
 	)
@@ -432,7 +459,9 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Unlockable(t *testing.T) {
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
-			tfs.Create(testFilename)
+			if _, err := tfs.Create(testFilename); err != nil {
+				t.Fatalf("Failed to create test file: %v", err)
+			}
 			return tfl
 		}))
 	validateFileCacheProvider(t, p, err, provider)
@@ -465,7 +494,9 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Unwritable(t *testing.T) {
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
-			tfs.Create(testFilename)
+			if _, err := tfs.Create(testFilename); err != nil {
+				t.Fatalf("Failed to create test file: %v", err)
+			}
 			return tfl
 		}),
 	)
@@ -516,7 +547,9 @@ func TestFileCacheProvider_Retrieve_WithExpirer_Writable(t *testing.T) {
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
-			tfs.Create(testFilename)
+			if _, err := tfs.Create(testFilename); err != nil {
+				t.Fatalf("Failed to create test file: %v", err)
+			}
 			return tfl
 		}),
 	)
@@ -542,7 +575,9 @@ func TestFileCacheProvider_Retrieve_CacheHit(t *testing.T) {
 	currentTime := time.Now()
 
 	tfs, tfl := getMocks()
-	tfs.Create(testFilename)
+	if _, err := tfs.Create(testFilename); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
 
 	// successfully parse cluster with matching arn
 	content := []byte(`clusters:
@@ -561,8 +596,12 @@ func TestFileCacheProvider_Retrieve_CacheHit(t *testing.T) {
 		WithFilename(testFilename),
 		WithFs(tfs),
 		WithFileLockerCreator(func(string) FileLocker {
-			tfs.Create(testFilename)
-			afero.WriteFile(tfs, testFilename, content, 0700)
+			if _, err := tfs.Create(testFilename); err != nil {
+				t.Fatalf("Failed to create test file: %v", err)
+			}
+			if err := afero.WriteFile(tfs, testFilename, content, 0700); err != nil {
+				t.Fatalf("Failed to write test file: %v", err)
+			}
 			return tfl
 		}))
 	validateFileCacheProvider(t, p, err, provider)

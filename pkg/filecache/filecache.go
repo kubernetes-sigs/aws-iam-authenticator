@@ -171,7 +171,12 @@ func NewFileCacheProvider(clusterID, profile, roleARN string, provider aws.Crede
 
 		// do file locking on cache to prevent inconsistent reads
 		lock := resp.filelockCreator(resp.filename)
-		defer lock.Unlock()
+		defer func() {
+			if err := lock.Unlock(); err != nil {
+				logrus.WithError(err).Warn("error unlocking cache file")
+			}
+		}()
+
 		// wait up to a second for the file to lock
 		ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 		defer cancel()
@@ -220,11 +225,20 @@ func (f *FileCacheProvider) Retrieve(ctx context.Context) (aws.Credentials, erro
 
 			// do file locking on cache to prevent inconsistent writes
 			lock := f.filelockCreator(f.filename)
-			defer lock.Unlock()
+			defer func() {
+				if err := lock.Unlock(); err != nil {
+					logrus.WithError(err).Warn("error unlocking cache file")
+				}
+			}()
 			// wait up to a second for the file to lock
 			ctx, cancel := context.WithTimeout(ctx, time.Second)
 			defer cancel()
 			ok, err := lock.TryLockContext(ctx, 250*time.Millisecond) // try to lock every 1/4 second
+			if err != nil {
+				// can't get a lock, but still return the credential
+				logrus.Warnf("Unable to lock file %s: %v", f.filename, err)
+				return credential, nil
+			}
 			if !ok {
 				// can't get write lock to create/update cache, but still return the credential
 				logrus.Warnf("Unable to write lock file %s: %v", f.filename, err)
@@ -238,7 +252,6 @@ func (f *FileCacheProvider) Retrieve(ctx context.Context) (aws.Credentials, erro
 			if err != nil {
 				// can't write cache, but still return the credential
 				logrus.Warnf("Unable to update credential cache %s: %v", f.filename, err)
-				err = nil
 			} else {
 				logrus.Debug("Updated cached credential")
 			}

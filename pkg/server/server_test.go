@@ -285,7 +285,7 @@ func TestAuthenticateUnableToDecodeBodyCRD(t *testing.T) {
 	validateMetrics(t, validateOpts{malformed: 1})
 }
 
-func testIsLoggableIdentity(t *testing.T) {
+func TestIsLoggableIdentity(t *testing.T) {
 	h := &handler{scrubbedAccounts: []string{"111122223333", "012345678901"}}
 
 	cases := []struct {
@@ -555,7 +555,9 @@ func TestAuthenticateVerifierRoleMappingCRD(t *testing.T) {
 		SessionName:  "TestSession",
 	}})
 	indexer := createIndexer()
-	indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/Test", "arn:aws:iam::0123456789012:role/test", "TestUser", []string{"sys:admin", "listers"}))
+	if err := indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/Test", "arn:aws:iam::0123456789012:role/test", "TestUser", []string{"sys:admin", "listers"})); err != nil {
+		t.Fatalf("Could not add IAM identity mapping: %v", err)
+	}
 	h.backendMapper = BackendMapper{
 		mappers:      []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)},
 		mapperStopCh: make(chan struct{}),
@@ -647,7 +649,9 @@ func TestAuthenticateVerifierUserMappingCRD(t *testing.T) {
 		SessionName:  "TestSession",
 	}})
 	indexer := createIndexer()
-	indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:user/Test", "arn:aws:iam::0123456789012:user/test", "TestUser", []string{"sys:admin", "listers"}))
+	if err := indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:user/Test", "arn:aws:iam::0123456789012:user/test", "TestUser", []string{"sys:admin", "listers"})); err != nil {
+		t.Fatalf("Could not add IAM identity mapping: %v", err)
+	}
 	h.backendMapper = BackendMapper{
 		mappers:      []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)},
 		mapperStopCh: make(chan struct{}),
@@ -918,7 +922,9 @@ func TestAuthenticateVerifierNodeMappingCRD(t *testing.T) {
 	}})
 	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14", 15, 5)
 	indexer := createIndexer()
-	indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/TestNodeRole", "arn:aws:iam::0123456789012:role/testnoderole", "system:node:{{EC2PrivateDNSName}}", []string{"system:nodes", "system:bootstrappers"}))
+	if err := indexer.Add(newIAMIdentityMapping("arn:aws:iam::0123456789012:role/TestNodeRole", "arn:aws:iam::0123456789012:role/testnoderole", "system:node:{{EC2PrivateDNSName}}", []string{"system:nodes", "system:bootstrappers"})); err != nil {
+		t.Fatalf("Could not add IAM identity mapping: %v", err)
+	}
 	h.backendMapper = BackendMapper{
 		mappers:      []mapper.Mapper{crd.NewCRDMapperWithIndexer(indexer)},
 		mapperStopCh: make(chan struct{}),
@@ -952,13 +958,6 @@ func TestRenderTemplate(t *testing.T) {
 		identity token.Identity
 		err      bool
 	}{
-		{
-			template: "a-{{EC2PrivateDNSName}}-b",
-			want:     "a-ip-172-31-27-14-b",
-			identity: token.Identity{
-				SessionName: "i-aaaaaaaa",
-			},
-		},
 		{
 			template: "a-{{EC2PrivateDNSName}}-b",
 			want:     "a-ip-172-31-27-14-b",

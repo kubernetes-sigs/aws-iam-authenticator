@@ -34,7 +34,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/middleware"
-	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
@@ -681,7 +681,10 @@ func (v *tokenVerifier) Verify(token string) (*Identity, error) {
 		return nil, FormatError{fmt.Sprintf("X-Amz-Date parameter is expired (%.f minute expiration) %s", presignedURLExpiration.Minutes(), dateParam)}
 	}
 
-	req, err := http.NewRequest("GET", parsedURL.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, parsedURL.String(), nil)
+	if err != nil {
+		return nil, FormatError{fmt.Sprintf("error creating HTTP request: %s", err.Error())}
+	}
 	req.Header.Set(clusterIDHeader, v.clusterID)
 	req.Header.Set("accept", "application/json")
 
@@ -694,7 +697,11 @@ func (v *tokenVerifier) Verify(token string) (*Identity, error) {
 		}
 		return nil, NewSTSError(fmt.Sprintf("error during GET: %v on %s endpoint", err, stsRegion))
 	}
-	defer response.Body.Close()
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			logrus.WithError(err).Warn("error closing response body	")
+		}
+	}()
 
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -763,7 +770,7 @@ func getIdentityFromSTSResponse(id *Identity, wrapper getCallerIdentityWrapper) 
 
 func validateDuplicateParameters(queryParams url.Values) error {
 	duplicateCheck := make(map[string]bool)
-	for key, _ := range queryParams {
+	for key := range queryParams {
 		if _, found := duplicateCheck[strings.ToLower(key)]; found {
 			return FormatError{fmt.Sprintf("duplicate query parameter found: %q", key)}
 		}
@@ -775,7 +782,7 @@ func validateDuplicateParameters(queryParams url.Values) error {
 func hasSignedClusterIDHeader(paramsLower *url.Values) bool {
 	signedHeaders := strings.Split(paramsLower.Get("x-amz-signedheaders"), ";")
 	for _, hdr := range signedHeaders {
-		if strings.ToLower(hdr) == strings.ToLower(clusterIDHeader) {
+		if strings.EqualFold(hdr, clusterIDHeader) {
 			return true
 		}
 	}

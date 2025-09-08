@@ -67,7 +67,7 @@ type Controller struct {
 	iamMappingsIndex cache.Indexer
 
 	// workqueue implements a FIFO queue used for processing items
-	workqueue workqueue.RateLimitingInterface
+	workqueue workqueue.TypedRateLimitingInterface[any]
 	// recorder implements the Event recorder interface for logging events.
 	recorder record.EventRecorder
 }
@@ -93,7 +93,7 @@ func New(
 		iamclientset:      iamclientset,
 		iamMappingLister:  iamMappingInformer.Lister(),
 		iamMappingsSynced: iamMappingInformer.Informer().HasSynced,
-		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "IAMIdentityMappings"),
+		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[any](), "IAMIdentityMappings"),
 		recorder:          recorder,
 	}
 
@@ -102,12 +102,14 @@ func New(
 	// canonical ARNs, we're ignoring deletes because all checks for roles happen
 	// using the in-memory cache which is updated automatically on deletes no further
 	// actions are necessary
-	iamMappingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := iamMappingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueIAMIdentityMapping,
 		UpdateFunc: func(old, new interface{}) {
 			controller.enqueueIAMIdentityMapping(new)
 		},
-	})
+	}); err != nil {
+		logrus.WithError(err).Fatal("error adding event handler")
+	}
 
 	err := iamMappingInformer.Informer().GetIndexer().AddIndexers(cache.Indexers{
 		"canonicalARN": IndexIAMIdentityMappingByCanonicalArn,

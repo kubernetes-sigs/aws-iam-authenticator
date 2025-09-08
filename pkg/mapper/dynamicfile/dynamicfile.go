@@ -125,7 +125,7 @@ func (ms *DynamicFileMapStore) LogMapping() {
 	for _, role := range ms.roles {
 		logrus.Info(role)
 	}
-	for awsAccount, _ := range ms.awsAccounts {
+	for awsAccount := range ms.awsAccounts {
 		logrus.Info(awsAccount)
 	}
 }
@@ -147,7 +147,7 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 			key = userMapping.UserId
 		}
 		if key == "" {
-			errs = append(errs, fmt.Errorf("Value for userarn or userid(if dynamicfileUserIDStrict = true) must be supplied"))
+			errs = append(errs, fmt.Errorf("value for userarn or userid(if dynamicfileUserIDStrict = true) must be supplied"))
 		} else {
 			userMappings = append(userMappings, userMapping)
 		}
@@ -159,7 +159,7 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 			key = roleMapping.UserId
 		}
 		if key == "" {
-			errs = append(errs, fmt.Errorf("Value for rolearn or userid(if dynamicfileUserIDStrict = true) must be supplied"))
+			errs = append(errs, fmt.Errorf("value for rolearn or userid(if dynamicfileUserIDStrict = true) must be supplied"))
 		} else {
 			roleMappings = append(roleMappings, roleMapping)
 		}

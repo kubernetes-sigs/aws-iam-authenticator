@@ -19,14 +19,6 @@ package config
 import "time"
 
 const (
-	// certFilename is the filename (under the StateDir) where the self-signed
-	// CA certificate will be stored.
-	certFilename = "cert.pem"
-
-	// keyFilename is the filename (under the StateDir) where the private key
-	// will be stored.
-	keyFilename = "key.pem"
-
 	// certLifetime is the lifetime of the CA certificate (100 years)
 	certLifetime = time.Hour * 24 * 365 * 100
 )

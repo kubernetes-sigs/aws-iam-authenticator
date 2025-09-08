@@ -33,9 +33,9 @@ func (m *RoleMapping) Validate() error {
 	}
 
 	if m.RoleARN == "" && m.SSO == nil {
-		return fmt.Errorf("One of rolearn or SSO must be supplied")
+		return fmt.Errorf("one of rolearn or SSO must be supplied")
 	} else if m.RoleARN != "" && m.SSO != nil {
-		return fmt.Errorf("Only one of rolearn or SSO can be supplied")
+		return fmt.Errorf("only one of rolearn or SSO can be supplied")
 	}
 
 	if m.SSO != nil {
@@ -56,7 +56,7 @@ func (m *RoleMapping) Validate() error {
 		case "":
 			// treated as "aws"
 		default:
-			return fmt.Errorf("Partition '%s' is not a valid AWS partition", m.SSO.Partition)
+			return fmt.Errorf("partition '%s' is not a valid AWS partition", m.SSO.Partition)
 		}
 
 		ssoArnLikeString := m.SSOArnLike()
@@ -75,7 +75,7 @@ func (m *RoleMapping) Validate() error {
 // this RoleMapping
 func (m *RoleMapping) Matches(subject string) bool {
 	if m.RoleARN != "" {
-		return strings.ToLower(m.RoleARN) == strings.ToLower(subject)
+		return strings.EqualFold(m.RoleARN, subject)
 	}
 
 	// Assume the caller has called Validate(), which parses m.RoleARNLike
@@ -117,7 +117,7 @@ func (m *UserMapping) Validate() error {
 	}
 
 	if m.UserARN == "" {
-		return fmt.Errorf("Value for userarn must be supplied")
+		return fmt.Errorf("value for userarn must be supplied")
 	}
 
 	return nil
@@ -125,7 +125,7 @@ func (m *UserMapping) Validate() error {
 
 // Matches returns true if the supplied ARN string matche this UserMapping
 func (m *UserMapping) Matches(subject string) bool {
-	return strings.ToLower(m.UserARN) == strings.ToLower(subject)
+	return strings.EqualFold(m.UserARN, subject)
 }
 
 // Key returns UserARN.

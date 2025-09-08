@@ -87,7 +87,7 @@ func (f *fixture) newController() (*Controller, informers.SharedInformerFactory)
 	c.recorder = &record.FakeRecorder{}
 
 	for _, f := range f.iamIdentityLister {
-		i.Iamauthenticator().V1alpha1().IAMIdentityMappings().Informer().GetIndexer().Add(f)
+		_ = i.Iamauthenticator().V1alpha1().IAMIdentityMappings().Informer().GetIndexer().Add(f)
 	}
 
 	return c, i
@@ -95,10 +95,6 @@ func (f *fixture) newController() (*Controller, informers.SharedInformerFactory)
 
 func (f *fixture) run(iamIdentityName string) {
 	f.runController(iamIdentityName, true, false)
-}
-
-func (f *fixture) runExpectError(iamIdentityName string) {
-	f.runController(iamIdentityName, true, true)
 }
 
 func (f *fixture) runController(iamIdentityName string, startInformers bool, expectError bool) {
@@ -147,7 +143,7 @@ func (f *fixture) runController(iamIdentityName string, startInformers bool, exp
 }
 
 func checkAction(expected, actual core.Action, t *testing.T) {
-	if !(expected.Matches(actual.GetVerb(), actual.GetResource().Resource) && actual.GetSubresource() == expected.GetSubresource()) {
+	if !expected.Matches(actual.GetVerb(), actual.GetResource().Resource) || actual.GetSubresource() != expected.GetSubresource() {
 		t.Errorf("expected\n\t%#v\ngot\n\t%#v", expected, actual)
 		return
 	}
@@ -160,15 +156,6 @@ func checkAction(expected, actual core.Action, t *testing.T) {
 	switch a := actual.(type) {
 	case core.CreateAction:
 		e, _ := expected.(core.CreateAction)
-		expObject := e.GetObject()
-		object := a.GetObject()
-
-		if !reflect.DeepEqual(expObject, object) {
-			t.Errorf("action %s %s has wrong object\nDiff:\n %s",
-				a.GetVerb(), a.GetResource().Resource, diff.ObjectGoPrintSideBySide(expObject, object))
-		}
-	case core.UpdateAction:
-		e, _ := expected.(core.UpdateAction)
 		expObject := e.GetObject()
 		object := a.GetObject()
 
@@ -202,18 +189,8 @@ func filterInformerActions(actions []core.Action) []core.Action {
 	return ret
 }
 
-func (f *fixture) expectUpdateAction(iamidentity *iamauthenticatorv1alpha1.IAMIdentityMapping) {
-	action := core.NewRootUpdateAction(schema.GroupVersionResource{Group: iamauthenticator.GroupName, Resource: "iamidentitymappings"}, iamidentity)
-	f.actions = append(f.actions, action)
-}
-
 func (f *fixture) expectUpdateStatusAction(iamidentity *iamauthenticatorv1alpha1.IAMIdentityMapping) {
 	action := core.NewRootUpdateSubresourceAction(schema.GroupVersionResource{Group: iamauthenticator.GroupName, Resource: "iamidentitymappings"}, "status", iamidentity)
-	f.actions = append(f.actions, action)
-}
-
-func (f *fixture) expectCreateAction(iamidentity *iamauthenticatorv1alpha1.IAMIdentityMapping) {
-	action := core.NewRootCreateAction(schema.GroupVersionResource{Group: iamauthenticator.GroupName, Resource: "iamidentitymappings"}, iamidentity)
 	f.actions = append(f.actions, action)
 }
 

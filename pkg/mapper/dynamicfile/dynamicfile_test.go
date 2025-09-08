@@ -25,8 +25,8 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func makeStore(users map[string]config.UserMapping, roles map[string]config.RoleMapping, filename string, userIDStrict bool) DynamicFileMapStore {
-	ms := DynamicFileMapStore{
+func makeStore(users map[string]config.UserMapping, roles map[string]config.RoleMapping, filename string, userIDStrict bool) *DynamicFileMapStore {
+	ms := &DynamicFileMapStore{
 		users:        users,
 		roles:        roles,
 		awsAccounts:  make(map[string]interface{}),
@@ -38,7 +38,7 @@ func makeStore(users map[string]config.UserMapping, roles map[string]config.Role
 	return ms
 }
 
-func makeDefaultStore() DynamicFileMapStore {
+func makeDefaultStore() *DynamicFileMapStore {
 	users := make(map[string]config.UserMapping)
 	roles := make(map[string]config.RoleMapping)
 	users["arn:aws:iam::012345678912:user/matt"] = testUser
@@ -49,7 +49,7 @@ func makeDefaultStore() DynamicFileMapStore {
 func makeMapper(users map[string]config.UserMapping, roles map[string]config.RoleMapping, filename string, userIDStrict bool) *DynamicFileMapper {
 	store := makeStore(users, roles, filename, userIDStrict)
 	return &DynamicFileMapper{
-		DynamicFileMapStore: &store,
+		DynamicFileMapStore: store,
 	}
 }
 
@@ -220,14 +220,18 @@ func TestUserIdStrict(t *testing.T) {
 	fileutil.StartLoadDynamicFile(ms.filename, ms, stopCh)
 	time.Sleep(1 * time.Second)
 	ms.mutex.RLock()
-	for key, _ := range ms.roles {
+	for key := range ms.roles {
 		if key[0:6] != "userid" {
 			t.Errorf("failed to generate key for userIDStrict")
 		}
 	}
 	ms.mutex.RUnlock()
 	//clean test files
-	defer os.Remove("/tmp/test.txt")
+	defer func() {
+		if err := os.Remove("/tmp/test.txt"); err != nil {
+			t.Errorf("failed to delete a local file /tmp/test.txt")
+		}
+	}()
 }
 
 func TestWithoutUserIdStrict(t *testing.T) {
@@ -251,14 +255,18 @@ func TestWithoutUserIdStrict(t *testing.T) {
 	fileutil.StartLoadDynamicFile(ms.filename, ms, stopCh)
 	time.Sleep(1 * time.Second)
 	ms.mutex.RLock()
-	for key, _ := range ms.roles {
+	for key := range ms.roles {
 		if key[0:3] != "arn" {
 			t.Errorf("failed to generate key for userIDStrict")
 		}
 	}
 	ms.mutex.RUnlock()
 	//clean test files
-	defer os.Remove("/tmp/test.txt")
+	defer func() {
+		if err := os.Remove("/tmp/test.txt"); err != nil {
+			t.Errorf("failed to delete a local file /tmp/test.txt")
+		}
+	}()
 }
 
 func TestLoadDynamicFileMode(t *testing.T) {
@@ -311,7 +319,9 @@ func TestLoadDynamicFileMode(t *testing.T) {
 	ms.mutex.RUnlock()
 	//user update the dynamic file,expect mapping should be equal to expectedMapStore
 	expectedData := []byte(updatedFileContent)
-	err = os.WriteFile("/tmp/expected.txt", expectedData, 0600)
+	if err = os.WriteFile("/tmp/expected.txt", expectedData, 0600); err != nil {
+		t.Errorf("failed to create expected local file /tmp/expected.txt")
+	}
 
 	cfg = config.Config{
 		DynamicFileUserIDStrict: true,
@@ -384,9 +394,16 @@ func TestLoadDynamicFileMode(t *testing.T) {
 	}
 	ms.mutex.RUnlock()
 	//clean test files
-	defer os.Remove("/tmp/test.txt")
-	defer os.Remove("/tmp/expected.txt")
-
+	defer func() {
+		if err := os.Remove("/tmp/test.txt"); err != nil {
+			t.Errorf("failed to delete a local file /tmp/test.txt")
+		}
+	}()
+	defer func() {
+		if err := os.Remove("/tmp/expected.txt"); err != nil {
+			t.Errorf("failed to delete a local file /tmp/expected.txt")
+		}
+	}()
 }
 
 func TestCallBackForFileDeletion(t *testing.T) {

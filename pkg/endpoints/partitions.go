@@ -50,7 +50,7 @@ func GetSTSPartitionDomain(partition string) (string, error) {
 	case AwsIsoFPartitionID:
 		domain = "csp.hci.ic.gov"
 	default:
-		return "", fmt.Errorf("Partition %s not valid", partition)
+		return "", fmt.Errorf("partition %s not valid", partition)
 	}
 
 	return domain, nil

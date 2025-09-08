@@ -9,16 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
-
-var origFileContent = `
-Abbatxt7095
-`
-
-var updatedFileContent = `
-efgwht2033
-`
 
 type testStruct struct {
 	callCount       int
@@ -72,7 +65,11 @@ func TestLoadDynamicFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to create a local temp file %v", err)
 	}
-	defer os.Remove(f.Name())
+	defer func() {
+		if err := os.Remove(f.Name()); err != nil {
+			logrus.WithError(err).Warn("error removing temp file")
+		}
+	}()
 
 	StartLoadDynamicFile(f.Name(), testA, stopCh)
 	defer close(stopCh)
@@ -133,7 +130,9 @@ func TestDeleteDynamicFile(t *testing.T) {
 	StartLoadDynamicFile("/tmp/delete.txt", testA, stopCh)
 	defer close(stopCh)
 	time.Sleep(2 * time.Second)
-	os.WriteFile("/tmp/delete.txt", []byte("test"), 0777)
+	if err := os.WriteFile("/tmp/delete.txt", []byte("test"), 0777); err != nil {
+		t.Errorf("failed to update a temp file %s, err: %v", "/tmp/delete.txt", err)
+	}
 	for {
 		time.Sleep(1 * time.Second)
 		testA.mutex.Lock()
@@ -144,7 +143,9 @@ func TestDeleteDynamicFile(t *testing.T) {
 		}
 		testA.mutex.Unlock()
 	}
-	os.Remove("/tmp/delete.txt")
+	if err := os.Remove("/tmp/delete.txt"); err != nil {
+		t.Errorf("failed to remove temp file %s, err: %v", "/tmp/delete.txt", err)
+	}
 	time.Sleep(2 * time.Second)
 	testA.mutex.Lock()
 	if testA.expectedContent != "" {
