@@ -101,7 +101,12 @@ func dumpPEM(filename string, mode os.FileMode, blockType string, bytes []byte) 
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			logrus.WithError(err).Warn("error closing file")
+		}
+	}()
+
 	return pem.Encode(f, &pem.Block{Type: blockType, Bytes: bytes})
 }
 

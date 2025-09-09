@@ -241,11 +241,11 @@ func (ms *MapStore) saveMap(
 	}
 }
 
-// UserNotFound is the error returned when the user is not found in the config map.
-var UserNotFound = errors.New("User not found in configmap")
+// ErrUserNotFound is the error returned when the user is not found in the config map.
+var ErrUserNotFound = errors.New("user not found in configmap")
 
-// RoleNotFound is the error returned when the role is not found in the config map.
-var RoleNotFound = errors.New("Role not found in configmap")
+// ErrRoleNotFound is the error returned when the role is not found in the config map.
+var ErrRoleNotFound = errors.New("role not found in configmap")
 
 func (ms *MapStore) UserMapping(arn string) (config.UserMapping, error) {
 	ms.mutex.RLock()
@@ -255,7 +255,7 @@ func (ms *MapStore) UserMapping(arn string) (config.UserMapping, error) {
 			return user, nil
 		}
 	}
-	return config.UserMapping{}, UserNotFound
+	return config.UserMapping{}, ErrUserNotFound
 }
 
 func (ms *MapStore) RoleMapping(arn string) (config.RoleMapping, error) {
@@ -266,7 +266,7 @@ func (ms *MapStore) RoleMapping(arn string) (config.RoleMapping, error) {
 			return role, nil
 		}
 	}
-	return config.RoleMapping{}, RoleNotFound
+	return config.RoleMapping{}, ErrRoleNotFound
 }
 
 func (ms *MapStore) AWSAccount(id string) bool {

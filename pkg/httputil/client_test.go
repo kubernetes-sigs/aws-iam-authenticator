@@ -127,8 +127,10 @@ func TestNewRateLimitedClient(t *testing.T) {
 func testHandler(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "GET":
-		fmt.Fprint(w, `test`)
+		if _, err := fmt.Fprint(w, `test`); err != nil {
+			http.Error(w, "Internal Server Error", 500)
+		}
 	default:
-		http.Error(w, "Method Not Allowed", 405)
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 	}
 }

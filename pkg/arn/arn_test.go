@@ -10,7 +10,7 @@ var arnTests = []struct {
 	expected string // canonacalized arn
 	err      error  // expected error value
 }{
-	{"NOT AN ARN", "", fmt.Errorf("Not an arn")},
+	{"NOT AN ARN", "", fmt.Errorf("not an arn")},
 	{"arn:aws:iam::123456789012:user/Alice", "arn:aws:iam::123456789012:user/Alice", nil},
 	{"arn:aws:iam::123456789012:role/Users", "arn:aws:iam::123456789012:role/Users", nil},
 	{"arn:aws:sts::123456789012:assumed-role/Admin/Session", "arn:aws:iam::123456789012:role/Admin", nil},
@@ -39,7 +39,7 @@ var arnStripTests = []struct {
 	expected string // canonacalized arn
 	err      error  // expected error value
 }{
-	{"NOT AN ARN", "", fmt.Errorf("Not an arn")},
+	{"NOT AN ARN", "", fmt.Errorf("not an arn")},
 	{"arn:aws:iam::123456789012:role/Org/Team/Admin", "arn:aws:iam::123456789012:role/Admin", nil},
 	{"arn:aws:iam::123456789012:role/Admin", "arn:aws:iam::123456789012:role/Admin", nil},
 	{"arn:aws:iam::123456789012:user/Alice", "arn:aws:iam::123456789012:user/Alice", nil},

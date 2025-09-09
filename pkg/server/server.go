@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -64,13 +63,12 @@ var tokenReviewDenyJSON = func() []byte {
 
 // Pattern to match EC2 instance IDs
 var (
-	instanceIDPattern = regexp.MustCompile("^i-(\\w{8}|\\w{17})$")
+	instanceIDPattern = regexp.MustCompile(`^i-(\w{8}|\w{17})$`)
 )
 
 // server state (internal)
 type handler struct {
 	http.ServeMux
-	mutex                     sync.RWMutex
 	verifier                  token.Verifier
 	ec2Provider               ec2provider.EC2Provider
 	clusterID                 string
@@ -141,7 +139,11 @@ func New(ctx context.Context, cfg config.Config) *Server {
 
 	// create a logrus logger for HTTP error logs
 	errLog := logrus.WithField("http", "error").Writer()
-	defer errLog.Close()
+	defer func() {
+		if err := errLog.Close(); err != nil {
+			logrus.WithError(err).Warn("error closing error log writer")
+		}
+	}()
 
 	logrus.Infof("listening on %s", listener.Addr())
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
@@ -158,19 +160,22 @@ func New(ctx context.Context, cfg config.Config) *Server {
 // Run will run the server closing the connection if there is a struct on the channel
 func (c *Server) Run(stopCh <-chan struct{}) {
 
-	defer c.listener.Close()
+	defer func() {
+		if err := c.listener.Close(); err != nil {
+			logrus.WithError(err).Warn("error closing listener")
+		}
+	}()
 
 	go func() {
-		http.ListenAndServe(":21363", &healthzHandler{})
+		if err := http.ListenAndServe(":21363", &healthzHandler{}); err != nil {
+			logrus.WithError(err).Error("healthz server exited")
+		}
 	}()
 	go func() {
-		for {
-			select {
-			case <-stopCh:
-				logrus.Info("shut down mapper before return from Run")
-				close(c.internalHandler.backendMapper.mapperStopCh)
-				return
-			}
+		for range stopCh {
+			logrus.Info("shut down mapper before return from Run")
+			close(c.internalHandler.backendMapper.mapperStopCh)
+			return
 		}
 	}()
 	if err := c.httpServer.Serve(c.listener); err != nil {
@@ -179,18 +184,24 @@ func (c *Server) Run(stopCh <-chan struct{}) {
 }
 
 func (c *Server) Close() {
-	c.listener.Close()
+	if err := c.listener.Close(); err != nil {
+		logrus.WithError(err).Error("could not close listener")
+	}
 
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	c.httpServer.Shutdown(ctxTimeout)
+	if err := c.httpServer.Shutdown(ctxTimeout); err != nil {
+		logrus.WithError(err).Error("could not gracefully shutdown http server")
+	}
 }
 
 type healthzHandler struct{}
 
 func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "ok")
+	if _, err := fmt.Fprintf(w, "ok"); err != nil {
+		logrus.WithError(err).Error("could not write response")
+	}
 }
 func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int) *handler {
 	stopCh := ctx.Done()
@@ -221,7 +232,7 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 		ec2Provider:               ec2provider.New(ctx, c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
 		clusterID:                 c.ClusterID,
 		backendMapper:             backendMapper,
-		scrubbedAccounts:          c.Config.ScrubbedAWSAccounts,
+		scrubbedAccounts:          c.ScrubbedAWSAccounts,
 		cfg:                       c.Config,
 		backendModeConfigInitDone: false,
 	}
@@ -231,7 +242,9 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 	})
 	h.Handle("/metrics", promhttp.Handler())
 	h.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "ok")
+		if _, err := fmt.Fprintf(w, "ok"); err != nil {
+			logrus.WithError(err).Error("could not write response")
+		}
 	})
 	logrus.Infof("Starting the h.ec2Provider.startEc2DescribeBatchProcessing ")
 	go h.ec2Provider.StartEc2DescribeBatchProcessing(ctx)
@@ -249,7 +262,7 @@ func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) 
 	}
 	for _, mode := range modes {
 		switch mode {
-		case mapper.ModeFile:
+		case mapper.ModeFile: //nolint:all
 			fallthrough
 		case mapper.ModeMountedFile:
 			fileMapper, err := file.NewFileMapper(cfg)
@@ -257,7 +270,7 @@ func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) 
 				return BackendMapper{}, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
 			backendMapper.mappers = append(backendMapper.mappers, fileMapper)
-		case mapper.ModeConfigMap:
+		case mapper.ModeConfigMap: //nolint:all
 			fallthrough
 		case mapper.ModeEKSConfigMap:
 			configMapMapper, err := configmap.NewConfigMapMapper(cfg)
@@ -328,7 +341,11 @@ func (h *handler) authenticateEndpoint(ctx context.Context, w http.ResponseWrite
 		metrics.Get().Latency.WithLabelValues(metrics.Malformed).Observe(duration(start))
 		return
 	}
-	defer req.Body.Close()
+	defer func() {
+		if err := req.Body.Close(); err != nil {
+			log.WithError(err).Warn("error closing request body")
+		}
+	}()
 
 	var tokenReview authenticationv1beta1.TokenReview
 	if err := json.NewDecoder(req.Body).Decode(&tokenReview); err != nil {
@@ -350,7 +367,9 @@ func (h *handler) authenticateEndpoint(ctx context.Context, w http.ResponseWrite
 			metrics.Get().Latency.WithLabelValues(metrics.STSThrottling).Observe(duration(start))
 			log.WithError(err).Warn("access denied")
 			w.WriteHeader(http.StatusTooManyRequests)
-			w.Write(tokenReviewDenyJSON)
+			if _, err := w.Write(tokenReviewDenyJSON); err != nil {
+				log.WithError(err).Error("could not write response")
+			}
 			return
 		} else if _, ok := err.(token.STSError); ok {
 			metrics.Get().Latency.WithLabelValues(metrics.STSError).Observe(duration(start))
@@ -359,7 +378,9 @@ func (h *handler) authenticateEndpoint(ctx context.Context, w http.ResponseWrite
 		}
 		log.WithError(err).Warn("access denied")
 		w.WriteHeader(http.StatusForbidden)
-		w.Write(tokenReviewDenyJSON)
+		if _, err := w.Write(tokenReviewDenyJSON); err != nil {
+			log.WithError(err).Error("could not write response")
+		}
 		return
 	}
 
@@ -382,7 +403,9 @@ func (h *handler) authenticateEndpoint(ctx context.Context, w http.ResponseWrite
 		metrics.Get().Latency.WithLabelValues(metrics.Unknown).Observe(duration(start))
 		log.WithError(err).Warn("access denied")
 		w.WriteHeader(http.StatusForbidden)
-		w.Write(tokenReviewDenyJSON)
+		if _, err := w.Write(tokenReviewDenyJSON); err != nil {
+			log.WithError(err).Error("could not write response")
+		}
 		return
 	}
 
@@ -412,7 +435,7 @@ func (h *handler) authenticateEndpoint(ctx context.Context, w http.ResponseWrite
 		userExtra["sigs.k8s.io/aws-iam-authenticator/principalId"] = authenticationv1beta1.ExtraValue{identity.UserID}
 	}
 
-	json.NewEncoder(w).Encode(authenticationv1beta1.TokenReview{
+	if err := json.NewEncoder(w).Encode(authenticationv1beta1.TokenReview{
 		Status: authenticationv1beta1.TokenReviewStatus{
 			Authenticated: true,
 			User: authenticationv1beta1.UserInfo{
@@ -422,7 +445,9 @@ func (h *handler) authenticateEndpoint(ctx context.Context, w http.ResponseWrite
 				Extra:    userExtra,
 			},
 		},
-	})
+	}); err != nil {
+		log.WithError(err).Error("could not serialize response")
+	}
 }
 
 func ReservedPrefixExists(username string, reservedList []string) bool {
@@ -498,14 +523,14 @@ func (h *handler) renderTemplate(ctx context.Context, template string, identity 
 		if err != nil {
 			return "", err
 		}
-		template = strings.Replace(template, "{{EC2PrivateDNSName}}", privateDNSName, -1)
+		template = strings.ReplaceAll(template, "{{EC2PrivateDNSName}}", privateDNSName)
 	}
 
-	template = strings.Replace(template, "{{AccountID}}", identity.AccountID, -1)
-	sessionName := strings.Replace(identity.SessionName, "@", "-", -1)
-	template = strings.Replace(template, "{{SessionName}}", sessionName, -1)
-	template = strings.Replace(template, "{{SessionNameRaw}}", identity.SessionName, -1)
-	template = strings.Replace(template, "{{AccessKeyID}}", identity.AccessKeyID, -1)
+	template = strings.ReplaceAll(template, "{{AccountID}}", identity.AccountID)
+	sessionName := strings.ReplaceAll(identity.SessionName, "@", "-")
+	template = strings.ReplaceAll(template, "{{SessionName}}", sessionName)
+	template = strings.ReplaceAll(template, "{{SessionNameRaw}}", identity.SessionName)
+	template = strings.ReplaceAll(template, "{{AccessKeyID}}", identity.AccessKeyID)
 
 	return template, nil
 }

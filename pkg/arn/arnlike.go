@@ -1,6 +1,7 @@
 package arn
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -12,11 +13,11 @@ const (
 	arnPrefix           = "arn:"
 
 	// zero-indexed
-	sectionPartition = 1
-	sectionService   = 2
-	sectionRegion    = 3
-	sectionAccountID = 4
-	sectionResource  = 5
+	// sectionPartition = 1
+	// sectionService   = 2
+	// sectionRegion    = 3
+	// sectionAccountID = 4
+	// sectionResource  = 5
 
 	// errors
 	invalidPrefix   = "invalid prefix"
@@ -30,11 +31,11 @@ func ArnLike(arn, pattern string) (bool, error) {
 	// "parse" the input arn into sections
 	arnSections, err := parse(arn)
 	if err != nil {
-		return false, fmt.Errorf("Could not parse input arn: %v", err)
+		return false, fmt.Errorf("could not parse input arn: %v", err)
 	}
 	patternSections, err := parse(pattern)
 	if err != nil {
-		return false, fmt.Errorf("Could not parse ArnLike string: %v", err)
+		return false, fmt.Errorf("could not parse ArnLike string: %v", err)
 	}
 
 	// Tidy regexp special characters. Escape the ones not used in ArnLike.
@@ -44,7 +45,7 @@ func ArnLike(arn, pattern string) (bool, error) {
 	for index := range arnSections {
 		patternGlob, err := regexp.Compile(patternSections[index])
 		if err != nil {
-			return false, fmt.Errorf("Could not parse %s: %v", patternSections[index], err)
+			return false, fmt.Errorf("could not parse %s: %v", patternSections[index], err)
 		}
 
 		if !patternGlob.MatchString(arnSections[index]) {
@@ -58,11 +59,11 @@ func ArnLike(arn, pattern string) (bool, error) {
 // parse is a copy of arn.Parse from the AWS SDK but represents the ARN as []string
 func parse(input string) ([]string, error) {
 	if !strings.HasPrefix(input, arnPrefix) {
-		return nil, fmt.Errorf(invalidPrefix)
+		return nil, errors.New(invalidPrefix)
 	}
 	arnSections := strings.SplitN(input, arnDelimiter, arnSectionsExpected)
 	if len(arnSections) != arnSectionsExpected {
-		return nil, fmt.Errorf(invalidSections)
+		return nil, errors.New(invalidSections)
 	}
 
 	return arnSections, nil

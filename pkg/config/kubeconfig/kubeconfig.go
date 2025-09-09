@@ -47,7 +47,11 @@ func (p KubeconfigParams) WriteKubeconfig(outputPath string, t *template.Templat
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			logrus.WithError(err).Warn("error closing file")
+		}
+	}()
 	return t.Execute(f, p)
 }
 

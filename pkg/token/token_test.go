@@ -273,7 +273,7 @@ func TestSTSEndpointResolution(t *testing.T) {
 }
 
 func TestVerifyTokenPreSTSValidations(t *testing.T) {
-	b := make([]byte, maxTokenLenBytes+1, maxTokenLenBytes+1)
+	b := make([]byte, maxTokenLenBytes+1)
 	s := string(b)
 	validationErrorTest(t, "aws", s, "token is too large")
 	validationErrorTest(t, "aws", "k8s-aws-v2.asdfasdfa", "token is missing expected \"k8s-aws-v1.\" prefix")
@@ -321,7 +321,9 @@ func TestVerifyHTTP403(t *testing.T) {
 
 func TestVerifyNoRedirectsFollowed(t *testing.T) {
 	ts2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, `{"UserId":"AROAIIRR6I5NDJBWMIRQQ:admin-session","Account":"111122223333","Arn":"arn:aws:sts::111122223333:assumed-role/Admin/admin-session"}`)
+		if _, err := fmt.Fprintln(w, `{"UserId":"AROAIIRR6I5NDJBWMIRQQ:admin-session","Account":"111122223333","Arn":"arn:aws:sts::111122223333:assumed-role/Admin/admin-session"}`); err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
 	}))
 	defer ts2.Close()
 
@@ -337,7 +339,11 @@ func TestVerifyNoRedirectsFollowed(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("Error closing response body: %v", err)
+		}
+	}()
 	if resp.Header.Get("Location") != ts2.URL && resp.StatusCode != http.StatusFound {
 		body, _ := io.ReadAll(resp.Body)
 		fmt.Printf("%#v\n", resp)
@@ -486,19 +492,23 @@ func TestFormatJson(t *testing.T) {
 					})
 				}
 
-				os.Setenv(c.EnvKey, string(marshal))
+				if err := os.Setenv(c.EnvKey, string(marshal)); err != nil {
+					t.Errorf("failed to set env var %s: %v", c.EnvKey, err)
+				}
 			}
 
 			jsonResponse := g.FormatJSON(Token{Token: token, Expiration: expiry})
 			output := &clientauthentication.ExecCredential{}
-			json.Unmarshal([]byte(jsonResponse), output)
-
-			if output.TypeMeta.Kind != kindExecCredential {
-				t.Errorf("expected Kind to be %s but was %s", kindExecCredential, output.TypeMeta.Kind)
+			if err := json.Unmarshal([]byte(jsonResponse), output); err != nil {
+				t.Errorf("failed to unmarshal json response: %v", err)
 			}
 
-			if output.TypeMeta.APIVersion != c.ExpectApiVersion {
-				t.Errorf("expected APIVersion to be %s but was %s", c.ExpectApiVersion, output.TypeMeta.APIVersion)
+			if output.Kind != kindExecCredential {
+				t.Errorf("expected Kind to be %s but was %s", kindExecCredential, output.Kind)
+			}
+
+			if output.APIVersion != c.ExpectApiVersion {
+				t.Errorf("expected APIVersion to be %s but was %s", c.ExpectApiVersion, output.APIVersion)
 			}
 
 			if output.Status.Token != token {
@@ -509,7 +519,9 @@ func TestFormatJson(t *testing.T) {
 				t.Errorf("expected expiration to be %s but was %s", expiry, output.Status.ExpirationTimestamp)
 			}
 
-			os.Unsetenv(c.EnvKey)
+			if err := os.Unsetenv(c.EnvKey); err != nil {
+				t.Errorf("failed to unset env var %s: %v", c.EnvKey, err)
+			}
 		})
 	}
 }

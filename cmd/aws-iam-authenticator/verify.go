@@ -45,13 +45,17 @@ var verifyCmd = &cobra.Command{
 
 		if tok == "" {
 			fmt.Fprintf(os.Stderr, "error: token not specified\n")
-			cmd.Usage()
+			if err := cmd.Usage(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error displaying usage: %v\n", err)
+			}
 			os.Exit(1)
 		}
 
 		if clusterID == "" {
 			fmt.Fprintf(os.Stderr, "error: cluster ID not specified\n")
-			cmd.Usage()
+			if err := cmd.Usage(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error displaying usage: %v\n", err)
+			}
 			os.Exit(1)
 		}
 
@@ -79,13 +83,22 @@ func init() {
 	rootCmd.AddCommand(verifyCmd)
 	verifyCmd.Flags().StringP("token", "t", "", "Token to verify")
 	verifyCmd.Flags().StringP("output", "o", "", "Output format. Only `json` is supported currently.")
-	viper.BindPFlag("token", verifyCmd.Flags().Lookup("token"))
-	viper.BindPFlag("output", verifyCmd.Flags().Lookup("output"))
+	if err := viper.BindPFlag("token", verifyCmd.Flags().Lookup("token")); err != nil {
+		fmt.Printf("Failed to bind flag '%s' - %+v\n", "token", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("output", verifyCmd.Flags().Lookup("output")); err != nil {
+		fmt.Printf("Failed to bind flag '%s' - %+v\n", "output", err)
+		os.Exit(1)
+	}
 
 	verifyCmd.Flags().String("partition",
 		endpoints.AwsPartitionID,
 		fmt.Sprintf("The AWS partition. Must be one of: %v", endpoints.PARTITIONS))
-	viper.BindPFlag("partition", verifyCmd.Flags().Lookup("partition"))
+	if err := viper.BindPFlag("partition", verifyCmd.Flags().Lookup("partition")); err != nil {
+		fmt.Printf("Failed to bind flag '%s' - %+v\n", "partition", err)
+		os.Exit(1)
+	}
 
 }
 

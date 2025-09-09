@@ -81,7 +81,7 @@ func (m *CRDMapper) Start(stopCh <-chan struct{}) error {
 	m.iamInformerFactory.Start(stopCh)
 	go func() {
 		// Run starts worker goroutines and blocks
-		if err := m.Controller.Run(2, stopCh); err != nil {
+		if err := m.Run(2, stopCh); err != nil {
 			panic(err)
 		}
 	}()

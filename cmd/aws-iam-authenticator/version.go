@@ -29,13 +29,18 @@ var (
 			case shortened:
 				fmt.Println(pkg.Version)
 			case output == "json":
-				json.NewEncoder(os.Stdout).Encode(ver)
+				if err := json.NewEncoder(os.Stdout).Encode(ver); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to encode version info to JSON - %+v\n", err)
+					os.Exit(1)
+				}
 			case output == "yaml":
-				yaml.NewEncoder(os.Stdout).Encode(ver)
+				if err := yaml.NewEncoder(os.Stdout).Encode(ver); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to encode version info to YAML - %+v\n", err)
+					os.Exit(1)
+				}
 			default:
 				fmt.Fprintln(os.Stderr, "unknown version option")
 			}
-			return
 		},
 	}
 )
