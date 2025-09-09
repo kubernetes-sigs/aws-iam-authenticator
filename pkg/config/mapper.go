@@ -3,9 +3,11 @@ package config
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/arn"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/endpoints"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 
 	"github.com/sirupsen/logrus"
@@ -50,12 +52,7 @@ func (m *RoleMapping) Validate() error {
 			return fmt.Errorf("PermissionSetName '%s' is not a valid AWS SSO PermissionSet Name", m.SSO.PermissionSetName)
 		}
 
-		switch m.SSO.Partition {
-		case "aws", "aws-cn", "aws-us-gov", "aws-iso", "aws-iso-b":
-			// valid
-		case "":
-			// treated as "aws"
-		default:
+		if m.SSO.Partition != "" && !slices.Contains(endpoints.PARTITIONS, m.SSO.Partition) {
 			return fmt.Errorf("partition '%s' is not a valid AWS partition", m.SSO.Partition)
 		}
 
