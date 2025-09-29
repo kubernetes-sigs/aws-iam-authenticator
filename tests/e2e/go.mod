@@ -5,10 +5,10 @@ go 1.25.1
 require (
 	github.com/onsi/ginkgo/v2 v2.25.3
 	github.com/onsi/gomega v1.38.2
-	k8s.io/api v0.34.0
-	k8s.io/apimachinery v0.34.0
-	k8s.io/client-go v0.34.0
-	k8s.io/kubernetes v1.34.0
+	k8s.io/api v0.34.1
+	k8s.io/apimachinery v0.34.1
+	k8s.io/client-go v0.34.1
+	k8s.io/kubernetes v1.34.1
 )
 
 require (
