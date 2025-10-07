@@ -92,7 +92,7 @@ require (
 	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
 	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
-	google.golang.org/protobuf v1.36.9 // indirect
+	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f // indirect
