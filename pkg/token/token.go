@@ -36,6 +36,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/middleware"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/processcreds"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -120,6 +121,9 @@ type GetTokenOptions struct {
 	AssumeRoleARN        string
 	AssumeRoleExternalID string
 	SessionName          string
+	// ProcessCredentialTimeout, if set to a positive duration, overrides the SDK's
+	// default 1 minute timeout for running credential_process.
+	ProcessCredentialTimeout time.Duration
 }
 
 // FormatError is returned when there is a problem with token that is
@@ -234,6 +238,11 @@ func (g generator) GetWithOptions(ctx context.Context, options *GetTokenOptions)
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithAssumeRoleCredentialOptions(func(options *stscreds.AssumeRoleOptions) {
 			options.TokenProvider = StdinStderrTokenProvider
+		}),
+		config.WithProcessCredentialOptions(func(o *processcreds.Options) {
+			if options.ProcessCredentialTimeout > 0 {
+				o.Timeout = options.ProcessCredentialTimeout
+			}
 		}),
 		config.WithEC2IMDSClientEnableState(imds.ClientEnabled),
 	)
