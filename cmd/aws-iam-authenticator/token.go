@@ -42,6 +42,7 @@ var tokenCmd = &cobra.Command{
 		forwardSessionName := viper.GetBool("forwardSessionName")
 		sessionName := viper.GetString("sessionName")
 		cache := viper.GetBool("cache")
+		procCredTimeout := viper.GetDuration("processCredentialTimeout")
 
 		if clusterID == "" {
 			fmt.Fprintf(os.Stderr, "Error: cluster ID not specified\n")
@@ -69,11 +70,12 @@ var tokenCmd = &cobra.Command{
 		}
 
 		tok, err = gen.GetWithOptions(context.Background(), &token.GetTokenOptions{
-			ClusterID:            clusterID,
-			AssumeRoleARN:        roleARN,
-			AssumeRoleExternalID: externalID,
-			SessionName:          sessionName,
-			Region:               region,
+			ClusterID:                clusterID,
+			AssumeRoleARN:            roleARN,
+			AssumeRoleExternalID:     externalID,
+			SessionName:              sessionName,
+			Region:                   region,
+			ProcessCredentialTimeout: procCredTimeout,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not get token: %v\n", err)
@@ -99,6 +101,7 @@ func init() {
 		false,
 		"Enable mapping a federated sessions caller-specified-role-name attribute onto newly assumed sessions. NOTE: Only applicable when a new role is requested via --role")
 	tokenCmd.Flags().Bool("cache", false, "Cache the credential on disk until it expires. Uses the aws profile specified by AWS_PROFILE or the default profile.")
+	tokenCmd.Flags().Duration("process-credential-timeout", 0, "Timeout for AWS credential_process execution (e.g. 5m, 120s). 0 uses SDK default (1m).")
 	if err := viper.BindPFlag("region", tokenCmd.Flags().Lookup("region")); err != nil {
 		fmt.Printf("Failed to bind flag '%s' - %+v\n", "region", err)
 		os.Exit(1)
@@ -125,6 +128,10 @@ func init() {
 	}
 	if err := viper.BindPFlag("cache", tokenCmd.Flags().Lookup("cache")); err != nil {
 		fmt.Printf("Failed to bind flag '%s' - %+v\n", "cache", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("processCredentialTimeout", tokenCmd.Flags().Lookup("process-credential-timeout")); err != nil {
+		fmt.Printf("Failed to bind flag '%s' - %+v\n", "processCredentialTimeout", err)
 		os.Exit(1)
 	}
 	if err := viper.BindEnv("role", "DEFAULT_ROLE"); err != nil {
