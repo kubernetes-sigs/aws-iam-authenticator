@@ -55,6 +55,19 @@ You can also skip this step and use:
 The server is meant to run on each of your master nodes as a DaemonSet with host networking so it can expose a localhost port.
 
 For a sample ConfigMap and DaemonSet configuration, see [`deploy/example.yaml`](./deploy/example.yaml).
+Before applying it, update these values for your cluster:
+ - Replace placeholder IAM ARNs (`arn:aws:iam::000000000000:...`) in `config.yaml`.
+ - Set `clusterID` to a unique value for your cluster.
+ - Verify the DaemonSet scheduling rules match your control-plane node labels/taints.
+
+Then deploy it:
+```sh
+kubectl apply -f deploy/example.yaml
+kubectl -n kube-system rollout status daemonset/aws-iam-authenticator
+kubectl -n kube-system get pods -l k8s-app=aws-iam-authenticator
+```
+
+Once the pod is running on a control-plane node, the `aws-iam-authenticator server` will create the webhook kubeconfig on the host at `/etc/kubernetes/aws-iam-authenticator/kubeconfig.yaml` (or the path configured via `--generate-kubeconfig`).
 
 #### (Optional) Pre-generate a certificate, key, and kubeconfig
 If you're building an automated installer, you can also pre-generate the certificate, key, and webhook kubeconfig files easily using `aws-iam-authenticator init`.
