@@ -139,3 +139,36 @@ func (m *UserMapping) IdentityMapping(identity *token.Identity) *IdentityMapping
 		Groups:      m.Groups,
 	}
 }
+
+// Validate returns an error if the RootMapping is not valid after being unmarshaled
+func (m *RootMapping) Validate() error {
+	if m == nil {
+		return fmt.Errorf("RootMapping is nil")
+	}
+
+	if m.RootARN == "" {
+		return fmt.Errorf("value for rootarn must be supplied")
+	}
+
+	return nil
+}
+
+// Matches returns true if the supplied ARN string matches this RootMapping
+func (m *RootMapping) Matches(subject string) bool {
+	return strings.EqualFold(m.RootARN, subject)
+}
+
+// Key returns RootARN.
+// Used to get a Key name for map[string]RootMapping
+func (m *RootMapping) Key() string {
+	return m.RootARN
+}
+
+// IdentityMapping converts the RootMapping into a generic IdentityMapping object
+func (m *RootMapping) IdentityMapping(identity *token.Identity) *IdentityMapping {
+	return &IdentityMapping{
+		IdentityARN: strings.ToLower(identity.CanonicalARN),
+		Username:    m.Username,
+		Groups:      m.Groups,
+	}
+}

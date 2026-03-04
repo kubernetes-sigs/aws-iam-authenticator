@@ -157,3 +157,38 @@ func TestUserARNMapping(t *testing.T) {
 		t.Errorf("Invalid UserMapping %v did not raise error when validated", invalidUserMapping)
 	}
 }
+
+func TestRootARNMapping(t *testing.T) {
+	rm := RootMapping{
+		RootARN:  "arn:aws:iam::012345678912:root",
+		Username: "root-admin",
+		Groups:   []string{"system:masters"},
+	}
+
+	expectedKey := "arn:aws:iam::012345678912:root"
+	actualKey := rm.Key()
+	if actualKey != expectedKey {
+		t.Errorf("RootMapping.Key() does not match expected value.\nActual:   %v\nExpected: %v", actualKey, expectedKey)
+	}
+
+	matches := rm.Matches("arn:aws:iam::012345678912:root")
+	if !matches {
+		t.Errorf("RootMapping did not match same root ARN")
+	}
+
+	matches = rm.Matches("arn:aws:iam::999999999999:root")
+	if matches {
+		t.Errorf("RootMapping unexpectedly matched different account root")
+	}
+
+	err := rm.Validate()
+	if err != nil {
+		t.Errorf("Received error %v validating RootMapping %v", err, rm)
+	}
+
+	invalidRootMapping := RootMapping{RootARN: ""}
+	err = invalidRootMapping.Validate()
+	if err == nil {
+		t.Errorf("Invalid RootMapping did not raise error when validated")
+	}
+}

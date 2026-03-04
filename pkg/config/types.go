@@ -78,6 +78,20 @@ type UserMapping struct {
 	UserId string `json:"userid,omitempty" yaml:"userid,omitempty"`
 }
 
+// RootMapping is a static mapping of an AWS root account principal to a
+// Kubernetes username and a list of Kubernetes groups.
+// Root principals have ARNs of the form arn:aws:iam::123456789012:root
+type RootMapping struct {
+	// RootARN is the AWS Resource Name of the root account. (e.g., "arn:aws:iam::000000000000:root").
+	RootARN string `json:"rootarn" yaml:"rootarn"`
+
+	// Username is the Kubernetes username this root account will authenticate as
+	Username string `json:"username" yaml:"username"`
+
+	// Groups is a list of Kubernetes groups this root account will authenticate as (e.g., `system:masters`)
+	Groups []string `json:"groups" yaml:"groups"`
+}
+
 // SSOARNMatcher contains fields used to match Role ARNs that
 // are generated for AWS SSO sessions. These SSO Role ARNs
 // follow this pattern:
@@ -140,6 +154,10 @@ type Config struct {
 	// UserMappings is a list of mappings from AWS IAM User to
 	// Kubernetes username + groups.
 	UserMappings []UserMapping
+
+	// RootMappings is a list of mappings from AWS root account principals to
+	// Kubernetes username + groups.
+	RootMappings []RootMapping
 
 	// AutoMappedAWSAccounts is a list of AWS accounts that are allowed without an explicit user/role mapping.
 	// IAM ARN from these accounts automatically maps to the Kubernetes username.

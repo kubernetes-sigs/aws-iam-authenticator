@@ -80,6 +80,7 @@ func TestNewFileMapper(t *testing.T) {
 		accountMap: map[string]bool{
 			"000000000000": true,
 		},
+		rootMap: map[string]config.RootMapping{},
 	}
 
 	actual, err := NewFileMapper(cfg)
@@ -147,5 +148,55 @@ func TestMap(t *testing.T) {
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("FileMapper.Map() does not match expected value for userMapping:\nActual:   %v\nExpected: %v", actual, expected)
+	}
+}
+
+func TestRootMap(t *testing.T) {
+	cfg := config.Config{
+		RootMappings: []config.RootMapping{
+			{
+				RootARN:  "arn:aws:iam::012345678910:root",
+				Username: "root-admin",
+				Groups:   []string{"system:masters"},
+			},
+		},
+	}
+
+	fm, err := NewFileMapper(cfg)
+	if err != nil {
+		t.Fatalf("Could not build FileMapper with root config: %v", err)
+	}
+
+	// Should match root principal
+	identity := token.Identity{
+		CanonicalARN: "arn:aws:iam::012345678910:root",
+	}
+	mapping, err := fm.Map(&identity)
+	if err != nil {
+		t.Fatalf("Root mapping did not match: %v", err)
+	}
+	if mapping.Username != "root-admin" {
+		t.Errorf("Expected username root-admin, got %s", mapping.Username)
+	}
+	if mapping.Groups[0] != "system:masters" {
+		t.Errorf("Expected group system:masters, got %s", mapping.Groups[0])
+	}
+
+	// Should not match a different account's root
+	identity = token.Identity{
+		CanonicalARN: "arn:aws:iam::999999999999:root",
+	}
+	_, err = fm.Map(&identity)
+	if err == nil {
+		t.Errorf("Root mapping unexpectedly matched different account")
+	}
+
+	// Should not match a role in the same account
+	identity = token.Identity{
+		CanonicalARN: "arn:aws:iam::012345678910:role/some-role",
+	}
+	_, err = fm.Map(&identity)
+	if err == nil {
+		t.Errorf("Root mapping unexpectedly matched a role ARN")
 	}
 }

@@ -15,6 +15,7 @@ import (
 type FileMapper struct {
 	roleMap                   map[string]config.RoleMapping
 	userMap                   map[string]config.UserMapping
+	rootMap                   map[string]config.RootMapping
 	accountMap                map[string]bool
 	usernamePrefixReserveList []string
 }
@@ -25,6 +26,7 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 	fileMapper := &FileMapper{
 		roleMap:    make(map[string]config.RoleMapping),
 		userMap:    make(map[string]config.UserMapping),
+		rootMap:    make(map[string]config.RootMapping),
 		accountMap: make(map[string]bool),
 	}
 
@@ -59,6 +61,20 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 	}
 	for _, m := range cfg.AutoMappedAWSAccounts {
 		fileMapper.accountMap[m] = true
+	}
+	for _, m := range cfg.RootMappings {
+		err := m.Validate()
+		if err != nil {
+			return nil, err
+		}
+		if m.RootARN != "" {
+			_, canonicalizedARN, err := arn.Canonicalize(strings.ToLower(m.RootARN))
+			if err != nil {
+				return nil, fmt.Errorf("error canonicalizing root ARN: %v", err)
+			}
+			m.RootARN = canonicalizedARN
+		}
+		fileMapper.rootMap[m.Key()] = m
 	}
 	if value, exists := cfg.ReservedPrefixConfig[mapper.ModeMountedFile]; exists {
 		fileMapper.usernamePrefixReserveList = value.UsernamePrefixReserveList
@@ -101,6 +117,13 @@ func (m *FileMapper) Map(identity *token.Identity) (*config.IdentityMapping, err
 			IdentityARN: canonicalARN,
 			Username:    userMapping.Username,
 			Groups:      userMapping.Groups,
+		}, nil
+	}
+	if rootMapping, exists := m.rootMap[canonicalARN]; exists {
+		return &config.IdentityMapping{
+			IdentityARN: canonicalARN,
+			Username:    rootMapping.Username,
+			Groups:      rootMapping.Groups,
 		}, nil
 	}
 	return nil, errutil.ErrNotMapped
