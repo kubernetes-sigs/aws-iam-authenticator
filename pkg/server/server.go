@@ -167,7 +167,11 @@ func (c *Server) Run(stopCh <-chan struct{}) {
 	}()
 
 	go func() {
-		if err := http.ListenAndServe(":21363", &healthzHandler{}); err != nil {
+		healthPort := c.Config.HealthPort
+		if healthPort == 0 {
+			healthPort = 21363
+		}
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", healthPort), &healthzHandler{}); err != nil {
 			logrus.WithError(err).Error("healthz server exited")
 		}
 	}()

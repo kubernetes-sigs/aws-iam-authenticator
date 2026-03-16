@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -28,11 +29,6 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/server"
 )
 
-const (
-	hardcodedHealthcheckPort         = 21363
-	hardcodedAuthenticatorServerPort = 21362
-)
-
 // AuthenticatorTestFrameworkSetup holds configuration information for a kube-apiserver test server.
 type AuthenticatorTestFrameworkSetup struct {
 	ModifyAuthenticatorServerConfig func(*config.Config)
@@ -46,7 +42,10 @@ type AuthenticatorTestFrameworkSetup struct {
 func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFrameworkSetup) (client.Interface, client.Interface, func()) {
 	metrics.InitMetrics(prometheus.NewRegistry())
 
-	cfg, err := testConfig(t, setup)
+	serverPort := freePort(t)
+	healthPort := freePort(t)
+
+	cfg, err := testConfig(t, setup, serverPort, healthPort)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +74,9 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 
 	adminClient, err := client.NewForConfig(restCfg)
 	if err != nil {
-		testEnv.Stop() //nolint:errcheck
+		if stopErr := testEnv.Stop(); stopErr != nil {
+			t.Logf("testEnv.Stop: %v", stopErr)
+		}
 		t.Fatal(err)
 	}
 
@@ -99,12 +100,14 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 			},
 		},
 	}, cfg.Kubeconfig); err != nil {
-		testEnv.Stop() //nolint:errcheck
+		if stopErr := testEnv.Stop(); stopErr != nil {
+			t.Logf("testEnv.Stop: %v", stopErr)
+		}
 		t.Fatal(err)
 	}
 
 	stopCh := make(chan struct{})
-	httpServer := server.New(context.TODO(), cfg)
+	httpServer := server.New(context.Background(), cfg)
 	go func() {
 		httpServer.Run(stopCh)
 	}()
@@ -125,7 +128,9 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 	if err != nil {
 		close(stopCh)
 		httpServer.Close()
-		testEnv.Stop() //nolint:errcheck
+		if stopErr := testEnv.Stop(); stopErr != nil {
+			t.Logf("testEnv.Stop: %v", stopErr)
+		}
 		t.Fatal(err)
 	}
 
@@ -143,7 +148,9 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 	if err != nil {
 		close(stopCh)
 		httpServer.Close()
-		testEnv.Stop() //nolint:errcheck
+		if stopErr := testEnv.Stop(); stopErr != nil {
+			t.Logf("testEnv.Stop: %v", stopErr)
+		}
 		t.Fatal(err)
 	}
 	execRestCfg.TLSClientConfig.CertData = nil
@@ -161,26 +168,34 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 	if err != nil {
 		close(stopCh)
 		httpServer.Close()
-		testEnv.Stop() //nolint:errcheck
+		if stopErr := testEnv.Stop(); stopErr != nil {
+			t.Logf("testEnv.Stop: %v", stopErr)
+		}
 		t.Fatal(err)
 	}
 
 	return adminClient, clientWithExecAuthenticator, func() {
 		close(stopCh)
 		httpServer.Close()
-		testEnv.Stop() //nolint:errcheck
+		if stopErr := testEnv.Stop(); stopErr != nil {
+			t.Logf("testEnv.Stop: %v", stopErr)
+		}
 	}
 }
 
-func testConfig(t *testing.T, setup AuthenticatorTestFrameworkSetup) (config.Config, error) {
-	testDir, _ := os.MkdirTemp(setup.TestArtifacts, "test-integration-"+t.Name())
+func testConfig(t *testing.T, setup AuthenticatorTestFrameworkSetup, serverPort, healthPort int) (config.Config, error) {
+	testDir, err := os.MkdirTemp(setup.TestArtifacts, "test-integration-"+t.Name())
+	if err != nil {
+		return config.Config{}, fmt.Errorf("creating test directory: %w", err)
+	}
 	t.Logf("Test dir: %v.\n", testDir)
 
 	cfg := config.Config{
 		PartitionID:            "aws",
 		ClusterID:              setup.ClusterID,
 		Hostname:               "localhost",
-		HostPort:               hardcodedAuthenticatorServerPort,
+		HostPort:               serverPort,
+		HealthPort:             healthPort,
 		KubeconfigPregenerated: true,
 		Address:                "127.0.0.1",
 		Kubeconfig:             filepath.Join(testDir, "apiserver.kubeconfig"),
@@ -223,23 +238,35 @@ func envtestBinaryPath(t *testing.T) string {
 	}
 	for _, candidate := range candidates {
 		if path, err := exec.LookPath(candidate); err == nil {
-			if out, err := exec.Command(path, "use", "1.35", "-p", "path").Output(); err == nil {
+			if out, err := exec.Command(path, "use", "1.35.0", "-p", "path").Output(); err == nil {
 				return strings.TrimSpace(string(out))
 			}
 		}
 	}
 	t.Skip("KUBEBUILDER_ASSETS not set and setup-envtest not available.\n" +
 		"Install: go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest\n" +
-		"Then set: export KUBEBUILDER_ASSETS=$(setup-envtest use 1.35 -p path)")
+		"Then set: export KUBEBUILDER_ASSETS=$(setup-envtest use 1.35.0 -p path)")
 	return ""
 }
 
 // checkHealth returns true when the authenticator server is healthy
 func checkHealth(cfg config.Config) (bool, error) {
-	resp, err := http.Get(fmt.Sprintf("http://%s:%d/healthz", cfg.Address, hardcodedHealthcheckPort))
+	resp, err := http.Get(fmt.Sprintf("http://%s:%d/healthz", cfg.Address, cfg.HealthPort))
 	if err != nil {
 		return false, err
 	}
 
 	return resp.StatusCode == http.StatusOK, nil
+}
+
+// freePort asks the OS for an available TCP port on loopback.
+func freePort(t *testing.T) int {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("could not allocate free port: %v", err)
+	}
+	port := ln.Addr().(*net.TCPAddr).Port
+	ln.Close()
+	return port
 }
