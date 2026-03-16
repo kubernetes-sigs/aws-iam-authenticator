@@ -77,7 +77,7 @@ func newIAMIdentityMapping(name, arn, username string) *iamauthenticatorv1alpha1
 
 func (f *fixture) newController() (*Controller, informers.SharedInformerFactory) {
 	f.client = fake.NewSimpleClientset(f.objects...)
-	f.kubeclient = k8sfake.NewSimpleClientset(f.kubeobjects...)
+	f.kubeclient = k8sfake.NewClientset(f.kubeobjects...)
 
 	i := informers.NewSharedInformerFactory(f.client, noResyncPeriodFunc())
 

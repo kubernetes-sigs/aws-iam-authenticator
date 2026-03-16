@@ -16,13 +16,10 @@ package e2e
 import (
 	"flag"
 	"fmt"
-	"log"
-	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/onsi/ginkgo/v2/reporters"
 
@@ -30,42 +27,44 @@ import (
 	. "github.com/onsi/gomega"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/kubernetes/test/e2e/framework"
-	frameworkconfig "k8s.io/kubernetes/test/e2e/framework/config"
+)
+
+var (
+	kubeConfig   string
+	reportDir    string
+	reportPrefix string
 )
 
 const kubeconfigEnvVar = "KUBECONFIG"
 
 func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
-	testing.Init()
-	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
-	// it does not fall back to defaults
 	if os.Getenv(kubeconfigEnvVar) == "" {
-		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
-		os.Setenv(kubeconfigEnvVar, kubeconfig)
+		defaultKubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		os.Setenv(kubeconfigEnvVar, defaultKubeconfig)
 	}
-	framework.AfterReadingAllFlags(&framework.TestContext)
+	flag.StringVar(&kubeConfig, "kubeconfig", os.Getenv(kubeconfigEnvVar), "Path to kubeconfig file")
+	flag.StringVar(&reportDir, "report-dir", "", "Directory for JUnit XML reports")
+	flag.StringVar(&reportPrefix, "report-prefix", "", "Prefix for JUnit report filenames")
+}
 
-	frameworkconfig.CopyFlags(frameworkconfig.Flags, flag.CommandLine)
-	framework.RegisterCommonFlags(flag.CommandLine)
-	framework.RegisterClusterFlags(flag.CommandLine)
+func TestMain(m *testing.M) {
 	flag.Parse()
+	os.Exit(m.Run())
 }
 
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
-	var r []Reporter
-	if framework.TestContext.ReportDir != "" {
-		if err := os.MkdirAll(framework.TestContext.ReportDir, 0755); err != nil {
-			log.Fatalf("Failed creating report directory: %v", err)
-		} else {
-			r = append(r, reporters.NewJUnitReporter(path.Join(framework.TestContext.ReportDir, fmt.Sprintf("junit_%v%02d.xml", framework.TestContext.ReportPrefix, GinkgoParallelProcess()))))
-		}
-	}
-	log.Printf("Starting e2e run %q on Ginkgo node %d", uuid.NewUUID(), GinkgoParallelProcess()) // TODO use framework.RunID like upstream
-
-	RunSpecsWithDefaultAndCustomReporters(t, "AWS IAM Authenticator End-to-End Tests", r)
+	GinkgoWriter.Printf("Starting e2e run %q on Ginkgo node %d\n", uuid.NewUUID(), GinkgoParallelProcess())
+	RunSpecs(t, "AWS IAM Authenticator End-to-End Tests")
 }
+
+var _ = ReportAfterSuite("junit reporter", func(report Report) {
+	if reportDir == "" {
+		return
+	}
+	if err := os.MkdirAll(reportDir, 0755); err != nil {
+		GinkgoWriter.Printf("Failed creating report directory: %v\n", err)
+		return
+	}
+	reporters.GenerateJUnitReport(report, path.Join(reportDir, fmt.Sprintf("junit_%v%02d.xml", reportPrefix, GinkgoParallelProcess())))
+})

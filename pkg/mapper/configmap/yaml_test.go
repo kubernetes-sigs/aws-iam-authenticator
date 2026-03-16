@@ -104,7 +104,7 @@ func TestConfigMap(t *testing.T) {
 				t.Errorf("expected error creating configMap from yaml, got nothing")
 			}
 
-			cs := fake.NewSimpleClientset()
+			cs := fake.NewClientset()
 			ms := MapStore{}
 			ms.configMap = cs.CoreV1().ConfigMaps("kube-system")
 

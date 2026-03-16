@@ -120,6 +120,10 @@ type Config struct {
 	// HostPort is the TCP Port on which to listen for authentication checks.
 	HostPort int
 
+	// HealthPort is the TCP port on which to serve the /healthz endpoint.
+	// Defaults to 21363 if zero.
+	HealthPort int
+
 	// Hostname is the address clients should use for this server.
 	Hostname string
 

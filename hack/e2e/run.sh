@@ -100,7 +100,7 @@ loudecho "Installing ginkgo to ${BIN_DIR}"
 GINKGO_BIN=${BIN_DIR}/ginkgo
 if [[ ! -e ${GINKGO_BIN} ]]; then
   pushd /tmp
-  GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} GO111MODULE=on go install github.com/onsi/ginkgo/ginkgo@v1.12.0
+  GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} GO111MODULE=on go install github.com/onsi/ginkgo/v2/ginkgo@latest
   popd
 fi
 
@@ -241,7 +241,7 @@ eval "EXPANDED_TEST_EXTRA_FLAGS=$TEST_EXTRA_FLAGS"
 set -x
 set +e
 pushd tests/e2e
-BASE_DIR=${BASE_DIR} CLUSTER_NAME=${CLUSTER_NAME} ADMIN_ROLE=${ADMIN_ROLE} AUTHENTICATOR_BIN=${AUTHENTICATOR_BIN} USER_ROLE=${USER_ROLE} ${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG_ADMIN}" -report-dir="${ARTIFACTS}" -gce-zone="${FIRST_ZONE}" "${EXPANDED_TEST_EXTRA_FLAGS}"
+BASE_DIR=${BASE_DIR} CLUSTER_NAME=${CLUSTER_NAME} ADMIN_ROLE=${ADMIN_ROLE} AUTHENTICATOR_BIN=${AUTHENTICATOR_BIN} USER_ROLE=${USER_ROLE} ${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG_ADMIN}" -report-dir="${ARTIFACTS}" "${EXPANDED_TEST_EXTRA_FLAGS}"
 TEST_PASSED=$?
 popd
 set -e

@@ -26,13 +26,14 @@ import (
 	restclientset "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/kubernetes/test/e2e/framework"
 )
 
 const (
 	kubeconfigEnv = "KUBECONFIG"
 	kubeSystemNs  = "kube-system"
 )
+
+var SIGDescribe = Describe
 
 var _ = Describe("[iam-auth-e2e] a kubernetes client", func() {
 	var (
@@ -49,7 +50,7 @@ var _ = Describe("[iam-auth-e2e] a kubernetes client", func() {
 
 	When("authenticaticating directly to the server", func() {
 		BeforeEach(func() {
-			cfg, _ = clientcmd.BuildConfigFromFlags("", framework.TestContext.KubeConfig)
+			cfg, _ = clientcmd.BuildConfigFromFlags("", kubeConfig)
 			cs, _ = clientset.NewForConfig(cfg)
 		})
 
@@ -61,7 +62,7 @@ var _ = Describe("[iam-auth-e2e] a kubernetes client", func() {
 
 	When("assuming the KubernetesAdmin role", func() {
 		BeforeEach(func() {
-			cfg, _ = clientcmd.BuildConfigFromFlags("", framework.TestContext.KubeConfig)
+			cfg, _ = clientcmd.BuildConfigFromFlags("", kubeConfig)
 
 			cfg.TLSClientConfig.CertData = []byte(nil)
 			cfg.TLSClientConfig.KeyData = []byte(nil)
@@ -107,7 +108,7 @@ var _ = Describe("[iam-auth-e2e] a kubernetes client", func() {
 
 	When("assuming the KubernetesUsers role", func() {
 		BeforeEach(func() {
-			cfg, _ = clientcmd.BuildConfigFromFlags("", framework.TestContext.KubeConfig)
+			cfg, _ = clientcmd.BuildConfigFromFlags("", kubeConfig)
 
 			cfg.TLSClientConfig.CertData = []byte(nil)
 			cfg.TLSClientConfig.KeyData = []byte(nil)
@@ -163,7 +164,7 @@ var _ = Describe("[iam-auth-e2e] a kubernetes client", func() {
 
 	When("authenticating as a user", func() {
 		BeforeEach(func() {
-			cfg, _ = clientcmd.BuildConfigFromFlags("", framework.TestContext.KubeConfig)
+			cfg, _ = clientcmd.BuildConfigFromFlags("", kubeConfig)
 
 			cfg.TLSClientConfig.CertData = []byte(nil)
 			cfg.TLSClientConfig.KeyData = []byte(nil)

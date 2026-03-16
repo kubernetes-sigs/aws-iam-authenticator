@@ -14,22 +14,21 @@ limitations under the License.
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
-	"bytes"
-
-	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/kubernetes/test/e2e/framework"
+	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -38,10 +37,15 @@ const (
 	testTimeout  = 300 * time.Second
 )
 
-var SIGDescribe = framework.SIGDescribe("api-machinery")
+var _ = SIGDescribe("apiserver", Label("Disruptive"), func() {
+	var cs kubernetes.Interface
 
-var _ = SIGDescribe("apiserver", framework.WithDisruptive(), func() {
-	f := framework.NewDefaultFramework("apiserver")
+	BeforeEach(func() {
+		cfg, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
+		Expect(err).NotTo(HaveOccurred())
+		cs, err = kubernetes.NewForConfig(cfg)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	When("the manifest changes", func() {
 		BeforeEach(func() {
@@ -52,21 +56,19 @@ var _ = SIGDescribe("apiserver", framework.WithDisruptive(), func() {
 			jobSpec := &batchv1.Job{}
 			_ = decoder.Decode(&jobSpec)
 
-			_, _ = f.ClientSet.BatchV1().
+			_, _ = cs.BatchV1().
 				Jobs(kubeSystemNs).
 				Create(context.TODO(), jobSpec, metav1.CreateOptions{})
 
 			fmt.Printf("Waiting for apiserver to go down...\n")
 			err := wait.PollImmediate(restartDelay, restartWait, func() (bool, error) {
-				_, pingErr := f.ClientSet.CoreV1().
+				_, pingErr := cs.CoreV1().
 					Nodes().
 					List(context.TODO(), metav1.ListOptions{})
-
 				if pingErr == nil {
 					return false, nil
-				} else {
-					return true, nil
 				}
+				return true, nil
 			})
 
 			if err != nil {
@@ -75,25 +77,22 @@ var _ = SIGDescribe("apiserver", framework.WithDisruptive(), func() {
 		})
 
 		AfterEach(func() {
-			f.ClientSet.BatchV1().Jobs(kubeSystemNs).Delete(context.TODO(), "apiserver-restarter", metav1.DeleteOptions{})
+			cs.BatchV1().Jobs(kubeSystemNs).Delete(context.TODO(), "apiserver-restarter", metav1.DeleteOptions{})
 		})
 
 		It("restarts successfully", func() {
 			startTime := time.Now()
 			err := wait.PollImmediate(1, testTimeout, func() (bool, error) {
-				res, pingErr := f.ClientSet.CoreV1().
+				res, pingErr := cs.CoreV1().
 					Nodes().
 					List(context.TODO(), metav1.ListOptions{})
-
 				if pingErr == nil {
 					fmt.Printf("after %ds: apiserver back up: %v nodes\n", int(time.Since(startTime).Seconds()), len(res.Items))
 					return true, nil
-				} else {
-					fmt.Printf("after %ds: %v\n", int(time.Since(startTime).Seconds()), pingErr)
-					return false, nil
 				}
+				fmt.Printf("after %ds: %v\n", int(time.Since(startTime).Seconds()), pingErr)
+				return false, nil
 			})
-
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
