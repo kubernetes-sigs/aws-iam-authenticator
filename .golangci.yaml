@@ -1,6 +1,46 @@
-# golangci-lint configuration
-# CI runs golangci-lint v2.11.3 with these settings.
+# golangci-lint configuration (v2.11.3)
 # Install: https://golangci-lint.run/welcome/install/
 # Run locally: make lint
 
 version: "2"
+
+linters:
+  default: none
+  enable:
+    # correctness
+    - errcheck        # unchecked errors
+    - govet           # suspicious constructs
+    - staticcheck     # staticcheck rules
+    - ineffassign     # unused assignments
+    - unused          # unused code
+    - copyloopvar     # loop variable capture bugs
+    - nilerr          # returning nil after checking for non-nil error
+    - unconvert       # unnecessary type conversions
+    # security
+    - gosec           # security issues
+    # code quality
+    - gocritic        # opinionated checks
+    - misspell        # common spelling mistakes
+    - nolintlint      # invalid or unnecessary nolint directives
+    - unparam         # unused function parameters
+    - revive          # replacement for golint
+    # formatting
+    - gofmt
+    - goimports
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  exclusions:
+    rules:
+      # gosec is noisy in tests
+      - path: "_test\\.go"
+        linters:
+          - gosec
+      # G402: TLS MinVersion — acceptable in test helpers
+      - linters:
+          - gosec
+        text: "G402"

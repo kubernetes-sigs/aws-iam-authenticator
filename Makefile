@@ -12,6 +12,8 @@ help:
 	@echo "  integration          Run integration tests (requires AWS credentials)"
 	@echo "  e2e                  Run end-to-end tests: make e2e RUNNER=[kops|kind]"
 	@echo "  lint                 Run golangci-lint"
+	@echo "  update               Run all auto-fixers (gofmt, go mod tidy)"
+	@echo "  verify               Assert that 'make update' produces no diff (used in CI)"
 	@echo "  format               Check and fix Go formatting"
 	@echo "  codegen              Regenerate CRD client code"
 	@echo "  start-dev            Start local kind dev environment (requires ADMIN_ARN and AUTHENTICATOR_IMAGE)"
@@ -157,6 +159,19 @@ endif
 .PHONY: lint
 lint:
 	golangci-lint run
+
+# update runs all auto-fixers. Run this before submitting a PR.
+.PHONY: update
+update:
+	gofmt -s -w .
+	go mod tidy
+	go mod tidy -C ./tests/e2e
+	go mod tidy -C ./tests/integration
+
+# verify checks that update produces no diff (used in CI).
+.PHONY: verify
+verify: update
+	@git diff --exit-code || (echo "\nRun 'make update' and commit the results." && exit 1)
 
 .PHONY: format
 format:
