@@ -43,8 +43,6 @@ You also might need to create a release branch, if it doesn't already exist, if 
 
 Update the `version.txt` with your new semantic version. This must be a standalone commit which only updates the `version.txt` file.
 
-Also, bump the image version in `deploy/example.yaml` to the new version.
-
 Push (or cherry-pick) the changes to a branch on your fork, and create a PR against the kubernetes-sigs upstream repository.
 
 ## Check the release on GitHub
@@ -52,22 +50,14 @@ Push (or cherry-pick) the changes to a branch on your fork, and create a PR agai
 Look at the release that was just published and validate that the release has the appropriate assets.  The assets should include the following:
 
 ```
-authenticator_0.6.26_checksums.txt
-aws-iam-authenticator_0.6.26_darwin_amd64
-aws-iam-authenticator_0.6.26_darwin_arm64
-aws-iam-authenticator_0.6.26_linux_amd64
-aws-iam-authenticator_0.6.26_linux_arm64
-aws-iam-authenticator_0.6.26_linux_ppc64le
-aws-iam-authenticator_0.6.26_linux_s390x
-aws-iam-authenticator_0.6.26_windows_amd64.exe
+authenticator_<version>_checksums.txt
+aws-iam-authenticator_<version>_darwin_amd64
+aws-iam-authenticator_<version>_darwin_arm64
+aws-iam-authenticator_<version>_linux_amd64
+aws-iam-authenticator_<version>_linux_arm64
+aws-iam-authenticator_<version>_linux_ppc64le
+aws-iam-authenticator_<version>_linux_s390x
+aws-iam-authenticator_<version>_windows_amd64.exe
 Source code (zip)
 Source code (tar.gz)
-```
-
-## Post Release
-
-In a new PR after the images are pushed to ECR, update the yaml in `deploy/example.yaml`:
-
-```
-        image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-iam-authenticator:v0.5.2
 ```
