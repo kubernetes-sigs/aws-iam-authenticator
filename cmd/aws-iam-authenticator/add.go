@@ -19,10 +19,11 @@ limitations under the License.
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
-	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -143,20 +144,16 @@ func checkPrompt(action string) {
 		return
 	}
 
-	msg := fmt.Sprintf("Ready to add %q, should we continue?", action)
-	prompt := promptui.Select{
-		Label: msg,
-		Items: []string{
-			"No, cancel it!",
-			fmt.Sprintf("Yes, let's add %q!", action),
-		},
-	}
-	idx, answer, err := prompt.Run()
+	fmt.Printf("Ready to add %q, should we continue? [y/N]: ", action)
+	reader := bufio.NewReader(os.Stdin)
+	answer, err := reader.ReadString('\n')
 	if err != nil {
-		panic(err)
+		fmt.Printf("error reading input: %v\n", err)
+		os.Exit(1)
 	}
-	if idx != 1 {
-		fmt.Printf("cancelled %q [index %d, answer %q]\n", action, idx, answer)
+	answer = strings.TrimSpace(strings.ToLower(answer))
+	if answer != "y" && answer != "yes" {
+		fmt.Printf("cancelled %q\n", action)
 		os.Exit(0)
 	}
 }

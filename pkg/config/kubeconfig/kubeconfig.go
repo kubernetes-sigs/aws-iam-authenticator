@@ -18,8 +18,8 @@ package kubeconfig
 
 import (
 	"crypto/tls"
+	"fmt"
 	"os"
-	"text/template"
 
 	"github.com/sirupsen/logrus"
 
@@ -39,10 +39,10 @@ func CreateWebhookKubeconfig(cert *tls.Certificate, kubeconfigPath, serverURL st
 	return KubeconfigParams{
 		ServerURL:                  serverURL,
 		CertificateAuthorityBase64: certs.CertToPEMBase64(cert.Certificate[0]),
-	}.WriteKubeconfig(kubeconfigPath, webhookKubeconfigTemplate)
+	}.WriteKubeconfig(kubeconfigPath)
 }
 
-func (p KubeconfigParams) WriteKubeconfig(outputPath string, t *template.Template) error {
+func (p KubeconfigParams) WriteKubeconfig(outputPath string) error {
 	f, err := os.Create(outputPath)
 	if err != nil {
 		return err
@@ -52,16 +52,13 @@ func (p KubeconfigParams) WriteKubeconfig(outputPath string, t *template.Templat
 			logrus.WithError(err).Warn("error closing file")
 		}
 	}()
-	return t.Execute(f, p)
-}
 
-var webhookKubeconfigTemplate = template.Must(
-	template.New("webhook.kubeconfig").Option("missingkey=error").Parse(`
+	_, err = fmt.Fprintf(f, `
 clusters:
   - name: aws-iam-authenticator
     cluster:
-      certificate-authority-data: {{.CertificateAuthorityBase64}}
-      server: {{.ServerURL}}
+      certificate-authority-data: %s
+      server: %s
 # user refers to the API server client
 users:
   - name: apiserver
@@ -71,4 +68,6 @@ contexts:
   context:
     cluster: aws-iam-authenticator
     user: apiserver
-`))
+`, p.CertificateAuthorityBase64, p.ServerURL)
+	return err
+}
