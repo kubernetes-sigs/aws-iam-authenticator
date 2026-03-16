@@ -20,7 +20,7 @@ jobs:
           go-version-file: .go-version
 
       - name: Unit tests
-        run: go test -race ./pkg/...
+        run: go test -race ./pkg/... ./cmd/...
 
   golangci-lint:
     runs-on: ubuntu-latest

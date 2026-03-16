@@ -275,7 +275,7 @@ func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) 
 	}
 	for _, mode := range modes {
 		switch mode {
-		case mapper.ModeFile: //nolint:all
+		case mapper.ModeFile: //nolint:staticcheck // SA1019: ModeFile is deprecated but accepted for backwards compatibility
 			fallthrough
 		case mapper.ModeMountedFile:
 			fileMapper, err := file.NewFileMapper(cfg)
@@ -283,7 +283,7 @@ func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) 
 				return BackendMapper{}, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
 			backendMapper.mappers = append(backendMapper.mappers, fileMapper)
-		case mapper.ModeConfigMap: //nolint:all
+		case mapper.ModeConfigMap: //nolint:staticcheck // SA1019: ModeConfigMap is deprecated but accepted for backwards compatibility
 			fallthrough
 		case mapper.ModeEKSConfigMap:
 			configMapMapper, err := configmap.NewConfigMapMapper(cfg)

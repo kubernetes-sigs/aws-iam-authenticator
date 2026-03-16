@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package pkg exposes version information set at build time.
+// Package pkg contains build-time version metadata for aws-iam-authenticator, set via ldflags.
 package pkg
 
 var (
