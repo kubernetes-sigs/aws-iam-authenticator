@@ -23,6 +23,8 @@ jobs:
 
       - id: govulncheck
         uses: golang/govulncheck-action@v1
+        with:
+          repo-checkout: false
 
       # [Info] Shows version of go that is (was) used
       - run: go version

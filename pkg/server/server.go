@@ -167,7 +167,7 @@ func (c *Server) Run(stopCh <-chan struct{}) {
 	}()
 
 	go func() {
-		healthPort := c.Config.HealthPort
+		healthPort := c.HealthPort
 		if healthPort == 0 {
 			healthPort = 21363
 		}
