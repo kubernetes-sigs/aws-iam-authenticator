@@ -1,3 +1,4 @@
+// Package ec2provider implements EC2 instance detail lookup for the aws-iam-authenticator.
 package ec2provider
 
 import (
@@ -48,7 +49,7 @@ type EC2API interface {
 	DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error)
 }
 
-// Get a node name from instance ID
+// EC2Provider looks up EC2 instance details by instance ID.
 type EC2Provider interface {
 	GetPrivateDNSName(ctx context.Context, id string) (string, error)
 	StartEc2DescribeBatchProcessing(ctx context.Context)
@@ -68,9 +69,10 @@ type ec2ProviderImpl struct {
 	ec2                EC2API
 	privateDNSCache    *ec2PrivateDNSCache
 	ec2Requests        *ec2Requests
-	instanceIdsChannel chan string
+	instanceIDsChannel chan string
 }
 
+// New creates and starts a new EC2Provider that resolves instance IDs to private DNS names.
 func New(ctx context.Context, roleARN, sourceARN, region string, qps int, burst int) EC2Provider {
 	dnsCache := &ec2PrivateDNSCache{
 		cache: make(map[string]string),
@@ -84,7 +86,7 @@ func New(ctx context.Context, roleARN, sourceARN, region string, qps int, burst 
 		ec2:                newEC2Client(ctx, roleARN, sourceARN, region, qps, burst),
 		privateDNSCache:    dnsCache,
 		ec2Requests:        ec2Requests,
-		instanceIdsChannel: make(chan string, maxChannelSize),
+		instanceIDsChannel: make(chan string, maxChannelSize),
 	}
 }
 
@@ -131,19 +133,19 @@ func (p *ec2ProviderImpl) setPrivateDNSNameCache(id string, privateDNSName strin
 	p.privateDNSCache.cache[id] = privateDNSName
 }
 
-func (p *ec2ProviderImpl) setRequestInFlightForInstanceId(id string) {
+func (p *ec2ProviderImpl) setRequestInFlightForInstanceID(id string) {
 	p.ec2Requests.lock.Lock()
 	defer p.ec2Requests.lock.Unlock()
 	p.ec2Requests.set[id] = true
 }
 
-func (p *ec2ProviderImpl) unsetRequestInFlightForInstanceId(id string) {
+func (p *ec2ProviderImpl) unsetRequestInFlightForInstanceID(id string) {
 	p.ec2Requests.lock.Lock()
 	defer p.ec2Requests.lock.Unlock()
 	delete(p.ec2Requests.set, id)
 }
 
-func (p *ec2ProviderImpl) getRequestInFlightForInstanceId(id string) bool {
+func (p *ec2ProviderImpl) getRequestInFlightForInstanceID(id string) bool {
 	p.ec2Requests.lock.RLock()
 	defer p.ec2Requests.lock.RUnlock()
 	_, ok := p.ec2Requests.set[id]
@@ -175,8 +177,8 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(ctx context.Context, id string) (str
 		return privateDNSName, nil
 	}
 	logrus.Debugf("Missed the cache for the InstanceId = %s Verifying if its already in requestQueue ", id)
-	// check if the request for instanceId already in queue.
-	if p.getRequestInFlightForInstanceId(id) {
+	// check if the request for instanceID already in queue.
+	if p.getRequestInFlightForInstanceID(id) {
 		logrus.Debugf("Found the InstanceId:= %s request In Queue waiting in 5 seconds loop ", id)
 		for i := 0; i < totalIterationForWaitInterval; i++ {
 			time.Sleep(defaultWaitInterval)
@@ -188,13 +190,13 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(ctx context.Context, id string) (str
 		return "", fmt.Errorf("failed to find node %s in PrivateDNSNameCache returning from loop", id)
 	}
 	logrus.Debugf("Missed the requestQueue cache for the InstanceId = %s", id)
-	p.setRequestInFlightForInstanceId(id)
+	p.setRequestInFlightForInstanceID(id)
 	requestQueueLength := p.getRequestInFlightSize()
-	//The code verifies if the requestQuqueMap size is greater than max request in flight with rate
-	//limiting then writes to the channel where we are making batch ec2:DescribeInstances API call.
+	// The code verifies if the requestQuqueMap size is greater than max request in flight with rate
+	// limiting then writes to the channel where we are making batch ec2:DescribeInstances API call.
 	if requestQueueLength > maxAllowedInflightRequest {
 		logrus.Debugf("Writing to buffered channel for instance Id %s ", id)
-		p.instanceIdsChannel <- id
+		p.instanceIDsChannel <- id
 		return p.GetPrivateDNSName(ctx, id)
 	}
 
@@ -205,7 +207,7 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(ctx context.Context, id string) (str
 		InstanceIds: []string{id},
 	})
 	if err != nil {
-		p.unsetRequestInFlightForInstanceId(id)
+		p.unsetRequestInFlightForInstanceID(id)
 		return "", fmt.Errorf("failed querying private DNS from EC2 API for node %s: %s ", id, err.Error())
 	}
 	for _, reservation := range output.Reservations {
@@ -213,7 +215,7 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(ctx context.Context, id string) (str
 			if aws.ToString(instance.InstanceId) == id {
 				privateDNSName = aws.ToString(instance.PrivateDnsName)
 				p.setPrivateDNSNameCache(id, privateDNSName)
-				p.unsetRequestInFlightForInstanceId(id)
+				p.unsetRequestInFlightForInstanceID(id)
 			}
 		}
 	}
@@ -226,17 +228,17 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(ctx context.Context, id string) (str
 
 func (p *ec2ProviderImpl) StartEc2DescribeBatchProcessing(ctx context.Context) {
 	startTime := time.Now()
-	var instanceIdList []string
+	var instanceIDList []string
 	for {
-		var instanceId string
+		var instanceID string
 		select {
-		case instanceId = <-p.instanceIdsChannel:
-			logrus.Debugf("Received the Instance Id := %s from buffered Channel for batch processing ", instanceId)
-			instanceIdList = append(instanceIdList, instanceId)
+		case instanceID = <-p.instanceIDsChannel:
+			logrus.Debugf("Received the Instance Id := %s from buffered Channel for batch processing ", instanceID)
+			instanceIDList = append(instanceIDList, instanceID)
 		default:
 			// Waiting for more elements to get added to the buffered Channel
 			// And to support the for select loop.
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(20 * time.Millisecond) //nolint:gosec // G118: intentional polling loop; ctx cancellation is handled by the caller via stopCh
 		}
 		endTime := time.Now()
 		/*
@@ -248,25 +250,25 @@ func (p *ec2ProviderImpl) StartEc2DescribeBatchProcessing(ctx context.Context) {
 			optimization here. Also for FYI we have client level rate limiting which is what this
 			ec2:DescribeInstances call will make so this call is also rate limited.
 		*/
-		if (len(instanceIdList) > 0 && (endTime.Sub(startTime).Milliseconds()) > maxWaitIntervalForBatch) || len(instanceIdList) > maxInstancesBatchSize {
+		if (len(instanceIDList) > 0 && (endTime.Sub(startTime).Milliseconds()) > maxWaitIntervalForBatch) || len(instanceIDList) > maxInstancesBatchSize {
 			startTime = time.Now()
-			dupInstanceList := make([]string, len(instanceIdList))
-			copy(dupInstanceList, instanceIdList)
-			go p.getPrivateDnsAndPublishToCache(ctx, dupInstanceList)
-			instanceIdList = nil
+			dupInstanceList := make([]string, len(instanceIDList))
+			copy(dupInstanceList, instanceIDList)
+			go p.getPrivateDNSAndPublishToCache(ctx, dupInstanceList)
+			instanceIDList = nil
 		}
 	}
 }
 
-func (p *ec2ProviderImpl) getPrivateDnsAndPublishToCache(ctx context.Context, instanceIdList []string) {
+func (p *ec2ProviderImpl) getPrivateDNSAndPublishToCache(ctx context.Context, instanceIDList []string) {
 	// Look up instance from EC2 API
-	logrus.Infof("Making Batch Query to DescribeInstances for %v instances ", len(instanceIdList))
+	logrus.Infof("Making Batch Query to DescribeInstances for %v instances ", len(instanceIDList))
 	metrics.Get().EC2DescribeInstanceCallCount.Inc()
 	output, err := p.ec2.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
-		InstanceIds: instanceIdList,
+		InstanceIds: instanceIDList,
 	})
 	if err != nil {
-		logrus.Errorf("Batch call failed querying private DNS from EC2 API for nodes [%s] : with error = []%s ", instanceIdList, err.Error())
+		logrus.Errorf("Batch call failed querying private DNS from EC2 API for nodes [%s] : with error = []%s ", instanceIDList, err.Error())
 	} else {
 		if output.NextToken != nil {
 			logrus.Debugf("Successfully got the batch result , output.NextToken = %s ", *output.NextToken)
@@ -284,8 +286,8 @@ func (p *ec2ProviderImpl) getPrivateDnsAndPublishToCache(ctx context.Context, in
 	}
 
 	logrus.Debugf("Removing instances from request Queue after getting response from Ec2")
-	for _, id := range instanceIdList {
-		p.unsetRequestInFlightForInstanceId(id)
+	for _, id := range instanceIDList {
+		p.unsetRequestInFlightForInstanceID(id)
 	}
 }
 

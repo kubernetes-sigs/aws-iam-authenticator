@@ -16,6 +16,7 @@ limitations under the License.
 
 package config
 
+// IdentityMapping is the result of mapping an IAM identity to a Kubernetes identity.
 type IdentityMapping struct {
 	IdentityARN string
 
@@ -59,7 +60,7 @@ type RoleMapping struct {
 	Groups []string `json:"groups" yaml:"groups"`
 
 	// UserId is the AWS PrincipalId of the role. (e.g., "ABCXSOTJDDV").
-	UserId string `json:"userid,omitempty" yaml:"userid,omitempty"`
+	UserId string `json:"userid,omitempty" yaml:"userid,omitempty"` //nolint:revive // var-naming: field name preserved for JSON compatibility
 }
 
 // UserMapping is a static mapping of a single AWS User ARN to a
@@ -75,7 +76,7 @@ type UserMapping struct {
 	Groups []string `json:"groups" yaml:"groups"`
 
 	// UserId is the AWS PrincipalId of the user. (e.g., "ABCXSOTJDDV").
-	UserId string `json:"userid,omitempty" yaml:"userid,omitempty"`
+	UserId string `json:"userid,omitempty" yaml:"userid,omitempty"` //nolint:revive // var-naming: field name preserved for JSON compatibility
 }
 
 // SSOARNMatcher contains fields used to match Role ARNs that
@@ -183,7 +184,7 @@ type Config struct {
 
 	// Ec2 DescribeInstances rate limiting variables initially set to defaults until we completely
 	// understand we don't need to change
-	EC2DescribeInstancesQps   int
+	EC2DescribeInstancesQps   int //nolint:revive // var-naming: field name preserved for backwards compatibility
 	EC2DescribeInstancesBurst int
 	// Dynamic File Path for DynamicFile BackendMode
 	DynamicFilePath string
@@ -195,6 +196,7 @@ type Config struct {
 	DynamicBackendModePath string
 }
 
+// ReservedPrefixConfig holds configuration for username prefix reservation.
 type ReservedPrefixConfig struct {
 	// Backend mode defined in Config.BackendMode
 	BackendMode string `json:"backendmode" yaml:"backendmode"`

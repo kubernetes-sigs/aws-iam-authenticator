@@ -24,9 +24,6 @@ linters:
     - nolintlint      # invalid or unnecessary nolint directives
     - unparam         # unused function parameters
     - revive          # replacement for golint
-    # formatting
-    - gofmt
-    - goimports
 
 formatters:
   enable:
@@ -36,10 +33,16 @@ formatters:
 issues:
   exclusions:
     rules:
-      # gosec is noisy in tests
+      # gosec and gocritic are noisy in tests
       - path: "_test\\.go"
         linters:
           - gosec
+          - gocritic
+          - misspell
+      # G101: false positive on Kubernetes API kind constant name
+      - linters:
+          - gosec
+        text: "G101"
       # G402: TLS MinVersion — acceptable in test helpers
       - linters:
           - gosec

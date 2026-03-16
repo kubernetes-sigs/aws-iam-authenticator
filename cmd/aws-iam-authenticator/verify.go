@@ -37,7 +37,7 @@ var verifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify a token for debugging purpose",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		tok := viper.GetString("token")
 		output := viper.GetString("output")
 		clusterID := viper.GetString("clusterID")

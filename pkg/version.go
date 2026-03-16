@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package pkg exposes version information set at build time.
 package pkg
 
 var (
-	// Set at build time
-	// Semantic version of the build.
+	// Version is the current release version, set at build time.
 	Version = "unversioned"
-	// Commit id of the build.
+	// CommitID is the commit ID of the build, set at build time.
 	CommitID = ""
-	// Build Date of the build.
+	// BuildDate is the date the binary was built, set at build time.
 	BuildDate = ""
 )

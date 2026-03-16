@@ -1,3 +1,4 @@
+// Package dynamicfile implements IAM identity mapping using a dynamically reloaded file.
 package dynamicfile
 
 import (
@@ -14,7 +15,8 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
-type DynamicFileMapStore struct {
+// DynamicFileMapStore holds in-memory IAM mappings loaded from a dynamic file.
+type DynamicFileMapStore struct { //nolint:revive // exported: stutter preserved for backwards compatibility
 	mutex sync.RWMutex
 	users map[string]config.UserMapping
 	roles map[string]config.RoleMapping
@@ -27,7 +29,8 @@ type DynamicFileMapStore struct {
 	dynamicFileInitDone bool
 }
 
-type DynamicFileData struct {
+// DynamicFileData represents the parsed content of the dynamic IAM mapping file.
+type DynamicFileData struct { //nolint:revive // exported: stutter preserved for backwards compatibility
 	// Time that the object takes from update time to load time
 	LastUpdatedDateTime string `json:"LastUpdatedDateTime"`
 	// Version is the version number of the update
@@ -43,6 +46,7 @@ type DynamicFileData struct {
 	AutoMappedAWSAccounts []string `json:"mapAccounts"`
 }
 
+// ErrParsingMap is returned when one or more errors occur parsing the dynamic mapping file.
 type ErrParsingMap struct {
 	errors []error
 }
@@ -51,6 +55,7 @@ func (err ErrParsingMap) Error() string {
 	return fmt.Sprintf("error parsing dynamic file: %v", err.errors)
 }
 
+// NewDynamicFileMapStore creates a new DynamicFileMapStore configured from the given Config.
 func NewDynamicFileMapStore(cfg config.Config) (*DynamicFileMapStore, error) {
 	ms := DynamicFileMapStore{}
 	ms.filename = cfg.DynamicFilePath
@@ -89,26 +94,29 @@ func (ms *DynamicFileMapStore) saveMap(
 	}
 }
 
+// UserMapping returns the UserMapping for the given key, or ErrUserNotFound.
 func (ms *DynamicFileMapStore) UserMapping(key string) (config.UserMapping, error) {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
-	if user, ok := ms.users[key]; !ok {
+	user, ok := ms.users[key]
+	if !ok {
 		return config.UserMapping{}, errutil.ErrNotMapped
-	} else {
-		return user, nil
 	}
+	return user, nil
 }
 
+// RoleMapping returns the RoleMapping for the given key, or ErrRoleNotFound.
 func (ms *DynamicFileMapStore) RoleMapping(key string) (config.RoleMapping, error) {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
-	if role, ok := ms.roles[key]; !ok {
+	role, ok := ms.roles[key]
+	if !ok {
 		return config.RoleMapping{}, errutil.ErrNotMapped
-	} else {
-		return role, nil
 	}
+	return role, nil
 }
 
+// AWSAccount returns true if the given account ID is permitted.
 func (ms *DynamicFileMapStore) AWSAccount(id string) bool {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
@@ -116,6 +124,7 @@ func (ms *DynamicFileMapStore) AWSAccount(id string) bool {
 	return ok
 }
 
+// LogMapping logs all current role and user mappings at debug level.
 func (ms *DynamicFileMapStore) LogMapping() {
 	ms.mutex.RLock()
 	defer ms.mutex.RUnlock()
@@ -130,6 +139,7 @@ func (ms *DynamicFileMapStore) LogMapping() {
 	}
 }
 
+// CallBackForFileLoad is invoked when the dynamic file is updated; it parses and reloads mappings.
 func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error {
 	errs := make([]error, 0)
 	userMappings := make([]config.UserMapping, 0)
@@ -165,7 +175,7 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 		}
 	}
 
-	awsAccounts := dynamicFileData.AutoMappedAWSAccounts[:]
+	awsAccounts := dynamicFileData.AutoMappedAWSAccounts
 
 	if len(errs) > 0 {
 		logrus.Warnf("ParseMap: Errors parsing dynamic file: %+v", errs)
@@ -196,6 +206,7 @@ func (ms *DynamicFileMapStore) CallBackForFileLoad(dynamicContent []byte) error 
 	return nil
 }
 
+// CallBackForFileDeletion is invoked when the dynamic file is deleted; it clears all mappings.
 func (ms *DynamicFileMapStore) CallBackForFileDeletion() error {
 	userMappings := make([]config.UserMapping, 0)
 	roleMappings := make([]config.RoleMapping, 0)

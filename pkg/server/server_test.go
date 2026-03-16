@@ -72,11 +72,11 @@ type testEC2Provider struct {
 	burst int
 }
 
-func (p *testEC2Provider) GetPrivateDNSName(ctx context.Context, id string) (string, error) {
+func (p *testEC2Provider) GetPrivateDNSName(_ context.Context, _ string) (string, error) {
 	return p.name, nil
 }
 
-func (p *testEC2Provider) StartEc2DescribeBatchProcessing(ctx context.Context) {}
+func (p *testEC2Provider) StartEc2DescribeBatchProcessing(_ context.Context) {}
 
 func newTestEC2Provider(name string, qps int, burst int) *testEC2Provider {
 	return &testEC2Provider{
@@ -508,7 +508,7 @@ func TestAuthenticateVerifierRoleMapping(t *testing.T) {
 	h := setup(&testVerifier{err: nil, identity: identity})
 	h.backendMapper = BackendMapper{
 		mappers: []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
-			"arn:aws:iam::0123456789012:role/test": config.RoleMapping{
+			"arn:aws:iam::0123456789012:role/test": {
 				RoleARN:  "arn:aws:iam::0123456789012:role/Test",
 				Username: "TestUser",
 				Groups:   []string{"sys:admin", "listers"},
@@ -602,7 +602,7 @@ func TestAuthenticateVerifierUserMapping(t *testing.T) {
 	}})
 	h.backendMapper = BackendMapper{
 		mappers: []mapper.Mapper{file.NewFileMapperWithMaps(nil, map[string]config.UserMapping{
-			"arn:aws:iam::0123456789012:user/test": config.UserMapping{
+			"arn:aws:iam::0123456789012:user/test": {
 				UserARN:  "arn:aws:iam::0123456789012:user/Test",
 				Username: "TestUser",
 				Groups:   []string{"sys:admin", "listers"},
@@ -873,7 +873,7 @@ func TestAuthenticateVerifierNodeMapping(t *testing.T) {
 	h.ec2Provider = newTestEC2Provider("ip-172-31-27-14", 15, 5)
 	h.backendMapper = BackendMapper{
 		mappers: []mapper.Mapper{file.NewFileMapperWithMaps(map[string]config.RoleMapping{
-			"arn:aws:iam::0123456789012:role/testnoderole": config.RoleMapping{
+			"arn:aws:iam::0123456789012:role/testnoderole": {
 				RoleARN:  "arn:aws:iam::0123456789012:role/TestNodeRole",
 				Username: "system:node:{{EC2PrivateDNSName}}",
 				Groups:   []string{"system:nodes", "system:bootstrappers"},

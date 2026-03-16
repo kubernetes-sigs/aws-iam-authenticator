@@ -1,3 +1,4 @@
+// Package file implements a static YAML file backend for IAM identity mapping.
 package file
 
 import (
@@ -12,7 +13,8 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 )
 
-type FileMapper struct {
+// FileMapper implements the Mapper interface using a static YAML file backend.
+type FileMapper struct { //nolint:revive // exported: stutter preserved for backwards compatibility
 	roleMap                   map[string]config.RoleMapping
 	userMap                   map[string]config.UserMapping
 	accountMap                map[string]bool
@@ -21,6 +23,7 @@ type FileMapper struct {
 
 var _ mapper.Mapper = &FileMapper{}
 
+// NewFileMapper creates a new FileMapper from the given Config.
 func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 	fileMapper := &FileMapper{
 		roleMap:    make(map[string]config.RoleMapping),
@@ -66,6 +69,7 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 	return fileMapper, nil
 }
 
+// NewFileMapperWithMaps creates a FileMapper pre-populated with the given role and user mappings.
 func NewFileMapperWithMaps(
 	lowercaseRoleMap map[string]config.RoleMapping,
 	lowercaseUserMap map[string]config.UserMapping,
@@ -77,14 +81,17 @@ func NewFileMapperWithMaps(
 	}
 }
 
+// Name returns the name of this mapper backend.
 func (m *FileMapper) Name() string {
 	return mapper.ModeMountedFile
 }
 
+// Start is a no-op for the file mapper.
 func (m *FileMapper) Start(_ <-chan struct{}) error {
 	return nil
 }
 
+// Map resolves an IAM identity to a Kubernetes identity mapping.
 func (m *FileMapper) Map(identity *token.Identity) (*config.IdentityMapping, error) {
 	canonicalARN := strings.ToLower(identity.CanonicalARN)
 	for _, roleMapping := range m.roleMap {
@@ -106,10 +113,12 @@ func (m *FileMapper) Map(identity *token.Identity) (*config.IdentityMapping, err
 	return nil, errutil.ErrNotMapped
 }
 
+// IsAccountAllowed returns true if the given AWS account ID is permitted.
 func (m *FileMapper) IsAccountAllowed(accountID string) bool {
 	return m.accountMap[accountID]
 }
 
+// UsernamePrefixReserveList returns username prefixes reserved by this mapper.
 func (m *FileMapper) UsernamePrefixReserveList() []string {
 	return m.usernamePrefixReserveList
 }

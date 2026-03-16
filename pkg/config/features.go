@@ -32,9 +32,11 @@ const (
 )
 
 var (
+	// SSORoleMatchEnabled indicates whether SSO role matching is currently enabled.
 	SSORoleMatchEnabled bool
 )
 
+// DefaultFeatureGates defines the default enabled/disabled state of all feature gates.
 var DefaultFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ConfiguredInitDirectories: {Default: false, PreRelease: featuregate.Alpha},
 	IAMIdentityMappingCRD:     {Default: false, PreRelease: featuregate.Alpha},
