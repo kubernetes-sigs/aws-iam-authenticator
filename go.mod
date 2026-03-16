@@ -13,7 +13,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gofrs/flock v0.13.0
 	github.com/google/go-cmp v0.7.0
-	github.com/manifoldco/promptui v0.9.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/afero v1.15.0
@@ -42,7 +41,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
@@ -105,3 +103,11 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
+
+// Pin protobuf to include fixes for Go 1.26 dead code elimination regression.
+// Go 1.26 added reflect.Value.Methods(), and protobuf's MethodByName("Methods")
+// call caused the Go linker to disable DCE globally, bloating binaries.
+// This pin matches what upstream Kubernetes uses (kubernetes/kubernetes#137451).
+// Remove this once google.golang.org/protobuf releases a version containing
+// commits cb6ac5a2 and 8c4c4ae4.
+replace google.golang.org/protobuf => google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af

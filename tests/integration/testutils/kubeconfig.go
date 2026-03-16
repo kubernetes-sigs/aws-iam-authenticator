@@ -18,32 +18,34 @@ package testutils
 
 import (
 	"crypto/x509"
-	"text/template"
+	"fmt"
+	"os"
 
 	"github.com/sirupsen/logrus"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config/certs"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/config/kubeconfig"
 )
 
 // CreateAPIServerClientKubeconfig will create a kubeconfig for the api server client
 func CreateAPIServerClientKubeconfig(cert *x509.Certificate, token string, kubeconfigPath, serverURL string) error {
 	logrus.WithField("kubeconfigPath", kubeconfigPath).Info("writing api server client kubeconfig file")
 
-	return kubeconfig.KubeconfigParams{
-		ServerURL:                  serverURL,
-		CertificateAuthorityBase64: certs.CertToPEMBase64(cert.Raw),
-		Token:                      token,
-	}.WriteKubeconfig(kubeconfigPath, ApiServerClientKubeconfigTemplate)
-}
+	f, err := os.Create(kubeconfigPath)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			logrus.WithError(err).Warn("error closing file")
+		}
+	}()
 
-var ApiServerClientKubeconfigTemplate = template.Must(
-	template.New("apiserver.kubeconfig").Option("missingkey=error").Parse(`
+	_, err = fmt.Fprintf(f, `
 clusters:
   - name: kubernetes
     cluster:
-      certificate-authority-data: {{.CertificateAuthorityBase64}}
-      server: {{.ServerURL}}
+      certificate-authority-data: %s
+      server: %s
 current-context: kubernetes
 contexts:
 - name: kubernetes
@@ -53,5 +55,7 @@ contexts:
 users:
   - name: kubernetes-client
     user:
-      token: {{.Token}}
-`))
+      token: %s
+`, certs.CertToPEMBase64(cert.Raw), serverURL, token)
+	return err
+}
