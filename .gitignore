@@ -9,6 +9,12 @@ bin
 test-artifacts
 hack/e2e/e2e-test-artifacts
 
+# Integration test server artifacts
+tests/integration/server/apiserver.kubeconfig
+tests/integration/server/cert.pem
+tests/integration/server/key.pem
+tests/integration/server/webhook.kubeconfig
+
 # == kubernetes .gitignore ==
 
 # OSX leaves these everywhere on SMB shares
@@ -72,5 +78,3 @@ cscope.*
 coverage.out
 coverage.html
 
-# multi-module workspaces
-go.work*

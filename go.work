@@ -1,0 +1,7 @@
+go 1.26.1
+
+use (
+	.
+	./tests/e2e
+	./tests/integration
+)

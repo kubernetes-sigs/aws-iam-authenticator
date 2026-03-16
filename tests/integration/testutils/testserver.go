@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -59,12 +61,7 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 
 	// Start kube-apiserver and etcd via envtest
 	testEnv := &envtest.Environment{
-		BinaryAssetsDirectory: func() string {
-			if dir := os.Getenv("KUBEBUILDER_ASSETS"); dir != "" {
-				return dir
-			}
-			return "/usr/local/kubebuilder/bin/k8s/1.29.5-linux-amd64"
-		}(),
+		BinaryAssetsDirectory: envtestBinaryPath(t),
 	}
 	testEnv.ControlPlane.GetAPIServer().Configure().Set(
 		"authentication-token-webhook-config-file",
@@ -112,7 +109,7 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 		httpServer.Run(stopCh)
 	}()
 
-	err = wait.PollImmediate(100*time.Millisecond, 10*time.Second, func() (done bool, err error) {
+	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (done bool, err error) {
 		t.Log("Checking authenticator server health...")
 		done, err = checkHealth(cfg)
 		if err != nil {
@@ -149,6 +146,10 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 		testEnv.Stop() //nolint:errcheck
 		t.Fatal(err)
 	}
+	execRestCfg.TLSClientConfig.CertData = nil
+	execRestCfg.TLSClientConfig.KeyData = nil
+	execRestCfg.TLSClientConfig.CertFile = ""
+	execRestCfg.TLSClientConfig.KeyFile = ""
 	execRestCfg.ExecProvider = &clientcmdapi.ExecConfig{
 		Command:         setup.AuthenticatorClientBinaryPath,
 		Args:            args,
@@ -206,6 +207,31 @@ func testConfig(t *testing.T, setup AuthenticatorTestFrameworkSetup) (config.Con
 	}
 
 	return cfg, nil
+}
+
+// envtestBinaryPath resolves the directory containing envtest binaries (kube-apiserver, etcd).
+// Checks KUBEBUILDER_ASSETS first, then falls back to setup-envtest, then skips the test.
+func envtestBinaryPath(t *testing.T) string {
+	t.Helper()
+	if dir := os.Getenv("KUBEBUILDER_ASSETS"); dir != "" {
+		return dir
+	}
+	// Try setup-envtest from PATH or GOPATH/bin
+	candidates := []string{"setup-envtest"}
+	if gopath, err := exec.Command("go", "env", "GOPATH").Output(); err == nil {
+		candidates = append(candidates, filepath.Join(strings.TrimSpace(string(gopath)), "bin", "setup-envtest"))
+	}
+	for _, candidate := range candidates {
+		if path, err := exec.LookPath(candidate); err == nil {
+			if out, err := exec.Command(path, "use", "1.35", "-p", "path").Output(); err == nil {
+				return strings.TrimSpace(string(out))
+			}
+		}
+	}
+	t.Skip("KUBEBUILDER_ASSETS not set and setup-envtest not available.\n" +
+		"Install: go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest\n" +
+		"Then set: export KUBEBUILDER_ASSETS=$(setup-envtest use 1.35 -p path)")
+	return ""
 }
 
 // checkHealth returns true when the authenticator server is healthy
