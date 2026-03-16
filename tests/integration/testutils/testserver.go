@@ -15,10 +15,9 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	client "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/kubernetes/cmd/kube-apiserver/app/options"
-	"k8s.io/kubernetes/pkg/controlplane"
-	"k8s.io/kubernetes/test/integration/framework"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/endpoints"
@@ -42,7 +41,7 @@ type AuthenticatorTestFrameworkSetup struct {
 	RoleArn                         string
 }
 
-func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFrameworkSetup) (client.Interface, client.Interface, framework.TearDownFunc) {
+func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFrameworkSetup) (client.Interface, client.Interface, func()) {
 	metrics.InitMetrics(prometheus.NewRegistry())
 
 	cfg, err := testConfig(t, setup)
@@ -58,20 +57,52 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 		t.Fatal(err)
 	}
 
-	adminClient, kubeAPIServerClientConfig, tearDownFn := framework.StartTestServer(context.Background(), t, framework.TestServerSetup{
-		ModifyServerRunOptions: func(opts *options.ServerRunOptions) {
-			opts.Authentication.WebHook.ConfigFile = cfg.GenerateKubeconfigPath
-		},
-		ModifyServerConfig: func(config *controlplane.Config) {},
-	})
+	// Start kube-apiserver and etcd via envtest
+	testEnv := &envtest.Environment{
+		BinaryAssetsDirectory: func() string {
+			if dir := os.Getenv("KUBEBUILDER_ASSETS"); dir != "" {
+				return dir
+			}
+			return "/usr/local/kubebuilder/bin/k8s/1.29.5-linux-amd64"
+		}(),
+	}
+	testEnv.ControlPlane.GetAPIServer().Configure().Set(
+		"authentication-token-webhook-config-file",
+		cfg.GenerateKubeconfigPath,
+	)
 
-	cert, err := LoadX509Certificate(kubeAPIServerClientConfig.TLSClientConfig.CAFile)
+	restCfg, err := testEnv.Start()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Create API server client kubeconfig, used by the authenticator to update its mapping store when using CRD or EKSConfigMap
-	if err := CreateAPIServerClientKubeconfig(cert, kubeAPIServerClientConfig.BearerToken, cfg.Kubeconfig, kubeAPIServerClientConfig.Host); err != nil {
+	adminClient, err := client.NewForConfig(restCfg)
+	if err != nil {
+		testEnv.Stop() //nolint:errcheck
+		t.Fatal(err)
+	}
+
+	// Write a kubeconfig for the authenticator server to connect back to kube-apiserver
+	// using client cert auth (envtest provides CertData/KeyData, not BearerToken)
+	if err := clientcmd.WriteToFile(clientcmdapi.Config{
+		Clusters: map[string]*clientcmdapi.Cluster{
+			"kubernetes": {
+				Server:                   restCfg.Host,
+				CertificateAuthorityData: restCfg.TLSClientConfig.CAData,
+			},
+		},
+		Contexts: map[string]*clientcmdapi.Context{
+			"kubernetes": {Cluster: "kubernetes", AuthInfo: "admin"},
+		},
+		CurrentContext: "kubernetes",
+		AuthInfos: map[string]*clientcmdapi.AuthInfo{
+			"admin": {
+				ClientCertificateData: restCfg.TLSClientConfig.CertData,
+				ClientKeyData:         restCfg.TLSClientConfig.KeyData,
+			},
+		},
+	}, cfg.Kubeconfig); err != nil {
+		testEnv.Stop() //nolint:errcheck
 		t.Fatal(err)
 	}
 
@@ -95,6 +126,9 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 		return true, nil
 	})
 	if err != nil {
+		close(stopCh)
+		httpServer.Close()
+		testEnv.Stop() //nolint:errcheck
 		t.Fatal(err)
 	}
 
@@ -103,24 +137,37 @@ func StartAuthenticatorTestFramework(t *testing.T, setup AuthenticatorTestFramew
 		args = append(args, "--role", setup.RoleArn)
 	}
 
-	// Create aws-iam-authenticator client
-	kubeAPIServerClientConfig.ExecProvider = &clientcmdapi.ExecConfig{
+	// Build a new rest.Config from the written kubeconfig and add ExecProvider
+	loadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: cfg.Kubeconfig}
+	execRestCfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		loadingRules,
+		&clientcmd.ConfigOverrides{},
+	).ClientConfig()
+	if err != nil {
+		close(stopCh)
+		httpServer.Close()
+		testEnv.Stop() //nolint:errcheck
+		t.Fatal(err)
+	}
+	execRestCfg.ExecProvider = &clientcmdapi.ExecConfig{
 		Command:         setup.AuthenticatorClientBinaryPath,
 		Args:            args,
 		APIVersion:      "client.authentication.k8s.io/v1beta1",
 		InteractiveMode: clientcmdapi.NeverExecInteractiveMode,
 	}
-	kubeAPIServerClientConfig.BearerToken = ""
 
-	clientWithExecAuthenticator, err := client.NewForConfig(kubeAPIServerClientConfig)
+	clientWithExecAuthenticator, err := client.NewForConfig(execRestCfg)
 	if err != nil {
+		close(stopCh)
+		httpServer.Close()
+		testEnv.Stop() //nolint:errcheck
 		t.Fatal(err)
 	}
 
 	return adminClient, clientWithExecAuthenticator, func() {
 		close(stopCh)
 		httpServer.Close()
-		tearDownFn()
+		testEnv.Stop() //nolint:errcheck
 	}
 }
 
