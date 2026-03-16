@@ -12,15 +12,15 @@
 ```bash
 # 1. Build the binary and image
 make bin
-make image
+make image  # prints the image tag — copy it for the next step
 
 # 2. Start a kind cluster with the authenticator running
 make start-dev \
   ADMIN_ARN=arn:aws:iam::123456789012:role/MyAdminRole \
-  AUTHENTICATOR_IMAGE=aws-iam-authenticator:<version>_<commit>_<date>-linux_<arch>
+  AUTHENTICATOR_IMAGE=<tag printed by make image>
 ```
 
-The exact image tag is printed by `make image`. `ADMIN_ARN` is the IAM role or user that will have admin access to the test cluster.
+`ADMIN_ARN` is the IAM role or user ARN that will have admin access to the test cluster.
 
 Once started, the script prints the `kubectl` command to use, with a kubeconfig pointing at your local cluster.
 
@@ -54,10 +54,10 @@ kubectl --kubeconfig=_output/dev/client/kubeconfig.yaml get nodes
 To test the DynamicFile backend mode instead of the default MountedFile mode:
 
 ```bash
-make start-dev-dynamicfile \
-  ADMIN_ARN=arn:aws:iam::123456789012:role/MyAdminRole \
-  AUTHENTICATOR_IMAGE=aws-iam-authenticator:<version>_<commit>_<date>-linux_<arch>
+make start-dev-dynamicfile
 ```
+
+No environment variables required — the script automatically derives `ADMIN_ARN` from `aws sts get-caller-identity` and builds and tags the image itself via `make image`.
 
 ## Tear Down
 
@@ -65,7 +65,9 @@ make start-dev-dynamicfile \
 make kill-dev
 ```
 
-This stops the authenticator container, deletes the kind cluster, removes the Docker network, and cleans up `_output/dev/`.
+This deletes the kind cluster, stops the authenticator container, removes the Docker network, and cleans up `_output/dev/`.
+
+If you want to stop the environment without removing `_output/dev/` (e.g. to restart with a new image without rebuilding config), use `make stop-dev` instead — it does everything except the directory cleanup.
 
 ## Running Tests
 

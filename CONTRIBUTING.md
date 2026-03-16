@@ -32,50 +32,9 @@ make image
 
 The binary is written to `_output/bin/`.
 
-### Running Tests
+### Building and Testing
 
-**Unit tests:**
-```bash
-make test
-```
-
-This runs `go test ./pkg/...` with race detection and generates a coverage report at `coverage.html`.
-
-**Integration tests** (requires AWS credentials and `jq`):
-```bash
-make integration
-```
-
-Integration tests spin up a local API server using etcd and exercise the authenticator against real AWS IAM API calls. You will need AWS credentials with permission to call `sts:GetCallerIdentity`.
-
-**End-to-end tests:**
-```bash
-# Against a kops cluster on AWS (requires full AWS setup)
-make e2e RUNNER=kops
-
-# Against a local kind cluster
-make e2e RUNNER=kind
-```
-
-See `docs/development.md` for setting up a local kind-based development environment.
-
-### Linting
-
-CI runs [golangci-lint](https://golangci-lint.run/) v2.11.3. To run it locally:
-
-```bash
-make lint
-```
-
-Install golangci-lint by following the [official installation guide](https://golangci-lint.run/welcome/install/).
-
-### Code Generation
-
-If you modify types in `pkg/mapper/crd/`, regenerate the CRD client code:
-
-```bash
-make codegen
-```
+See [`docs/development.md`](docs/development.md) for full instructions on building, running tests, linting, setting up a local kind environment, and code generation.
 
 ## Submitting Changes
 

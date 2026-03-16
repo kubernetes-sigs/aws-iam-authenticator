@@ -15,10 +15,11 @@ help:
 	@echo "  format               Check and fix Go formatting"
 	@echo "  codegen              Regenerate CRD client code"
 	@echo "  start-dev            Start local kind dev environment (requires ADMIN_ARN and AUTHENTICATOR_IMAGE)"
-	@echo "  stop-dev             Stop local kind dev environment"
-	@echo "  start-dev-dynamicfile  Start kind dev environment with DynamicFile backend"
-	@echo "  stop-dev-dynamicfile   Stop DynamicFile kind dev environment"
-	@echo "  kill-dev             Tear down dev environment and clean up generated config"
+	@echo "  stop-dev             Tear down dev environment (keep _output/dev/)"
+	@echo "  start-dev-dynamicfile  Start kind dev environment with DynamicFile backend (no env vars needed)"
+	@echo "  stop-dev-dynamicfile   Tear down DynamicFile dev environment (keep _output/dev/)"
+	@echo "  kill-dev             Tear down dev environment and remove generated config"
+	@echo "  checksums            Generate SHA256 checksums for all release binaries"
 	@echo "  clean                Remove build output directory"
 
 PKG ?= sigs.k8s.io/aws-iam-authenticator
