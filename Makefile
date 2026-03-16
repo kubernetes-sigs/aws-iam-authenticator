@@ -1,5 +1,26 @@
 default: bin/aws-iam-authenticator
 
+.PHONY: help
+help:
+	@echo "Available targets:"
+	@echo "  bin                  Build binary for current OS/arch"
+	@echo "  build-all-bins       Build binaries for all platforms"
+	@echo "  build-all-images     Build Docker images for all Linux architectures"
+	@echo "  image                Build Docker image for current arch"
+	@echo "  goreleaser           Build a local snapshot release (requires goreleaser)"
+	@echo "  test                 Run unit tests with coverage"
+	@echo "  integration          Run integration tests (requires AWS credentials)"
+	@echo "  e2e                  Run end-to-end tests: make e2e RUNNER=[kops|kind]"
+	@echo "  lint                 Run golangci-lint"
+	@echo "  format               Check and fix Go formatting"
+	@echo "  codegen              Regenerate CRD client code"
+	@echo "  start-dev            Start local kind dev environment (requires ADMIN_ARN and AUTHENTICATOR_IMAGE)"
+	@echo "  stop-dev             Stop local kind dev environment"
+	@echo "  start-dev-dynamicfile  Start kind dev environment with DynamicFile backend"
+	@echo "  stop-dev-dynamicfile   Stop DynamicFile kind dev environment"
+	@echo "  kill-dev             Tear down dev environment and clean up generated config"
+	@echo "  clean                Remove build output directory"
+
 PKG ?= sigs.k8s.io/aws-iam-authenticator
 GORELEASER := $(shell command -v goreleaser 2> /dev/null)
 
@@ -110,7 +131,7 @@ goreleaser:
 ifndef GORELEASER
 	$(error "goreleaser not found (`go get -u -v github.com/goreleaser/goreleaser` to fix)")
 endif
-	$(GORELEASER) --skip-publish --rm-dist --snapshot
+	$(GORELEASER) --skip-publish --clean --snapshot
 
 .PHONY: test
 test:
@@ -131,6 +152,10 @@ else ifeq ($(RUNNER),kind)
 else
 	echo "make e2e RUNNER=[kops|kind]"
 endif
+
+.PHONY: lint
+lint:
+	golangci-lint run
 
 .PHONY: format
 format:
@@ -160,11 +185,11 @@ start-dev: bin
 stop-dev:
 	./hack/stop-dev-env.sh
 
-.PHONY: start-dev-dynamicfile-e2e
+.PHONY: start-dev-dynamicfile
 start-dev-dynamicfile:
 	./hack/start-dev-env-dynamicfile.sh
 
-.PHONY: stop-dev-dynamicfile-e2e
+.PHONY: stop-dev-dynamicfile
 stop-dev-dynamicfile:
 	./hack/stop-dev-env.sh
 

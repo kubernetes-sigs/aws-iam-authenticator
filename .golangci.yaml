@@ -1,0 +1,6 @@
+# golangci-lint configuration
+# CI runs golangci-lint v2.11.3 with these settings.
+# Install: https://golangci-lint.run/welcome/install/
+# Run locally: make lint
+
+version: "2"
