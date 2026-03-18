@@ -1,3 +1,4 @@
+// Package arn provides utilities for parsing and validating AWS ARNs used in IAM authentication.
 package arn
 
 import (
@@ -9,16 +10,20 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/endpoints"
 )
 
+// PrincipalType represents the type of AWS principal (role, user, etc).
 type PrincipalType int
 
 const (
-	// Supported principals
+	// NONE indicates no principal type is set.
 	NONE PrincipalType = iota
+	// ROLE indicates an IAM role principal.
 	ROLE
+	// USER indicates an IAM user principal.
 	USER
+	// ROOT indicates an AWS root account principal.
 	ROOT
-	FEDERATED_USER
-	ASSUMED_ROLE
+	FEDERATED_USER //nolint:revive // var-naming: ALL_CAPS preserved for backwards compatibility
+	ASSUMED_ROLE   //nolint:revive // var-naming: ALL_CAPS preserved for backwards compatibility
 )
 
 // Canonicalize validates IAM resources are appropriate for the authenticator
@@ -74,6 +79,7 @@ func Canonicalize(arn string) (PrincipalType, string, error) {
 	return NONE, "", fmt.Errorf("service %s in arn %s is not a valid service for identities", parsed.Service, arn)
 }
 
+// StripPath removes the path component from an ARN.
 // TODO: add strip path functionality Canonicalize after testing it in all mappers - this can be used to support role paths in the configmap
 func StripPath(arn string) (string, error) {
 	parsed, err := awsarn.Parse(arn)

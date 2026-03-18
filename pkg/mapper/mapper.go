@@ -1,3 +1,4 @@
+// Package mapper defines the Mapper interface and backend mode constants for IAM identity mapping.
 package mapper
 
 import (
@@ -10,6 +11,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
 )
 
+// Backend mode constants define the available IAM mapping backends.
 const (
 	// Deprecated: use ModeMountedFile instead
 	ModeFile string = "File"
@@ -25,6 +27,7 @@ const (
 	ModeDynamicFile string = "DynamicFile"
 )
 
+// ValidBackendModeChoices lists all valid backend mode identifiers.
 var (
 	ValidBackendModeChoices      = []string{ModeFile, ModeConfigMap, ModeMountedFile, ModeEKSConfigMap, ModeCRD, ModeDynamicFile}
 	DeprecatedBackendModeChoices = map[string]string{
@@ -34,6 +37,7 @@ var (
 	BackendModeChoices = []string{ModeMountedFile, ModeEKSConfigMap, ModeCRD, ModeDynamicFile}
 )
 
+// Mapper is the interface implemented by all IAM identity mapping backends.
 type Mapper interface {
 	Name() string
 	// Start must be non-blocking
@@ -43,6 +47,7 @@ type Mapper interface {
 	UsernamePrefixReserveList() []string
 }
 
+// ValidateBackendMode returns errors for any unrecognized backend mode strings.
 func ValidateBackendMode(modes []string) []error {
 	var errs []error
 

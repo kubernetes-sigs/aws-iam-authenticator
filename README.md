@@ -3,6 +3,20 @@
 A tool to use AWS IAM credentials to authenticate to a Kubernetes cluster.
 The initial work on this tool was driven by Heptio. The project receives contributions from multiple community engineers and is currently maintained by Heptio and Amazon EKS OSS Engineers.
 
+## Table of Contents
+
+- [Why do I want this?](#why-do-i-want-this)
+- [How do I use it?](#how-do-i-use-it)
+- [Kops Usage](#kops-usage)
+- [How does it work?](#how-does-it-work)
+- [What is a cluster ID?](#what-is-a-cluster-id)
+- [Specifying Credentials & Using AWS Profiles](#specifying-credentials--using-aws-profiles)
+- [API Authorization from Outside a Cluster](#api-authorization-from-outside-a-cluster)
+- [Troubleshooting](#troubleshooting)
+- [Full Configuration Format](#full-configuration-format)
+- [Development](#development)
+- [Community, discussion, contribution, and support](#community-discussion-contribution-and-support)
+
 ## Why do I want this?
 If you are an administrator running a Kubernetes cluster on AWS, you already need to manage AWS IAM credentials to provision and update the cluster.
 By using AWS IAM Authenticator for Kubernetes, you avoid having to manage a separate credential for Kubernetes access.
@@ -192,11 +206,9 @@ about how to configure the reserved prefix.
 
 ### 6. Set up kubectl to use authentication tokens provided by AWS IAM Authenticator for Kubernetes
 
-> This requires a 1.10+ `kubectl` binary to work. If you receive `Please enter Username:` when trying to use `kubectl` you need to update to the latest `kubectl`
-
 Finally, once the server is set up you'll want to authenticate.
 You will still need a `kubeconfig` that has the public data about your cluster (cluster CA certificate, endpoint address).
-The `users` section of your configuration, however, should include an exec section ([refer to the v1.10 docs](https://kubernetes.io/docs/admin/authentication/#client-go-credential-plugins))::
+The `users` section of your configuration, however, should include an exec section ([refer to the kubectl credential plugin docs](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins)):
 ```yaml
 # [...]
 users:

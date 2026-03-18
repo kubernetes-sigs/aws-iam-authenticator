@@ -26,7 +26,7 @@ type mockEc2Client struct {
 	Reservations []*ec2types.Reservation
 }
 
-func (c *mockEc2Client) DescribeInstances(ctx context.Context, in *ec2.DescribeInstancesInput, opts ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
+func (c *mockEc2Client) DescribeInstances(_ context.Context, in *ec2.DescribeInstancesInput, _ ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	// simulate the time it takes for aws to return
 	time.Sleep(DescribeDelay * time.Millisecond)
 	var reservations []ec2types.Reservation
@@ -61,7 +61,7 @@ func newMockedEC2ProviderImpl() *ec2ProviderImpl {
 		ec2:                &mockEc2Client{},
 		privateDNSCache:    dnsCache,
 		ec2Requests:        ec2Requests,
-		instanceIdsChannel: make(chan string, maxChannelSize),
+		instanceIDsChannel: make(chan string, maxChannelSize),
 	}
 
 }
@@ -71,12 +71,12 @@ func TestGetPrivateDNSName(t *testing.T) {
 	ec2Provider := newMockedEC2ProviderImpl()
 	ec2Provider.ec2 = &mockEc2Client{Reservations: prepareSingleInstanceOutput()}
 	go ec2Provider.StartEc2DescribeBatchProcessing(context.TODO())
-	dns_name, err := ec2Provider.GetPrivateDNSName(context.TODO(), "ec2-1")
+	dnsName, err := ec2Provider.GetPrivateDNSName(context.TODO(), "ec2-1")
 	if err != nil {
 		t.Error("There is an error which is not expected when calling ec2 API with setting up mocks")
 	}
-	if dns_name != "ec2-dns-1" {
-		t.Errorf("want: %v, got: %v", "ec2-dns-1", dns_name)
+	if dnsName != "ec2-dns-1" {
+		t.Errorf("want: %v, got: %v", "ec2-dns-1", dnsName)
 	}
 }
 
@@ -85,7 +85,7 @@ func prepareSingleInstanceOutput() []*ec2types.Reservation {
 		{
 			Groups: nil,
 			Instances: []ec2types.Instance{
-				ec2types.Instance{
+				{
 					InstanceId:     aws.String("ec2-1"),
 					PrivateDnsName: aws.String("ec2-dns-1"),
 				},
@@ -174,7 +174,7 @@ func TestGetSourceAcctAndArn(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "incorect role arn",
+			name: "incorrect role arn",
 			args: args{
 				roleARN: "arn:aws:iam::123456789876",
 			},

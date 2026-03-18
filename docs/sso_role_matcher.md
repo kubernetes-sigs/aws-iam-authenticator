@@ -6,6 +6,8 @@ Maps configuration for an AWS SSO managed IAM Role to a Kubernetes username and 
 
 Alpha
 
+This feature is in **Alpha** status. Alpha features may change in backwards-incompatible ways and are not recommended for production use. The configuration format and behavior may change between releases without a deprecation period.
+
 ## Use case
 
 Easy and robust configuration for AWS SSO managed roles, which currently have two main issues:

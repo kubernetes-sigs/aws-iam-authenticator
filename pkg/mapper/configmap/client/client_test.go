@@ -103,7 +103,7 @@ func makeTestClient(
 	t *testing.T,
 	userMappings []config.UserMapping,
 	roleMappings []config.RoleMapping,
-	awsAccounts []string,
+	awsAccounts []string, //nolint:unparam // awsAccounts is nil in current tests but kept for test flexibility
 ) Client {
 	d, err := configmap.EncodeMap(userMappings, roleMappings, awsAccounts)
 	if err != nil {

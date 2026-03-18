@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package certs provides utilities for generating and loading TLS certificates.
 package certs
 
 import (
@@ -32,6 +33,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// CertificateOptions holds configuration for X.509 certificate creation or loading.
 type CertificateOptions struct {
 	CertPath string
 	KeyPath  string
@@ -40,6 +42,7 @@ type CertificateOptions struct {
 	Lifetime time.Duration
 }
 
+// GetOrCreateX509KeyPair returns an existing TLS certificate or generates a new self-signed one.
 func GetOrCreateX509KeyPair(opts CertificateOptions) (*tls.Certificate, error) {
 	// first try to load the existing keypair
 	cert, err := LoadX509KeyPair(opts.CertPath, opts.KeyPath)
@@ -75,6 +78,7 @@ func GetOrCreateX509KeyPair(opts CertificateOptions) (*tls.Certificate, error) {
 	return &newCert, err
 }
 
+// LoadX509KeyPair loads an X.509 key pair from the given certificate and key file paths.
 func LoadX509KeyPair(certPath, keyPath string) (*tls.Certificate, error) {
 	// if either file does not exist, we'll consider that not an error but
 	// return a nil
@@ -97,7 +101,7 @@ func LoadX509KeyPair(certPath, keyPath string) (*tls.Certificate, error) {
 }
 
 func dumpPEM(filename string, mode os.FileMode, blockType string, bytes []byte) error {
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode) //nolint:gosec // G304: filename is a config-provided path, not user input
 	if err != nil {
 		return err
 	}
@@ -170,7 +174,7 @@ func selfSignedCertificate(address, hostname string, lifetime time.Duration) ([]
 	return certBytes, keyBytes, nil
 }
 
-// certToPEMBase64 returns the Base64 encoded PEM block for a given DER
+// CertToPEMBase64 returns the Base64 encoded PEM block for a given DER
 // certificate (i.e., it returns "Base64(PEM(asn1))").
 func CertToPEMBase64(der []byte) string {
 	return base64.StdEncoding.EncodeToString(pem.EncodeToMemory(&pem.Block{

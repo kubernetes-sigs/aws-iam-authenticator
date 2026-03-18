@@ -203,7 +203,7 @@ func TestUserIdStrict(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	//When the file doesn't exist, expect mapping should be empty map
+	// When the file doesn't exist, expect mapping should be empty map
 	cfg := config.Config{
 		DynamicFileUserIDStrict: true,
 		DynamicFilePath:         "/tmp/test.txt",
@@ -213,7 +213,7 @@ func TestUserIdStrict(t *testing.T) {
 		t.Errorf("failed to create a DynamicFileMapper")
 	}
 	data := []byte(origFileContent)
-	err = os.WriteFile("/tmp/test.txt", data, 0600)
+	err = os.WriteFile("/tmp/test.txt", data, 0600) //nolint:gosec // G303: fixed path intentional in test
 	if err != nil {
 		t.Errorf("failed to create a local file /tmp/test.txt")
 	}
@@ -226,7 +226,7 @@ func TestUserIdStrict(t *testing.T) {
 		}
 	}
 	ms.mutex.RUnlock()
-	//clean test files
+	// clean test files
 	defer func() {
 		if err := os.Remove("/tmp/test.txt"); err != nil {
 			t.Errorf("failed to delete a local file /tmp/test.txt")
@@ -238,7 +238,7 @@ func TestWithoutUserIdStrict(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	//When the file doesn't exist, expect mapping should be empty map
+	// When the file doesn't exist, expect mapping should be empty map
 	cfg := config.Config{
 		DynamicFileUserIDStrict: false,
 		DynamicFilePath:         "/tmp/test.txt",
@@ -248,7 +248,7 @@ func TestWithoutUserIdStrict(t *testing.T) {
 		t.Errorf("failed to create a DynamicFileMapper")
 	}
 	data := []byte(origFileContent)
-	err = os.WriteFile("/tmp/test.txt", data, 0600)
+	err = os.WriteFile("/tmp/test.txt", data, 0600) //nolint:gosec // G303: fixed path intentional in test
 	if err != nil {
 		t.Errorf("failed to create a local file /tmp/test.txt")
 	}
@@ -261,7 +261,7 @@ func TestWithoutUserIdStrict(t *testing.T) {
 		}
 	}
 	ms.mutex.RUnlock()
-	//clean test files
+	// clean test files
 	defer func() {
 		if err := os.Remove("/tmp/test.txt"); err != nil {
 			t.Errorf("failed to delete a local file /tmp/test.txt")
@@ -273,7 +273,7 @@ func TestLoadDynamicFileMode(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	//When the file doesn't exist, expect mapping should be empty map
+	// When the file doesn't exist, expect mapping should be empty map
 	cfg := config.Config{
 		DynamicFileUserIDStrict: true,
 		DynamicFilePath:         "/tmp/test.txt",
@@ -297,10 +297,10 @@ func TestLoadDynamicFileMode(t *testing.T) {
 	}
 	ms.mutex.RUnlock()
 
-	//user create the dynamic file, expect that mapping should contain item
+	// user create the dynamic file, expect that mapping should contain item
 	time.Sleep(1 * time.Second)
 	data := []byte(origFileContent)
-	err = os.WriteFile("/tmp/test.txt", data, 0600)
+	err = os.WriteFile("/tmp/test.txt", data, 0600) //nolint:gosec // G303: fixed path intentional in test
 	if err != nil {
 		t.Errorf("failed to create a local file /tmp/test.txt")
 	}
@@ -317,9 +317,9 @@ func TestLoadDynamicFileMode(t *testing.T) {
 		t.Fatalf("testing failed as mapping should contain item since dynamic file has content")
 	}
 	ms.mutex.RUnlock()
-	//user update the dynamic file,expect mapping should be equal to expectedMapStore
+	// user update the dynamic file, expect mapping should be equal to expectedMapStore
 	expectedData := []byte(updatedFileContent)
-	if err = os.WriteFile("/tmp/expected.txt", expectedData, 0600); err != nil {
+	if err = os.WriteFile("/tmp/expected.txt", expectedData, 0600); err != nil { //nolint:gosec // G303: fixed path intentional in test
 		t.Errorf("failed to create expected local file /tmp/expected.txt")
 	}
 
@@ -338,9 +338,9 @@ func TestLoadDynamicFileMode(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	//modify the dynamic file
+	// modify the dynamic file
 	data = []byte(updatedFileContent)
-	err = os.WriteFile("/tmp/test.txt", data, 0600)
+	err = os.WriteFile("/tmp/test.txt", data, 0600) //nolint:gosec // G303: fixed path intentional in test
 	if err != nil {
 		t.Errorf("failed to modify a local file /tmp/test.txt")
 	}
@@ -356,7 +356,7 @@ func TestLoadDynamicFileMode(t *testing.T) {
 		t.Fatalf("testing failed as mapping doesn't update after file modification")
 	}
 	ms.mutex.RUnlock()
-	//user delete the dynamic file, expect mapping should be empty
+	// user delete the dynamic file, expect mapping should be empty
 	err = os.Remove("/tmp/test.txt")
 	if err != nil {
 		t.Errorf("failed to delete a local file /tmp/test.txt")
@@ -373,10 +373,10 @@ func TestLoadDynamicFileMode(t *testing.T) {
 		t.Fatalf("testing failed as mapping doesn't update after file deletion")
 	}
 	ms.mutex.RUnlock()
-	//user add file back, expect mapping should be equal to expectedMap
+	// user add file back, expect mapping should be equal to expectedMap
 	time.Sleep(1 * time.Second)
 	data = []byte(updatedFileContent)
-	err = os.WriteFile("/tmp/test.txt", data, 0600)
+	err = os.WriteFile("/tmp/test.txt", data, 0600) //nolint:gosec // G303: fixed path intentional in test
 	if err != nil {
 		t.Errorf("failed to create a local file /tmp/test.txt")
 	}
@@ -393,7 +393,7 @@ func TestLoadDynamicFileMode(t *testing.T) {
 		t.Fatalf("testing failed as mapping doesn't update after file modification")
 	}
 	ms.mutex.RUnlock()
-	//clean test files
+	// clean test files
 	defer func() {
 		if err := os.Remove("/tmp/test.txt"); err != nil {
 			t.Errorf("failed to delete a local file /tmp/test.txt")

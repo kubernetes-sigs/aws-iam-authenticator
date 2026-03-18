@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package server implements the aws-iam-authenticator webhook authentication server.
 package server
 
 import (
@@ -149,8 +150,9 @@ func New(ctx context.Context, cfg config.Config) *Server {
 	logrus.Infof("reconfigure your apiserver with `--authentication-token-webhook-config-file=%s` to enable (assuming default hostPath mounts)", c.GenerateKubeconfigPath)
 	internalHandler := c.getHandler(ctx, backendMapper, c.EC2DescribeInstancesQps, c.EC2DescribeInstancesBurst)
 	c.httpServer = http.Server{
-		ErrorLog: log.New(errLog, "", 0),
-		Handler:  internalHandler,
+		ErrorLog:          log.New(errLog, "", 0),
+		Handler:           internalHandler,
+		ReadHeaderTimeout: 60 * time.Second,
 	}
 	c.listener = listener
 	c.internalHandler = internalHandler
@@ -171,7 +173,12 @@ func (c *Server) Run(stopCh <-chan struct{}) {
 		if healthPort == 0 {
 			healthPort = 21363
 		}
-		if err := http.ListenAndServe(fmt.Sprintf(":%d", healthPort), &healthzHandler{}); err != nil {
+		healthzServer := &http.Server{
+			Addr:              fmt.Sprintf(":%d", healthPort),
+			Handler:           &healthzHandler{},
+			ReadHeaderTimeout: 60 * time.Second,
+		}
+		if err := healthzServer.ListenAndServe(); err != nil {
 			logrus.WithError(err).Error("healthz server exited")
 		}
 	}()
@@ -187,6 +194,7 @@ func (c *Server) Run(stopCh <-chan struct{}) {
 	}
 }
 
+// Close shuts down the authenticator server.
 func (c *Server) Close() {
 	if err := c.listener.Close(); err != nil {
 		logrus.WithError(err).Error("could not close listener")
@@ -202,12 +210,12 @@ func (c *Server) Close() {
 
 type healthzHandler struct{}
 
-func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	if _, err := fmt.Fprintf(w, "ok"); err != nil {
 		logrus.WithError(err).Error("could not write response")
 	}
 }
-func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec2DescribeQps int, ec2DescribeBurst int) *handler {
+func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec2DescribeQPS int, ec2DescribeBurst int) *handler {
 	stopCh := ctx.Done()
 	if c.ServerEC2DescribeInstancesRoleARN != "" {
 		_, err := awsarn.Parse(c.ServerEC2DescribeInstancesRoleARN)
@@ -233,7 +241,7 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 
 	h := &handler{
 		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
-		ec2Provider:               ec2provider.New(ctx, c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, instanceRegion, ec2DescribeQps, ec2DescribeBurst),
+		ec2Provider:               ec2provider.New(ctx, c.ServerEC2DescribeInstancesRoleARN, c.SourceARN, instanceRegion, ec2DescribeQPS, ec2DescribeBurst),
 		clusterID:                 c.ClusterID,
 		backendMapper:             backendMapper,
 		scrubbedAccounts:          c.ScrubbedAWSAccounts,
@@ -245,7 +253,7 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 		h.authenticateEndpoint(ctx, w, r)
 	})
 	h.Handle("/metrics", promhttp.Handler())
-	h.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	h.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		if _, err := fmt.Fprintf(w, "ok"); err != nil {
 			logrus.WithError(err).Error("could not write response")
 		}
@@ -259,6 +267,7 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 	return h
 }
 
+// BuildMapperChain constructs the chain of identity mappers from the given config and mode list.
 func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) {
 	backendMapper := BackendMapper{
 		mappers:      []mapper.Mapper{},
@@ -266,7 +275,7 @@ func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) 
 	}
 	for _, mode := range modes {
 		switch mode {
-		case mapper.ModeFile: //nolint:all
+		case mapper.ModeFile: //nolint:staticcheck // SA1019: ModeFile is deprecated but accepted for backwards compatibility
 			fallthrough
 		case mapper.ModeMountedFile:
 			fileMapper, err := file.NewFileMapper(cfg)
@@ -274,7 +283,7 @@ func BuildMapperChain(cfg config.Config, modes []string) (BackendMapper, error) 
 				return BackendMapper{}, fmt.Errorf("backend-mode %q creation failed: %v", mode, err)
 			}
 			backendMapper.mappers = append(backendMapper.mappers, fileMapper)
-		case mapper.ModeConfigMap: //nolint:all
+		case mapper.ModeConfigMap: //nolint:staticcheck // SA1019: ModeConfigMap is deprecated but accepted for backwards compatibility
 			fallthrough
 		case mapper.ModeEKSConfigMap:
 			configMapMapper, err := configmap.NewConfigMapMapper(cfg)
@@ -454,6 +463,7 @@ func (h *handler) authenticateEndpoint(ctx context.Context, w http.ResponseWrite
 	}
 }
 
+// ReservedPrefixExists reports whether any reserved prefix matches the given username.
 func ReservedPrefixExists(username string, reservedList []string) bool {
 	for _, prefix := range reservedList {
 		if len(prefix) > 0 && strings.HasPrefix(username, prefix) {
@@ -478,14 +488,13 @@ func (h *handler) doMapping(ctx context.Context, identity *token.Identity) (stri
 				return "", nil, fmt.Errorf("invalid username '%s' for mapper %s: username must not begin with with the following prefixes: %v", username, m.Name(), m.UsernamePrefixReserveList())
 			}
 			return username, groups, nil
-		} else {
-			if err != errutil.ErrNotMapped {
-				errs = append(errs, fmt.Errorf("mapper %s Map error: %v", m.Name(), err))
-			}
+		}
+		if err != errutil.ErrNotMapped {
+			errs = append(errs, fmt.Errorf("mapper %s Map error: %v", m.Name(), err))
+		}
 
-			if m.IsAccountAllowed(identity.AccountID) {
-				return identity.CanonicalARN, []string{}, nil
-			}
+		if m.IsAccountAllowed(identity.AccountID) {
+			return identity.CanonicalARN, []string{}, nil
 		}
 	}
 

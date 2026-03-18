@@ -33,13 +33,14 @@ type Server struct {
 	internalHandler *handler
 }
 
+// BackendMapper is the interface implemented by all IAM identity mapping backends.
 type BackendMapper struct {
 	mappers      []mapper.Mapper
 	mapperStopCh chan struct{}
 	currentModes string
 }
 
-// AccessConfig represents the configuration format for cluster access config via backend mode.
+// BackendModeConfig represents the configuration format for cluster access config via backend mode.
 type BackendModeConfig struct {
 	// Time that the object takes from update time to load time
 	LastUpdatedDateTime string `json:"LastUpdatedDateTime"`

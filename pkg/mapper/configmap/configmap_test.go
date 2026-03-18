@@ -180,7 +180,7 @@ func TestLoadConfigMap(t *testing.T) {
 	watcher := watch.NewFake()
 
 	fakeConfigMaps.Fake.AddWatchReactor("configmaps",
-		func(action k8stesting.Action) (handled bool, ret watch.Interface, err error) {
+		func(_ k8stesting.Action) (handled bool, ret watch.Interface, err error) {
 			return true, watcher, nil
 		})
 

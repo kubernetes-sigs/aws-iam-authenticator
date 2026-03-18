@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package config defines configuration types and helpers for aws-iam-authenticator.
 package config
 
 import (
@@ -62,6 +63,7 @@ func (c *Config) GenerateFiles() error {
 	return nil
 }
 
+// GenerateWebhookKubeconfig writes the webhook kubeconfig file used by the Kubernetes API server.
 func (c *Config) GenerateWebhookKubeconfig() error {
 	cert, err := certs.LoadX509KeyPair(c.CertPath(), c.KeyPath())
 	if err != nil {
@@ -81,6 +83,7 @@ func (c *Config) KeyPath() string {
 	return filepath.Join(c.StateDir, "key.pem")
 }
 
+// CertOpts returns the certificate configuration options derived from this Config.
 func (c *Config) CertOpts() certs.CertificateOptions {
 	return certs.CertificateOptions{
 		CertPath: c.CertPath(),
@@ -91,7 +94,7 @@ func (c *Config) CertOpts() certs.CertificateOptions {
 	}
 }
 
-// GetOrCreateCertificate will create a certificate if it cannot find one based on the config
+// GetOrCreateX509KeyPair will create a certificate if it cannot find one based on the config
 func (c *Config) GetOrCreateX509KeyPair() (*tls.Certificate, error) {
 	return certs.GetOrCreateX509KeyPair(c.CertOpts())
 }

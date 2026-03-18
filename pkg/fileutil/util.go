@@ -1,3 +1,4 @@
+// Package fileutil provides utilities for watching and loading dynamic configuration files.
 package fileutil
 
 import (
@@ -12,6 +13,7 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
 
+// FileChangeCallBack defines callbacks invoked when a watched file changes or is deleted.
 type FileChangeCallBack interface {
 	CallBackForFileLoad(dynamicContent []byte) error
 	CallBackForFileDeletion() error
@@ -38,14 +40,15 @@ func waitUntilFileAvailable(filename string, stopCh <-chan struct{}) {
 
 func loadDynamicFile(filename string, stopCh <-chan struct{}) ([]byte, error) {
 	waitUntilFileAvailable(filename, stopCh)
-	if content, err := os.ReadFile(filename); err == nil {
+	content, err := os.ReadFile(filename) //nolint:gosec // G304: filename is a config-provided path, not user input
+	if err == nil {
 		logrus.Infof("LoadDynamicFile: %v is available. content is %s", filename, string(content))
 		return content, nil
-	} else {
-		return nil, err
 	}
+	return nil, err
 }
 
+// StartLoadDynamicFile starts a goroutine that watches the given file for changes and invokes callbacks.
 func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <-chan struct{}) {
 	go wait.Until(func() {
 		// start to watch the file change
@@ -113,6 +116,7 @@ func StartLoadDynamicFile(filename string, callBack FileChangeCallBack, stopCh <
 	}, time.Second, stopCh)
 }
 
+// CalculateTimeDeltaFromUnixInSeconds returns the elapsed seconds since the given Unix timestamp string.
 func CalculateTimeDeltaFromUnixInSeconds(from string) (int64, error) {
 	startTime, err := strconv.ParseInt(from, 10, 64)
 	if err != nil {

@@ -11,8 +11,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package iamauthenticator contains the API group registration for IAM Authenticator CRDs.
 package iamauthenticator
 
+// GroupName is the Kubernetes API group name for IAM Authenticator CRDs.
 const (
 	GroupName = "iamauthenticator.k8s.aws"
 )

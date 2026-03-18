@@ -2,10 +2,10 @@ package file
 
 import (
 	"reflect"
-	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"testing"
 
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
 func init() {

@@ -78,3 +78,6 @@ cscope.*
 coverage.out
 coverage.html
 
+# Go workspace lock file (auto-generated, environment-specific)
+go.work.sum
+

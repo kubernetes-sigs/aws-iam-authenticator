@@ -44,7 +44,7 @@ func validationErrorTest(t *testing.T, partition string, token string, expectedE
 	errorContains(t, err, expectedErr)
 }
 
-func validationSuccessTest(t *testing.T, partition, token string) {
+func validationSuccessTest(t *testing.T, partition, token string) { //nolint:unparam // partition is "aws" in current tests but kept for future partition coverage
 	t.Helper()
 	arn := "arn:aws:iam::123456789012:user/Alice"
 	account := "123456789012"
@@ -115,7 +115,7 @@ type roundTripper struct {
 type errorReadCloser struct {
 }
 
-func (r errorReadCloser) Read(b []byte) (int, error) {
+func (r errorReadCloser) Read(_ []byte) (int, error) {
 	return 0, errors.New("An Error")
 }
 
@@ -123,7 +123,7 @@ func (r errorReadCloser) Close() error {
 	return nil
 }
 
-func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (rt *roundTripper) RoundTrip(_ *http.Request) (*http.Response, error) {
 	return rt.resp, rt.err
 }
 
@@ -143,7 +143,7 @@ func TestSTSEndpoints(t *testing.T) {
 		valid     bool
 		region    string
 	}{
-		// STS global endpoint is only supported in the commerical partition
+		// STS global endpoint is only supported in the commercial partition
 		{"aws", "sts.amazonaws.com", true, ""},
 		{"aws-cn", "sts.amazonaws.com", false, ""},
 		{"aws-us-gov", "sts.amazonaws.com", false, ""},
@@ -205,7 +205,7 @@ func TestSTSEndpoints(t *testing.T) {
 		{"aws-cn", "sts.cn-north-1.api.amazonwebservices.com.cn", true, ""},
 		{"aws", "sts.cn-north-1.api.amazonwebservices.com.cn", false, ""},
 
-		// Due to the Go SDK migration, if a hostname follows the commerical partition format,
+		// Due to the Go SDK migration, if a hostname follows the commercial partition format,
 		// there's no longer a way to check if a region is valid. So, verifications on such hosts
 		// will pass even if the region is invalid/the hostname doesn't exist.
 		{"aws", "sts.not-a-region.amazonaws.com", true, ""},
@@ -240,9 +240,9 @@ func TestSTSEndpointResolution(t *testing.T) {
 		// STS's endpoint resolver (used in verifyHost()) takes in a region and returns an STS hostname.
 		// If it cannot find a region, it puts the region in a commercial domain hostname.
 
-		// This means that the resolver works well in verifying non-commerical hostnames.
+		// This means that the resolver works well in verifying non-commercial hostnames.
 		// If a region doesn't exist in the hostname's partition, the resolver's hostname will either map
-		// it to the correct region or fallback to commerical, either way not matching the given hostname.
+		// it to the correct region or fallback to commercial, either way not matching the given hostname.
 		{"aws-cn", "sts.not-a-region3.amazonaws.com.cn", false, ""},
 		{"aws-cn", "sts.not-a-region4.amazonaws.com.cn", true, "not-a-region4"},
 		{"aws-cn", "sts.not-a-region5.amazonaws.com.cn", false, "us-west-2"},
@@ -250,8 +250,8 @@ func TestSTSEndpointResolution(t *testing.T) {
 		{"aws", "sts.us-west-2.amazonaws.com.cn", false, ""},
 		{"aws", "sts.us-west-2.amazonaws.com.cn", false, "us-west-2"},
 
-		// However, this fallback means that if the verifier is given a commerical hostname,
-		// the resolver is weaker as a tool for verification. All commerical STS hostnames will
+		// However, this fallback means that if the verifier is given a commercial hostname,
+		// the resolver is weaker as a tool for verification. All commercial STS hostnames will
 		// be verified as long as they follow the proper format, even if the host is invalid.
 		{"aws", "sts.not-a-region.amazonaws.com", true, ""},
 		{"aws", "sts.not-a-region.amazonaws.com", true, "not-a-region"},
@@ -320,7 +320,7 @@ func TestVerifyHTTP403(t *testing.T) {
 }
 
 func TestVerifyNoRedirectsFollowed(t *testing.T) {
-	ts2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if _, err := fmt.Fprintln(w, `{"UserId":"AROAIIRR6I5NDJBWMIRQQ:admin-session","Account":"111122223333","Arn":"arn:aws:sts::111122223333:assumed-role/Admin/admin-session"}`); err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -451,28 +451,28 @@ func TestFormatJson(t *testing.T) {
 	cases := []struct {
 		Name             string
 		EnvKey           string
-		ExpectApiVersion string
+		ExpectAPIVersion string
 		IsMalformedEnv   bool
 	}{
 		{
 			Name:             "Default",
-			ExpectApiVersion: clientauthv1beta1.SchemeGroupVersion.String(),
+			ExpectAPIVersion: clientauthv1beta1.SchemeGroupVersion.String(),
 		},
 		{
 			Name:             "Malformed KUBERNETES_EXEC_INFO",
 			EnvKey:           "KUBERNETES_EXEC_INFO",
 			IsMalformedEnv:   true,
-			ExpectApiVersion: clientauthv1beta1.SchemeGroupVersion.String(),
+			ExpectAPIVersion: clientauthv1beta1.SchemeGroupVersion.String(),
 		},
 		{
 			Name:             "KUBERNETES_EXEC_INFO with v1beta1",
 			EnvKey:           "KUBERNETES_EXEC_INFO",
-			ExpectApiVersion: clientauthv1beta1.SchemeGroupVersion.String(),
+			ExpectAPIVersion: clientauthv1beta1.SchemeGroupVersion.String(),
 		},
 		{
 			Name:             "KUBERNETES_EXEC_INFO with v1",
 			EnvKey:           "KUBERNETES_EXEC_INFO",
-			ExpectApiVersion: clientauthv1.SchemeGroupVersion.String(),
+			ExpectAPIVersion: clientauthv1.SchemeGroupVersion.String(),
 		},
 	}
 	for _, c := range cases {
@@ -487,7 +487,7 @@ func TestFormatJson(t *testing.T) {
 					marshal, _ = json.Marshal(clientauthentication.ExecCredential{
 						TypeMeta: v1.TypeMeta{
 							Kind:       "ExecCredential",
-							APIVersion: c.ExpectApiVersion,
+							APIVersion: c.ExpectAPIVersion,
 						},
 					})
 				}
@@ -507,8 +507,8 @@ func TestFormatJson(t *testing.T) {
 				t.Errorf("expected Kind to be %s but was %s", kindExecCredential, output.Kind)
 			}
 
-			if output.APIVersion != c.ExpectApiVersion {
-				t.Errorf("expected APIVersion to be %s but was %s", c.ExpectApiVersion, output.APIVersion)
+			if output.APIVersion != c.ExpectAPIVersion {
+				t.Errorf("expected APIVersion to be %s but was %s", c.ExpectAPIVersion, output.APIVersion)
 			}
 
 			if output.Status.Token != token {
@@ -618,7 +618,7 @@ func TestGetIdentityFromSTSResponse(t *testing.T) {
 	}
 }
 
-func response(account, userID, arn string) getCallerIdentityWrapper {
+func response(account, userID, arn string) getCallerIdentityWrapper { //nolint:unparam // account is parameterized for test clarity even though currently constant
 	wrapper := getCallerIdentityWrapper{}
 	wrapper.GetCallerIdentityResponse.GetCallerIdentityResult.Account = account
 	wrapper.GetCallerIdentityResponse.GetCallerIdentityResult.Arn = arn
@@ -720,7 +720,7 @@ func TestGetWithSTS(t *testing.T) {
 				)
 			}(),
 			time.Unix(1682640000, 0),
-			Token{
+			Token{ //nolint:gosec // G101: false positive, this is a test fixture token value not a hardcoded credential
 				Token:      "k8s-aws-v1.aHR0cHM6Ly9zdHMudXMtd2VzdC0yLmFtYXpvbmF3cy5jb20vP0FjdGlvbj1HZXRDYWxsZXJJZGVudGl0eSZWZXJzaW9uPTIwMTEtMDYtMTUmWC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BU0lBUjJURzQ0VjZBUzNaWkU3QyUyRjIwMjMwNDI4JTJGdXMtd2VzdC0yJTJGc3RzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyMzA0MjhUMDAwMDAwWiZYLUFtei1FeHBpcmVzPTYwJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCUzQngtazhzLWF3cy1pZCZYLUFtei1TaWduYXR1cmU9ZTIxMWRiYTc3YWJhOWRjNDRiMGI2YmUzOGI4ZWFhZDA5MjU5OWM1MTU3ZjYzMTQ0NDRjNWI5ZDg1NzQ3ZjVjZQ",
 				Expiration: time.Unix(1682640000, 0).Local().Add(time.Minute * 14),
 			},

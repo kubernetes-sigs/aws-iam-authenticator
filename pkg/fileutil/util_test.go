@@ -74,7 +74,7 @@ func TestLoadDynamicFile(t *testing.T) {
 	StartLoadDynamicFile(f.Name(), testA, stopCh)
 	defer close(stopCh)
 	time.Sleep(2 * time.Second)
-	err = os.WriteFile(f.Name(), []byte("test"), 0777)
+	err = os.WriteFile(f.Name(), []byte("test"), 0777) //nolint:gosec // G306: permissive perms intentional in test
 	if err != nil {
 		t.Errorf("failed to update a temp file %s, err: %v", f.Name(), err)
 	}
@@ -94,7 +94,7 @@ func TestLoadDynamicFile(t *testing.T) {
 	for _, c := range cases {
 		updateFile(f.Name(), c.input, t)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		//wait until the file reloaded is handled or context timesout
+		// wait until the file reloaded is handled or context timesout
 		wait.Until(func() {
 			testA.mutex.Lock()
 			defer testA.mutex.Unlock()
@@ -104,7 +104,7 @@ func TestLoadDynamicFile(t *testing.T) {
 			}
 		}, 100*time.Millisecond, ctx.Done())
 		cancel()
-		//Validate the content
+		// Validate the content
 		if testA.expectedContent != c.want {
 			t.Errorf(
 				"Unexpected result: TestLoadDynamicFile: got: %s, wanted %s",
@@ -130,7 +130,7 @@ func TestDeleteDynamicFile(t *testing.T) {
 	StartLoadDynamicFile("/tmp/delete.txt", testA, stopCh)
 	defer close(stopCh)
 	time.Sleep(2 * time.Second)
-	if err := os.WriteFile("/tmp/delete.txt", []byte("test"), 0777); err != nil {
+	if err := os.WriteFile("/tmp/delete.txt", []byte("test"), 0777); err != nil { //nolint:gosec // G303, G306: fixed path and permissive perms intentional in test
 		t.Errorf("failed to update a temp file %s, err: %v", "/tmp/delete.txt", err)
 	}
 	for {

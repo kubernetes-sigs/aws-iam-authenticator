@@ -27,7 +27,7 @@ const (
 // ArnLike takes an ARN and returns true if it is matched by the pattern.
 // Each component of the ARN is matched individually as per
 // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition_operators.html#Conditions_ARN
-func ArnLike(arn, pattern string) (bool, error) {
+func ArnLike(arn, pattern string) (bool, error) { //nolint:revive // exported: stutter preserved for backwards compatibility
 	// "parse" the input arn into sections
 	arnSections, err := parse(arn)
 	if err != nil {

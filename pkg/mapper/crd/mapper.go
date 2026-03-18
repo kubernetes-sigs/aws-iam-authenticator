@@ -1,3 +1,4 @@
+// Package crd implements IAM identity mapping using Kubernetes Custom Resource Definitions.
 package crd
 
 import (
@@ -20,7 +21,8 @@ import (
 	informers "sigs.k8s.io/aws-iam-authenticator/pkg/mapper/crd/generated/informers/externalversions"
 )
 
-type CRDMapper struct {
+// CRDMapper implements the Mapper interface using Kubernetes CRDs.
+type CRDMapper struct { //nolint:revive // exported: stutter preserved for backwards compatibility
 	*controller.Controller
 	// iamInformerFactory is an informer factory that must be Started
 	iamInformerFactory informers.SharedInformerFactory
@@ -32,6 +34,7 @@ type CRDMapper struct {
 
 var _ mapper.Mapper = &CRDMapper{}
 
+// NewCRDMapper creates a new CRDMapper connected to the Kubernetes API.
 func NewCRDMapper(cfg config.Config) (*CRDMapper, error) {
 	var err error
 	var k8sconfig *rest.Config
@@ -69,14 +72,17 @@ func NewCRDMapper(cfg config.Config) (*CRDMapper, error) {
 	return &CRDMapper{ctrl, iamInformerFactory, iamMappingsSynced, iamMappingsIndex}, nil
 }
 
+// NewCRDMapperWithIndexer creates a CRDMapper using the provided cache indexer, for testing.
 func NewCRDMapperWithIndexer(iamMappingsIndex cache.Indexer) *CRDMapper {
 	return &CRDMapper{iamMappingsIndex: iamMappingsIndex}
 }
 
+// Name returns the name of this mapper backend.
 func (m *CRDMapper) Name() string {
 	return mapper.ModeCRD
 }
 
+// Start launches the CRD informer and controller goroutines.
 func (m *CRDMapper) Start(stopCh <-chan struct{}) error {
 	m.iamInformerFactory.Start(stopCh)
 	go func() {
@@ -89,6 +95,7 @@ func (m *CRDMapper) Start(stopCh <-chan struct{}) error {
 	return nil
 }
 
+// Map resolves an IAM identity to a Kubernetes identity mapping.
 func (m *CRDMapper) Map(identity *token.Identity) (*config.IdentityMapping, error) {
 	canonicalARN := strings.ToLower(identity.CanonicalARN)
 
@@ -119,10 +126,12 @@ func (m *CRDMapper) Map(identity *token.Identity) (*config.IdentityMapping, erro
 	return nil, errutil.ErrNotMapped
 }
 
-func (m *CRDMapper) IsAccountAllowed(accountID string) bool {
+// IsAccountAllowed returns false; CRD mapper does not support account-based allow-listing.
+func (m *CRDMapper) IsAccountAllowed(_ string) bool {
 	return false
 }
 
+// UsernamePrefixReserveList returns username prefixes reserved by this mapper.
 func (m *CRDMapper) UsernamePrefixReserveList() []string {
 	return []string{}
 }

@@ -43,7 +43,7 @@ var addUserCmd = &cobra.Command{
 	Use:   "user",
 	Short: "add a user entity to an existing aws-auth configmap, not for CRD/file backends",
 	Long:  "NOTE: this does not currently support the CRD and file backends",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		if userARN == "" || userName == "" || len(groups) == 0 {
 			fmt.Printf("invalid empty value in userARN %q, username %q, groups %q\n", userARN, userName, groups)
 			os.Exit(1)
@@ -75,7 +75,7 @@ var addRoleCmd = &cobra.Command{
 	Use:   "role",
 	Short: "add a role entity to an existing aws-auth configmap, not for CRD/file backends",
 	Long:  "NOTE: this does not currently support the CRD and file backends",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		if (roleARN == "" && ssoRole == nil) || userName == "" || len(groups) == 0 {
 			fmt.Printf("invalid empty value in rolearn %q, username %q, groups %q\n", roleARN, userName, groups)
 			os.Exit(1)

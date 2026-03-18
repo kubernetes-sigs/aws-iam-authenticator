@@ -41,7 +41,7 @@ const (
 	// DefaultPort is the default localhost port (chosen randomly).
 	DefaultPort = 21362
 	// Default Ec2 TPS Variables
-	DefaultEC2DescribeInstancesQps   = 15
+	DefaultEC2DescribeInstancesQps   = 15 //nolint:revive // var-naming: const name preserved for backwards compatibility
 	DefaultEC2DescribeInstancesBurst = 5
 )
 
@@ -50,7 +50,7 @@ var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Run a webhook validation server suitable that validates tokens using AWS IAM",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		var err error
 		fmt.Printf("Authenticator Version: %q, %q\n", pkg.Version, pkg.CommitID)
 		metrics.InitMetrics(prometheus.DefaultRegisterer)

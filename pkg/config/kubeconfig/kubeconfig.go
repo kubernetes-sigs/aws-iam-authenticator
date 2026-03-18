@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package kubeconfig provides utilities for generating kubeconfig files.
 package kubeconfig
 
 import (
@@ -26,7 +27,8 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config/certs"
 )
 
-type KubeconfigParams struct {
+// KubeconfigParams holds parameters for generating a kubeconfig file.
+type KubeconfigParams struct { //nolint:revive // exported: stutter preserved for backwards compatibility
 	ServerURL                  string
 	CertificateAuthorityBase64 string
 	Token                      string
@@ -42,8 +44,9 @@ func CreateWebhookKubeconfig(cert *tls.Certificate, kubeconfigPath, serverURL st
 	}.WriteKubeconfig(kubeconfigPath)
 }
 
+// WriteKubeconfig renders and writes a kubeconfig file to the given output path.
 func (p KubeconfigParams) WriteKubeconfig(outputPath string) error {
-	f, err := os.Create(outputPath)
+	f, err := os.Create(outputPath) //nolint:gosec // G304: outputPath is a config-provided path, not user input
 	if err != nil {
 		return err
 	}

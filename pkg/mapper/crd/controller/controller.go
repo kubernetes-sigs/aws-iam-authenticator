@@ -104,8 +104,8 @@ func New(
 	// actions are necessary
 	if _, err := iamMappingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueIAMIdentityMapping,
-		UpdateFunc: func(old, new interface{}) {
-			controller.enqueueIAMIdentityMapping(new)
+		UpdateFunc: func(_, newObj interface{}) {
+			controller.enqueueIAMIdentityMapping(newObj)
 		},
 	}); err != nil {
 		logrus.WithError(err).Fatal("error adding event handler")
@@ -193,7 +193,7 @@ func (c *Controller) syncHandler(key string) (err error) {
 	_, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("invalid resource key %s", key))
-		return nil
+		return nil //nolint:nilerr // invalid keys should not be retried; log and drop
 	}
 
 	iamIdentityMapping, err := c.iamMappingLister.Get(name)

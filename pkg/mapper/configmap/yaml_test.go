@@ -163,7 +163,7 @@ func TestConfigMap(t *testing.T) {
 
 func configMapFromYaml(fileName string) (*v1.ConfigMap, error) {
 	var cm v1.ConfigMap
-	data, err := os.ReadFile(path.Join("./yaml/", fileName))
+	data, err := os.ReadFile(path.Join("./yaml/", fileName)) //nolint:gosec // G304: test helper reads fixture files from a fixed relative path
 	if err != nil {
 		return nil, err
 	}

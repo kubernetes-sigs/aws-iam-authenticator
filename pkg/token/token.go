@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package token provides AWS IAM token generation and verification for Kubernetes authentication.
 package token
 
 import (
@@ -102,7 +103,7 @@ const (
 	// Format of the X-Amz-Date header used for expiration
 	// https://golang.org/pkg/time/#pkg-constants
 	dateHeaderFormat   = "20060102T150405Z"
-	kindExecCredential = "ExecCredential"
+	kindExecCredential = "ExecCredential" //nolint:gosec // G101: false positive, this is a Kubernetes API kind name not a credential
 	execInfoEnvKey     = "KUBERNETES_EXEC_INFO"
 	stsServiceID       = "sts"
 )
@@ -157,7 +158,7 @@ func (e STSThrottling) Error() string {
 	return "sts getCallerIdentity was throttled: " + e.message
 }
 
-// NewSTSError creates a error of type STS.
+// NewSTSThrottling creates a error of type STSThrottling.
 func NewSTSThrottling(m string) STSThrottling {
 	return STSThrottling{message: m}
 }
@@ -334,7 +335,7 @@ type presignFixedTime struct {
 
 func (w *presignFixedTime) PresignHTTP(
 	ctx context.Context, credentials aws.Credentials, r *http.Request,
-	payloadHash string, service string, region string, signingTime time.Time,
+	payloadHash string, service string, region string, _ time.Time,
 	optFns ...func(*v4.SignerOptions),
 ) (url string, signedHeader http.Header, err error) {
 	return w.p.PresignHTTP(ctx, credentials, r,
@@ -467,7 +468,7 @@ func NewVerifier(clusterID, partitionID, region string) Verifier {
 
 	return &tokenVerifier{
 		client: &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 			Timeout: 10 * time.Second,
@@ -533,9 +534,9 @@ func (v *tokenVerifier) verifySTSHostnameFormat(host string) error {
 	options := []bool{true, false}
 	for _, useFIPS := range options {
 		for _, useDualStack := range options {
-			// If the resolver cannot find the region in any partition, it will fall back to the commerical
+			// If the resolver cannot find the region in any partition, it will fall back to the commercial
 			// format, resulting in something like sts.{region}.amazonaws.com. So, if the hostRegion is invalid
-			// or unsupported by STS, then we expect to see an endpoint that follows the commerical partition format.
+			// or unsupported by STS, then we expect to see an endpoint that follows the commercial partition format.
 			endpoint, err := stsResolver.ResolveEndpoint(context.TODO(), sts.EndpointParameters{
 				Region:       aws.String(hostRegion),
 				UseFIPS:      aws.Bool(useFIPS),
@@ -710,7 +711,7 @@ func (v *tokenVerifier) Verify(token string) (*Identity, error) {
 
 	metrics.Get().StsResponses.WithLabelValues(fmt.Sprint(response.StatusCode), stsRegion).Inc()
 	if response.StatusCode != 200 {
-		responseStr := string(responseBody[:])
+		responseStr := string(responseBody)
 		// refer to https://docs.aws.amazon.com/STS/latest/APIReference/CommonErrors.html and log
 		// response body for STS Throttling is {"Error":{"Code":"Throttling","Message":"Rate exceeded","Type":"Sender"},"RequestId":"xxx"}
 		if strings.Contains(responseStr, "Throttling") {

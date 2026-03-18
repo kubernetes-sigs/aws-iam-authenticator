@@ -1,3 +1,4 @@
+// Package metrics defines and initializes Prometheus metrics for aws-iam-authenticator.
 package metrics
 
 import (
@@ -5,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+// Namespace is the Prometheus metrics namespace for aws-iam-authenticator.
 const (
 	Namespace     = "aws_iam_authenticator"
 	Malformed     = "malformed_request"
@@ -18,6 +20,7 @@ const (
 var authenticatorMetrics Metrics
 var initialized bool
 
+// InitMetrics initializes the global authenticator metrics using the provided Prometheus registerer.
 func InitMetrics(registerer prometheus.Registerer) {
 	authenticatorMetrics = createMetrics(registerer)
 	initialized = true
@@ -29,6 +32,7 @@ func Initialized() bool {
 	return initialized
 }
 
+// Get returns the global authenticator Metrics instance.
 func Get() Metrics {
 	return authenticatorMetrics
 }

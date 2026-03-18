@@ -1,3 +1,4 @@
+// Package endpoints provides AWS STS endpoint resolution for different partitions.
 package endpoints
 
 import (
@@ -19,7 +20,7 @@ const (
 )
 
 var (
-	PARTITIONS = []string{
+	PARTITIONS = []string{ //nolint:revive // var-naming: ALL_CAPS preserved for backwards compatibility
 		AwsPartitionID,
 		AwsCnPartitionID,
 		AwsUsGovPartitionID,
@@ -31,7 +32,7 @@ var (
 	}
 )
 
-// Returns the STS domain for the given partition. Returns an error
+// GetSTSPartitionDomain returns the STS domain for the given partition. Returns an error
 // if the partition is not recognized.
 func GetSTSPartitionDomain(partition string) (string, error) {
 	var domain string
@@ -60,9 +61,9 @@ func GetSTSPartitionDomain(partition string) (string, error) {
 	return domain, nil
 }
 
-// Gets the dual stack domain for the given partition. Returns an empty string
-// if the partition does not support dual stack
-// To determine if a partition supports dual stack, check in the SDK
+// GetSTSDualStackPartitionDomain returns the dual stack domain for the given partition. Returns an empty string
+// if the partition does not support dual stack.
+// To determine if a partition supports dual stack, check in the SDK:
 // https://github.com/aws/aws-sdk-go-v2/blob/f68827f17283ffb439c64aa951a6dd4852bef8e2/internal/endpoints/awsrulesfn/partitions.json
 func GetSTSDualStackPartitionDomain(partition string) string {
 	var domain string

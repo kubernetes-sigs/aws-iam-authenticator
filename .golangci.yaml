@@ -1,0 +1,35 @@
+# golangci-lint configuration (v2.11.3)
+# Install: https://golangci-lint.run/welcome/install/
+# Run locally: make lint
+
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # correctness
+    - errcheck        # unchecked errors
+    - govet           # suspicious constructs
+    - staticcheck     # staticcheck rules
+    - ineffassign     # unused assignments
+    - unused          # unused code
+    - copyloopvar     # loop variable capture bugs
+    - nilerr          # returning nil after checking for non-nil error
+    - unconvert       # unnecessary type conversions
+    # security
+    - gosec           # security issues
+    # code quality
+    - gocritic        # opinionated checks
+    - misspell        # common spelling mistakes
+    - nolintlint      # invalid or unnecessary nolint directives
+    - unparam         # unused function parameters
+    - revive          # replacement for golint
+  settings:
+    nolintlint:
+      require-explanation: true  # every //nolint must include a reason
+      require-specific: true     # //nolint must name the specific linter(s)
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

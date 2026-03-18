@@ -34,7 +34,7 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Pre-generate certificate, private key, and kubeconfig files for the server.",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		fmt.Printf("Authenticator Version: %q, %q\n", pkg.Version, pkg.CommitID)
 		cfg, err := getConfig()
 		if err != nil {

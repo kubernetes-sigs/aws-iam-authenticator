@@ -33,7 +33,7 @@ var tokenCmd = &cobra.Command{
 	Use:   "token",
 	Short: "Authenticate using AWS IAM and get token for Kubernetes",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		region := viper.GetString("region")
 		roleARN := viper.GetString("role")
 		externalID := viper.GetString("externalID")
