@@ -132,9 +132,9 @@ image: .image-linux-$(GOARCH)
 .PHONY: goreleaser
 goreleaser:
 ifndef GORELEASER
-	$(error "goreleaser not found (`go get -u -v github.com/goreleaser/goreleaser` to fix)")
+	$(error "goreleaser not found (`go install github.com/goreleaser/goreleaser/v2@latest` to fix)")
 endif
-	$(GORELEASER) --skip-publish --clean --snapshot
+	$(GORELEASER) release --skip=publish --clean --snapshot
 
 .PHONY: test
 test:
