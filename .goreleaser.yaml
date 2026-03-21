@@ -1,4 +1,5 @@
 # Configuration for https://goreleaser.com/
+version: 2
 project_name: authenticator
 
 builds:
@@ -23,11 +24,12 @@ builds:
       - "-s -w -X sigs.k8s.io/aws-iam-authenticator/pkg.Version={{.Version}} -X sigs.k8s.io/aws-iam-authenticator/pkg.CommitID={{.Commit}} -buildid=''"
 
 snapshot:
-  name_template: "git-{{.ShortCommit}}"
+  version_template: "git-{{.ShortCommit}}"
 
 archives:
   - id: bin
-    format: binary
+    formats:
+      - binary
 
 release:
   github:
