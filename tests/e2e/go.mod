@@ -1,6 +1,6 @@
 module sigs.k8s.io/aws-iam-authenticator/tests/e2e
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/onsi/ginkgo/v2 v2.28.1
