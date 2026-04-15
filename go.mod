@@ -20,12 +20,12 @@ require (
 	github.com/spf13/viper v1.21.0
 	golang.org/x/time v0.15.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.35.3
-	k8s.io/apimachinery v0.35.3
-	k8s.io/client-go v0.35.3
-	k8s.io/code-generator v0.35.3
-	k8s.io/component-base v0.35.3
-	k8s.io/sample-controller v0.35.3
+	k8s.io/api v0.36.0-rc.0
+	k8s.io/apimachinery v0.36.0-rc.0
+	k8s.io/client-go v0.36.0-rc.0
+	k8s.io/code-generator v0.36.0-rc.0
+	k8s.io/component-base v0.36.0-rc.0
+	k8s.io/sample-controller v0.36.0-rc.0
 	sigs.k8s.io/yaml v1.6.0
 )
 
