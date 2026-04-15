@@ -1,7 +1,7 @@
 options:
   substitution_option: ALLOW_LOOSE
 steps:
-  - name: gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20221214-1b4dd4d69a
+  - name: gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20260205-38cfa9523f
     entrypoint: /buildx-entrypoint
     args:
       - build
