@@ -149,3 +149,41 @@ func TestMap(t *testing.T) {
 		t.Errorf("FileMapper.Map() does not match expected value for userMapping:\nActual:   %v\nExpected: %v", actual, expected)
 	}
 }
+
+func TestWildcardRoleMap(t *testing.T) {
+	cfg := config.Config{
+		RoleMappings: []config.RoleMapping{
+			{
+				RoleARN:  "arn:aws:iam::012345678910:role/dev-*",
+				Username: "dev-{{SessionName}}",
+				Groups:   []string{"developers"},
+			},
+		},
+	}
+
+	fm, err := NewFileMapper(cfg)
+	if err != nil {
+		t.Fatalf("Could not build FileMapper with wildcard config: %v", err)
+	}
+
+	// Should match
+	identity := token.Identity{
+		CanonicalARN: "arn:aws:iam::012345678910:role/dev-team-lead",
+	}
+	mapping, err := fm.Map(&identity)
+	if err != nil {
+		t.Fatalf("Wildcard role did not match dev-team-lead: %v", err)
+	}
+	if mapping.Username != "dev-{{SessionName}}" {
+		t.Errorf("Expected username dev-{{SessionName}}, got %s", mapping.Username)
+	}
+
+	// Should not match
+	identity = token.Identity{
+		CanonicalARN: "arn:aws:iam::012345678910:role/prod-admin",
+	}
+	_, err = fm.Map(&identity)
+	if err == nil {
+		t.Errorf("Wildcard role unexpectedly matched prod-admin")
+	}
+}
