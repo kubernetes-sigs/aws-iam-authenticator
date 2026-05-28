@@ -73,7 +73,15 @@ func (m *DynamicFileMapper) match(canonicalARN string, mappingARN string) error 
 		// If ARN is provided, ARN must be validated along with UserID.  This avoids having to
 		// support IAM user name/ARN changes. Without preventing this the mapping would look
 		// invalid but still work and auditing would be difficult/impossible.
-		strippedArn, _ := arn.StripPath(mappingARN)
+		if mappingARN == "" {
+			// No ARN configured for this mapping; UserID match alone is sufficient.
+			return nil
+		}
+		strippedArn, err := arn.StripPath(mappingARN)
+		if err != nil {
+			logrus.Infof("invalid mapping arn in dynamic file: %q, treating as mismatch: %v", mappingARN, err)
+			return errutil.ErrIDAndARNMismatch
+		}
 		logrus.Infof("additional arn comparison for IAM arn. arn from STS response is %s, arn in mapper is %s",
 			canonicalARN, strings.ToLower(strippedArn))
 		if strippedArn != "" && canonicalARN != strings.ToLower(strippedArn) {

@@ -593,6 +593,44 @@ func TestMap(t *testing.T) {
 			expectedError:     errutil.ErrIDAndARNMismatch,
 		},
 		{
+			description: "UserID strict: malformed RoleARN is rejected even when UserID matches.",
+			identity: &token.Identity{
+				ARN:          "arn:aws:sts::012345678912:assumed-role/RealRole/session",
+				CanonicalARN: "arn:aws:iam::012345678912:role/RealRole",
+				UserID:       "AROAAAAAAAAAAAAAAAAAA",
+			},
+			users: map[string]config.UserMapping{},
+			roles: map[string]config.RoleMapping{
+				"AROAAAAAAAAAAAAAAAAAA": {
+					RoleARN:  "not-an-arn",
+					UserId:   "AROAAAAAAAAAAAAAAAAAA",
+					Username: "kubernetes-admin",
+					Groups:   []string{"system:masters"},
+				},
+			},
+			expectedIDMapping: nil,
+			expectedError:     errutil.ErrIDAndARNMismatch,
+		},
+		{
+			description: "UserID strict: malformed UserARN is rejected even when UserID matches.",
+			identity: &token.Identity{
+				ARN:          "arn:aws:iam::012345678912:user/real",
+				CanonicalARN: "arn:aws:iam::012345678912:user/real",
+				UserID:       "AIDAAAAAAAAAAAAAAAAAA",
+			},
+			users: map[string]config.UserMapping{
+				"AIDAAAAAAAAAAAAAAAAAA": {
+					UserARN:  "garbage",
+					UserId:   "AIDAAAAAAAAAAAAAAAAAA",
+					Username: "kubernetes-admin",
+					Groups:   []string{"system:masters"},
+				},
+			},
+			roles:             map[string]config.RoleMapping{},
+			expectedIDMapping: nil,
+			expectedError:     errutil.ErrIDAndARNMismatch,
+		},
+		{
 			description: "UserID strict: No ARN provided.",
 			identity: &token.Identity{
 				ARN:          "arn:aws:iam::012345678912:user/matt",
