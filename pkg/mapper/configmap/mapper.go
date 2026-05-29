@@ -13,6 +13,7 @@ import (
 // ConfigMapMapper maps IAM identities using the aws-auth Kubernetes ConfigMap.
 type ConfigMapMapper struct { //nolint:revive // exported: stutter preserved for backwards compatibility
 	*MapStore
+	usernamePrefixReserveList []string
 }
 
 var _ mapper.Mapper = &ConfigMapMapper{}
@@ -23,7 +24,11 @@ func NewConfigMapMapper(cfg config.Config) (*ConfigMapMapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ConfigMapMapper{ms}, nil
+	cm := &ConfigMapMapper{MapStore: ms}
+	if value, exists := cfg.ReservedPrefixConfig[mapper.ModeEKSConfigMap]; exists {
+		cm.usernamePrefixReserveList = value.UsernamePrefixReserveList
+	}
+	return cm, nil
 }
 
 // Name returns the name of this mapper mode.
@@ -70,5 +75,5 @@ func (m *ConfigMapMapper) IsAccountAllowed(accountID string) bool {
 
 // UsernamePrefixReserveList returns the list of reserved username prefixes for this mapper.
 func (m *ConfigMapMapper) UsernamePrefixReserveList() []string {
-	return []string{}
+	return m.usernamePrefixReserveList
 }

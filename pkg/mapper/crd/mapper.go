@@ -30,6 +30,8 @@ type CRDMapper struct { //nolint:revive // exported: stutter preserved for backw
 	iamMappingsSynced cache.InformerSynced
 	// iamMappingsIndex is a custom indexer which allows for indexing on canonical arns
 	iamMappingsIndex cache.Indexer
+	// usernamePrefixReserveList holds reserved username prefixes from cfg.ReservedPrefixConfig that mapped usernames must not begin with.
+	usernamePrefixReserveList []string
 }
 
 var _ mapper.Mapper = &CRDMapper{}
@@ -69,7 +71,17 @@ func NewCRDMapper(cfg config.Config) (*CRDMapper, error) {
 
 	ctrl := controller.New(kubeClient, iamClient, iamMappingInformer)
 
-	return &CRDMapper{ctrl, iamInformerFactory, iamMappingsSynced, iamMappingsIndex}, nil
+	cm := &CRDMapper{
+		Controller:         ctrl,
+		iamInformerFactory: iamInformerFactory,
+		iamMappingsSynced:  iamMappingsSynced,
+		iamMappingsIndex:   iamMappingsIndex,
+	}
+	if value, exists := cfg.ReservedPrefixConfig[mapper.ModeCRD]; exists {
+		cm.usernamePrefixReserveList = value.UsernamePrefixReserveList
+	}
+
+	return cm, nil
 }
 
 // NewCRDMapperWithIndexer creates a CRDMapper using the provided cache indexer, for testing.
@@ -133,5 +145,5 @@ func (m *CRDMapper) IsAccountAllowed(_ string) bool {
 
 // UsernamePrefixReserveList returns username prefixes reserved by this mapper.
 func (m *CRDMapper) UsernamePrefixReserveList() []string {
-	return []string{}
+	return m.usernamePrefixReserveList
 }
