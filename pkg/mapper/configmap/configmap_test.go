@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/config"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/mapper"
 )
 
 func init() {
@@ -374,6 +375,33 @@ func TestBadParseMapSingleQuote(t *testing.T) {
 	emptyMap := map[string]string{}
 	if !reflect.DeepEqual(emptyMap, m2) {
 		t.Fatalf("unexpected %v != %v", emptyMap, m2)
+	}
+}
+
+func TestConfigMapMapperReservedPrefixesFromConfig(t *testing.T) {
+	cfg := config.Config{
+		ReservedPrefixConfig: map[string]config.ReservedPrefixConfig{
+			mapper.ModeEKSConfigMap: {
+				BackendMode:               mapper.ModeEKSConfigMap,
+				UsernamePrefixReserveList: []string{"system:", "eks:"},
+			},
+		},
+	}
+	m := &ConfigMapMapper{}
+	if value, exists := cfg.ReservedPrefixConfig[mapper.ModeEKSConfigMap]; exists {
+		m.usernamePrefixReserveList = value.UsernamePrefixReserveList
+	}
+	got := m.UsernamePrefixReserveList()
+	want := []string{"system:", "eks:"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("UsernamePrefixReserveList() = %v, want %v", got, want)
+	}
+}
+
+func TestConfigMapMapperReservedPrefixesEmptyByDefault(t *testing.T) {
+	m := &ConfigMapMapper{}
+	if got := m.UsernamePrefixReserveList(); len(got) != 0 {
+		t.Errorf("UsernamePrefixReserveList() = %v, want empty, got %v", got, got)
 	}
 }
 
