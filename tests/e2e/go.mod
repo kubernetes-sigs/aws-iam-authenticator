@@ -5,9 +5,9 @@ go 1.26.3
 require (
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
-	k8s.io/api v0.36.0-rc.0
-	k8s.io/apimachinery v0.36.0-rc.0
-	k8s.io/client-go v0.36.0-rc.0
+	k8s.io/api v0.36.0
+	k8s.io/apimachinery v0.36.0
+	k8s.io/client-go v0.36.0
 )
 
 require (
