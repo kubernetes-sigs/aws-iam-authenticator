@@ -37,11 +37,16 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 			return nil, err
 		}
 		if m.RoleARN != "" {
-			_, canonicalizedARN, err := arn.Canonicalize(m.RoleARN)
-			if err != nil {
-				return nil, err
+			if strings.ContainsAny(m.RoleARN, "*?") {
+				// Wildcard ARNs cannot be canonicalized; store as lowercase
+				m.RoleARN = strings.ToLower(m.RoleARN)
+			} else {
+				_, canonicalizedARN, err := arn.Canonicalize(m.RoleARN)
+				if err != nil {
+					return nil, err
+				}
+				m.RoleARN = canonicalizedARN
 			}
-			m.RoleARN = canonicalizedARN
 		}
 		fileMapper.roleMap[m.Key()] = m
 	}
