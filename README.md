@@ -470,8 +470,12 @@ server:
 
   # map nodes that should conform to the username "system:node:<private-DNS>".  This
   # requires the authenticator to query the EC2 API in order to discover the private
-  # DNS of the EC2 instance originating the authentication request.  Optionally, you
-  # may specify a role that should be assumed before querying the EC2 API with the
+  # DNS of the EC2 instance originating the authentication request.
+  # {{EC2PrivateDNSName}} is resolved by using the session name as an EC2 instance
+  # ID and calling ec2:DescribeInstances. Note that if this role is assumed directly
+  # by an IAM User (not via federation), the user can set the session name to any
+  # instance ID, resolving another instance's private DNS and impersonating that node.
+  # Optionally, you may specify a role that should be assumed before querying the EC2 API with the
   # key "server.ec2DescribeInstancesRoleARN" (see above).
   - rolearn: arn:aws:iam::000000000000:role/KubernetesNode
     username: system:node:{{EC2PrivateDNSName}}
