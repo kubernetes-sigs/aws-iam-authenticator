@@ -311,7 +311,7 @@ func newTestEC2Client(rt http.RoundTripper) *ec2.Client {
 		Region: "us-west-2",
 		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
 			"AKID", "SECRET", "SESSION")),
-		HTTPClient: &http.Client{Transport: rt},
+		HTTPClient:       &http.Client{Transport: rt},
 		RetryMaxAttempts: 1,
 	}
 	return ec2.NewFromConfig(cfg)
@@ -368,17 +368,28 @@ func TestEc2ResponseCodeWithRealSDKError(t *testing.T) {
 			},
 			want: "",
 		},
+		{
+			name: "200 success",
+			rt: &statusRoundTripper{
+				status: 200,
+				body:   "",
+			},
+			want: "200",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client := newTestEC2Client(tt.rt)
-			_, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+			output, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
 				InstanceIds: []string{"i-1234567890abcdef0"},
 			})
 			if err == nil {
-				t.Fatal("expected an error from DescribeInstances, got nil")
+				if got := ec2SuccessResponseCode(output.ResultMetadata); got != tt.want {
+					t.Errorf("ec2SuccessResponseCode() = %q, want %q", got, tt.want)
+				}
+				return
 			}
-			if got := ec2ResponseCode(err); got != tt.want {
+			if got := ec2ErrorResponseCode(err); got != tt.want {
 				t.Errorf("ec2ResponseCode() = %q, want %q (err was: %v)", got, tt.want, err)
 			}
 		})
@@ -407,7 +418,7 @@ func TestEc2ResponseCode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ec2ResponseCode(tt.err)
+			got := ec2ErrorResponseCode(tt.err)
 			if got != tt.want {
 				t.Errorf("ec2ResponseCode() = %q, want %q", got, tt.want)
 			}

@@ -73,11 +73,7 @@ type ec2ProviderImpl struct {
 	region             string
 }
 
-// ec2ResponseCode returns the specific HTTP status code (e.g. "400"/"503") for
-// a non-nil DescribeInstances error that carried an HTTP response, or "" if the
-// error had no HTTP response / a zero status (a transport failure, which is not
-// counted here).
-func ec2ResponseCode(err error) string {
+func ec2ErrorResponseCode(err error) string {
 	var respErr *smithyhttp.ResponseError
 	if errors.As(err, &respErr) {
 		if code := respErr.HTTPStatusCode(); code != 0 {
@@ -85,6 +81,13 @@ func ec2ResponseCode(err error) string {
 		}
 	}
 	return ""
+}
+
+func ec2SuccessResponseCode(metadata smithymiddleware.Metadata) string {
+	if raw, ok := middleware.GetRawResponse(metadata).(*smithyhttp.Response); ok {
+		return fmt.Sprint(raw.StatusCode)
+	}
+	return "200"
 }
 
 // New creates and starts a new EC2Provider that resolves instance IDs to private DNS names.
@@ -223,7 +226,7 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(ctx context.Context, id string) (str
 		InstanceIds: []string{id},
 	})
 	if err != nil {
-		if code := ec2ResponseCode(err); code != "" {
+		if code := ec2ErrorResponseCode(err); code != "" {
 			metrics.Get().EC2Responses.WithLabelValues(code, p.region).Inc()
 		} else {
 			metrics.Get().EC2ConnectionFailure.WithLabelValues(p.region).Inc()
@@ -231,7 +234,7 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(ctx context.Context, id string) (str
 		p.unsetRequestInFlightForInstanceID(id)
 		return "", fmt.Errorf("failed querying private DNS from EC2 API for node %s: %s ", id, err.Error())
 	}
-	metrics.Get().EC2Responses.WithLabelValues("200", p.region).Inc()
+	metrics.Get().EC2Responses.WithLabelValues(ec2SuccessResponseCode(output.ResultMetadata), p.region).Inc()
 	for _, reservation := range output.Reservations {
 		for _, instance := range reservation.Instances {
 			if aws.ToString(instance.InstanceId) == id {
@@ -291,13 +294,13 @@ func (p *ec2ProviderImpl) getPrivateDNSAndPublishToCache(ctx context.Context, in
 	})
 	if err != nil {
 		logrus.Errorf("Batch call failed querying private DNS from EC2 API for nodes [%s] : with error = []%s ", instanceIDList, err.Error())
-		if code := ec2ResponseCode(err); code != "" {
+		if code := ec2ErrorResponseCode(err); code != "" {
 			metrics.Get().EC2Responses.WithLabelValues(code, p.region).Inc()
 		} else {
 			metrics.Get().EC2ConnectionFailure.WithLabelValues(p.region).Inc()
 		}
 	} else {
-		metrics.Get().EC2Responses.WithLabelValues("200", p.region).Inc()
+		metrics.Get().EC2Responses.WithLabelValues(ec2SuccessResponseCode(output.ResultMetadata), p.region).Inc()
 		if output.NextToken != nil {
 			logrus.Debugf("Successfully got the batch result , output.NextToken = %s ", *output.NextToken)
 		} else {
