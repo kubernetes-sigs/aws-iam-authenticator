@@ -44,6 +44,8 @@ type Metrics struct {
 	EC2DescribeInstanceCallCount prometheus.Counter
 	StsConnectionFailure         *prometheus.CounterVec
 	StsResponses                 *prometheus.CounterVec
+	EC2Responses                 *prometheus.CounterVec
+	EC2ConnectionFailure         *prometheus.CounterVec
 	DynamicFileFailures          prometheus.Counter
 	StsThrottling                *prometheus.CounterVec
 	E2ELatency                   *prometheus.HistogramVec
@@ -89,6 +91,20 @@ func createMetrics(reg prometheus.Registerer) Metrics {
 				Name:      "sts_responses_total",
 				Help:      "Sts responses with error code label",
 			}, []string{"ResponseCode", "StsRegion"},
+		),
+		EC2Responses: factory.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: Namespace,
+				Name:      "ec2_responses_total",
+				Help:      "EC2 responses with error code label",
+			}, []string{"ResponseCode", "Region"},
+		),
+		EC2ConnectionFailure: factory.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: Namespace,
+				Name:      "ec2_connection_failures_total",
+				Help:      "EC2 call could not succeed or timed out",
+			}, []string{"Region"},
 		),
 		Latency: factory.NewHistogramVec(
 			prometheus.HistogramOpts{

@@ -70,6 +70,24 @@ type ec2ProviderImpl struct {
 	privateDNSCache    *ec2PrivateDNSCache
 	ec2Requests        *ec2Requests
 	instanceIDsChannel chan string
+	region             string
+}
+
+func ec2ErrorResponseCode(err error) string {
+	var respErr *smithyhttp.ResponseError
+	if errors.As(err, &respErr) {
+		if code := respErr.HTTPStatusCode(); code != 0 {
+			return fmt.Sprint(code)
+		}
+	}
+	return ""
+}
+
+func ec2SuccessResponseCode(metadata smithymiddleware.Metadata) string {
+	if raw, ok := middleware.GetRawResponse(metadata).(*smithyhttp.Response); ok {
+		return fmt.Sprint(raw.StatusCode)
+	}
+	return "200"
 }
 
 // New creates and starts a new EC2Provider that resolves instance IDs to private DNS names.
@@ -87,6 +105,7 @@ func New(ctx context.Context, roleARN, sourceARN, region string, qps int, burst 
 		privateDNSCache:    dnsCache,
 		ec2Requests:        ec2Requests,
 		instanceIDsChannel: make(chan string, maxChannelSize),
+		region:             region,
 	}
 }
 
@@ -207,9 +226,15 @@ func (p *ec2ProviderImpl) GetPrivateDNSName(ctx context.Context, id string) (str
 		InstanceIds: []string{id},
 	})
 	if err != nil {
+		if code := ec2ErrorResponseCode(err); code != "" {
+			metrics.Get().EC2Responses.WithLabelValues(code, p.region).Inc()
+		} else {
+			metrics.Get().EC2ConnectionFailure.WithLabelValues(p.region).Inc()
+		}
 		p.unsetRequestInFlightForInstanceID(id)
 		return "", fmt.Errorf("failed querying private DNS from EC2 API for node %s: %s ", id, err.Error())
 	}
+	metrics.Get().EC2Responses.WithLabelValues(ec2SuccessResponseCode(output.ResultMetadata), p.region).Inc()
 	for _, reservation := range output.Reservations {
 		for _, instance := range reservation.Instances {
 			if aws.ToString(instance.InstanceId) == id {
@@ -269,7 +294,13 @@ func (p *ec2ProviderImpl) getPrivateDNSAndPublishToCache(ctx context.Context, in
 	})
 	if err != nil {
 		logrus.Errorf("Batch call failed querying private DNS from EC2 API for nodes [%s] : with error = []%s ", instanceIDList, err.Error())
+		if code := ec2ErrorResponseCode(err); code != "" {
+			metrics.Get().EC2Responses.WithLabelValues(code, p.region).Inc()
+		} else {
+			metrics.Get().EC2ConnectionFailure.WithLabelValues(p.region).Inc()
+		}
 	} else {
+		metrics.Get().EC2Responses.WithLabelValues(ec2SuccessResponseCode(output.ResultMetadata), p.region).Inc()
 		if output.NextToken != nil {
 			logrus.Debugf("Successfully got the batch result , output.NextToken = %s ", *output.NextToken)
 		} else {
