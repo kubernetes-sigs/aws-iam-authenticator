@@ -2,8 +2,11 @@ package ec2provider
 
 import (
 	"context"
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
@@ -282,4 +286,131 @@ func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	}
 
 	return resp, nil
+}
+
+type statusRoundTripper struct {
+	status int
+	body   string
+	err    error
+}
+
+func (s *statusRoundTripper) RoundTrip(_ *http.Request) (*http.Response, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return &http.Response{
+		StatusCode: s.status,
+		Header:     make(http.Header),
+		// Body must be non-nil: the EC2 error deserializer io.Copy's from it.
+		Body: io.NopCloser(strings.NewReader(s.body)),
+	}, nil
+}
+
+func newTestEC2Client(rt http.RoundTripper) *ec2.Client {
+	cfg := aws.Config{
+		Region: "us-west-2",
+		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
+			"AKID", "SECRET", "SESSION")),
+		HTTPClient: &http.Client{Transport: rt},
+		RetryMaxAttempts: 1,
+	}
+	return ec2.NewFromConfig(cfg)
+}
+
+func TestEc2ResponseCodeWithRealSDKError(t *testing.T) {
+	// Shape the real ec2query deserializer expects (Errors>Error>Code/Message).
+	errorBody := func(code, msg string) string {
+		return `<Response><Errors><Error><Code>` + code + `</Code><Message>` + msg +
+			`</Message></Error></Errors><RequestID>test-request-id</RequestID></Response>`
+	}
+
+	tests := []struct {
+		name string
+		rt   *statusRoundTripper
+		want string
+	}{
+		{
+			name: "400 throttling response",
+			rt: &statusRoundTripper{
+				status: 400,
+				body:   errorBody("RequestLimitExceeded", "Rate exceeded"),
+			},
+			want: "400",
+		},
+		{
+			name: "400 invalid instance id",
+			rt: &statusRoundTripper{
+				status: 400,
+				body:   errorBody("InvalidInstanceID.NotFound", "The instance ID does not exist"),
+			},
+			want: "400",
+		},
+		{
+			name: "403 unauthorized",
+			rt: &statusRoundTripper{
+				status: 403,
+				body:   errorBody("UnauthorizedOperation", "You are not authorized"),
+			},
+			want: "403",
+		},
+		{
+			name: "503 service unavailable",
+			rt: &statusRoundTripper{
+				status: 503,
+				body:   errorBody("ServiceUnavailable", "Service unavailable"),
+			},
+			want: "503",
+		},
+		{
+			name: "transport failure (no HTTP response)",
+			rt: &statusRoundTripper{
+				err: errors.New("dial tcp 10.0.0.1:443: connect: connection refused"),
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestEC2Client(tt.rt)
+			_, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+				InstanceIds: []string{"i-1234567890abcdef0"},
+			})
+			if err == nil {
+				t.Fatal("expected an error from DescribeInstances, got nil")
+			}
+			if got := ec2ResponseCode(err); got != tt.want {
+				t.Errorf("ec2ResponseCode() = %q, want %q (err was: %v)", got, tt.want, err)
+			}
+		})
+	}
+}
+
+func TestEc2ResponseCode(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{
+			name: "nil error",
+			err:  nil,
+			want: "",
+		},
+		{
+			name: "response error with zero status",
+			err: &smithyhttp.ResponseError{
+				Response: &smithyhttp.Response{Response: &http.Response{StatusCode: 0}},
+				Err:      errors.New("x"),
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ec2ResponseCode(tt.err)
+			if got != tt.want {
+				t.Errorf("ec2ResponseCode() = %q, want %q", got, tt.want)
+			}
+		})
+	}
 }
