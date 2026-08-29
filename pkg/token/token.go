@@ -106,6 +106,9 @@ const (
 	kindExecCredential = "ExecCredential" //nolint:gosec // G101: false positive, this is a Kubernetes API kind name not a credential
 	execInfoEnvKey     = "KUBERNETES_EXEC_INFO"
 	stsServiceID       = "sts"
+	// userAgentPrefix is used to build the User-Agent header the verifier sends
+	// when validating pre-signed sts:GetCallerIdentity URLs against STS.
+	userAgentPrefix = "aws-iam-authenticator"
 )
 
 // Token is generated and used by Kubernetes client-go to authenticate with a Kubernetes cluster.
@@ -688,6 +691,7 @@ func (v *tokenVerifier) Verify(token string) (*Identity, error) {
 	}
 	req.Header.Set(clusterIDHeader, v.clusterID)
 	req.Header.Set("accept", "application/json")
+	req.Header.Set("User-Agent", fmt.Sprintf("%s/%s", userAgentPrefix, pkg.Version))
 
 	response, err := v.client.Do(req)
 	if err != nil {

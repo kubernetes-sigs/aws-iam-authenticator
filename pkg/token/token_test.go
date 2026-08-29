@@ -28,6 +28,7 @@ import (
 	"k8s.io/client-go/pkg/apis/clientauthentication"
 	clientauthv1 "k8s.io/client-go/pkg/apis/clientauthentication/v1"
 	clientauthv1beta1 "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
+	"sigs.k8s.io/aws-iam-authenticator/pkg"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/endpoints"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/metrics"
 )
@@ -444,6 +445,42 @@ func TestVerifyCanonicalARN(t *testing.T) {
 	}
 	if identity.CanonicalARN != canonicalARN {
 		t.Errorf("expected CannonicalARN to be %q but was %q", canonicalARN, identity.CanonicalARN)
+	}
+}
+
+// capturingRoundTripper records the last request it sees and returns a fixed
+// successful GetCallerIdentity response.
+type capturingRoundTripper struct {
+	lastRequest *http.Request
+	body        string
+}
+
+func (rt *capturingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	rt.lastRequest = req
+	return &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewReader([]byte(rt.body))),
+	}, nil
+}
+
+func TestVerifySetsUserAgent(t *testing.T) {
+	rt := &capturingRoundTripper{
+		body: jsonResponse("arn:aws:iam::123456789012:user/Alice", "123456789012", "Alice"),
+	}
+	verifier := &tokenVerifier{
+		client:            &http.Client{Transport: rt},
+		validSTShostnames: make(map[string]bool),
+		partition:         "aws",
+	}
+	if _, err := verifier.Verify(validToken); err != nil {
+		t.Fatalf("received unexpected error: %s", err)
+	}
+	if rt.lastRequest == nil {
+		t.Fatal("expected an STS request to be made but none was captured")
+	}
+	want := fmt.Sprintf("%s/%s", userAgentPrefix, pkg.Version)
+	if got := rt.lastRequest.Header.Get("User-Agent"); got != want {
+		t.Errorf("expected User-Agent header %q but got %q", want, got)
 	}
 }
 
