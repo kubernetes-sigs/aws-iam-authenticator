@@ -114,6 +114,12 @@ type Token struct {
 	Expiration time.Time
 }
 
+// STSPresignAPI is satisfied by *sts.PresignClient and allows callers to inject a
+// pre-configured client with custom credentials, region, or endpoint settings.
+type STSPresignAPI interface {
+	PresignGetCallerIdentity(ctx context.Context, params *sts.GetCallerIdentityInput, optFns ...func(*sts.PresignOptions)) (*v4.PresignedHTTPRequest, error)
+}
+
 // GetTokenOptions is passed to GetWithOptions to provide an extensible get token interface
 type GetTokenOptions struct {
 	Region               string
@@ -121,6 +127,9 @@ type GetTokenOptions struct {
 	AssumeRoleARN        string
 	AssumeRoleExternalID string
 	SessionName          string
+	// STSPresignClient, when set, is used directly and skips config.LoadDefaultConfig.
+	// Region, AssumeRoleARN, AssumeRoleExternalID, and SessionName are ignored.
+	STSPresignClient STSPresignAPI
 }
 
 // FormatError is returned when there is a problem with token that is
@@ -228,6 +237,10 @@ func StdinStderrTokenProvider() (string, error) {
 func (g generator) GetWithOptions(ctx context.Context, options *GetTokenOptions) (Token, error) {
 	if options.ClusterID == "" {
 		return Token{}, fmt.Errorf("ClusterID is required")
+	}
+
+	if options.STSPresignClient != nil {
+		return g.presignToken(options.ClusterID, options.STSPresignClient)
 	}
 
 	// create a session with the "base" credentials available
@@ -354,9 +367,10 @@ func withPresignFixedTime(t time.Time) func(*sts.PresignOptions) {
 
 // GetWithSTS returns a token valid for clusterID using the given STS client.
 func (g generator) GetWithSTS(clusterID string, stsClient *sts.Client) (Token, error) {
-	// Generate an sts:GetCallerIdentity presigned request
-	presignClient := sts.NewPresignClient(stsClient)
+	return g.presignToken(clusterID, sts.NewPresignClient(stsClient))
+}
 
+func (g generator) presignToken(clusterID string, presignClient STSPresignAPI) (Token, error) {
 	presignedRequest, err := presignClient.PresignGetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{},
 		func(presignOptions *sts.PresignOptions) {
 			// Configure the presigned request with a fixed time so we can control the now time for testing
