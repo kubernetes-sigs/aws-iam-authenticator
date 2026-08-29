@@ -118,6 +118,56 @@ func TestRoleARNMapping(t *testing.T) {
 	}
 }
 
+func TestWildcardRoleARNMapping(t *testing.T) {
+	rm := RoleMapping{
+		RoleARN:  "arn:aws:iam::012345678912:role/*",
+		Username: "wildcard-admin",
+		Groups:   []string{"system:masters"},
+	}
+
+	// Should match any role in the account
+	matches := rm.Matches("arn:aws:iam::012345678912:role/anyrole")
+	if !matches {
+		t.Errorf("Wildcard RoleMapping did not match role in same account")
+	}
+
+	// Should match roles with paths
+	matches = rm.Matches("arn:aws:iam::012345678912:role/path/to/role")
+	if !matches {
+		t.Errorf("Wildcard RoleMapping did not match role with path")
+	}
+
+	// Should NOT match a different account
+	matches = rm.Matches("arn:aws:iam::999999999999:role/anyrole")
+	if matches {
+		t.Errorf("Wildcard RoleMapping unexpectedly matched different account")
+	}
+
+	// Should NOT match a user ARN
+	matches = rm.Matches("arn:aws:iam::012345678912:user/someuser")
+	if matches {
+		t.Errorf("Wildcard RoleMapping unexpectedly matched user ARN")
+	}
+}
+
+func TestWildcardRoleARNPrefixMapping(t *testing.T) {
+	rm := RoleMapping{
+		RoleARN:  "arn:aws:iam::012345678912:role/dev-*",
+		Username: "dev-{{SessionName}}",
+		Groups:   []string{"developers"},
+	}
+
+	matches := rm.Matches("arn:aws:iam::012345678912:role/dev-team-lead")
+	if !matches {
+		t.Errorf("Prefix wildcard RoleMapping did not match dev-team-lead")
+	}
+
+	matches = rm.Matches("arn:aws:iam::012345678912:role/prod-admin")
+	if matches {
+		t.Errorf("Prefix wildcard RoleMapping unexpectedly matched prod-admin")
+	}
+}
+
 func TestUserARNMapping(t *testing.T) {
 	um := UserMapping{
 		UserARN:  "arn:aws:iam::012345678912:user/Shanice",

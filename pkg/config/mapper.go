@@ -68,10 +68,23 @@ func (m *RoleMapping) Validate() error {
 	return nil
 }
 
+// hasWildcards returns true if the string contains ArnLike wildcard characters
+func hasWildcards(s string) bool {
+	return strings.ContainsAny(s, "*?")
+}
+
 // Matches returns true if the supplied ARN or SSO settings matches
 // this RoleMapping
 func (m *RoleMapping) Matches(subject string) bool {
 	if m.RoleARN != "" {
+		if hasWildcards(m.RoleARN) {
+			ok, err := arn.ArnLike(subject, strings.ToLower(m.RoleARN))
+			if err != nil {
+				logrus.Error("Could not parse subject ARN for wildcard match: ", err)
+				return false
+			}
+			return ok
+		}
 		return strings.EqualFold(m.RoleARN, subject)
 	}
 
