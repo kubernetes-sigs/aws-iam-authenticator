@@ -37,6 +37,26 @@ var (
 	BackendModeChoices = []string{ModeMountedFile, ModeEKSConfigMap, ModeCRD, ModeDynamicFile}
 )
 
+// DefaultReservedUsernamePrefixes are username prefixes that are always reserved,
+// regardless of operator configuration. A mapped username (from aws-auth
+// mapRoles/mapUsers or any other backend) must not begin with one of these.
+//
+// "system:" is reserved to prevent a mapping from impersonating a Kubernetes
+// system identity (e.g. "system:node:...", "system:kube-controller-manager"),
+// which would bypass RBAC.
+var DefaultReservedUsernamePrefixes = []string{"system:"}
+
+// ReservedUsernamePrefixes returns the reserved username prefixes for the given
+// backend mode: the always-reserved defaults merged with any operator-configured
+// prefixes from cfg.ReservedPrefixConfig, de-duplicated.
+func ReservedUsernamePrefixes(cfg config.Config, mode string) []string {
+	prefixes := sets.NewString(DefaultReservedUsernamePrefixes...)
+	if value, exists := cfg.ReservedPrefixConfig[mode]; exists {
+		prefixes.Insert(value.UsernamePrefixReserveList...)
+	}
+	return prefixes.List()
+}
+
 // Mapper is the interface implemented by all IAM identity mapping backends.
 type Mapper interface {
 	Name() string

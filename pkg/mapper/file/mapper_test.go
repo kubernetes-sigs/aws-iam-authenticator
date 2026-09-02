@@ -80,6 +80,7 @@ func TestNewFileMapper(t *testing.T) {
 		accountMap: map[string]bool{
 			"000000000000": true,
 		},
+		usernamePrefixReserveList: []string{"system:"},
 	}
 
 	actual, err := NewFileMapper(cfg)

@@ -200,8 +200,14 @@ The aws-iam-authenticator can support reserved prefix for k8s username. If the r
 set, then the username with the reserved prefix will not be authenticated with the error
 "username must not begin with with the following prefixes:".
 
+The `system:` prefix is always reserved for every backend, regardless of `reservedPrefixConfig`.
+This prevents an `aws-auth` `mapRoles`/`mapUsers` entry (or any other backend mapping) from
+mapping to a Kubernetes system identity such as `system:node:...` or
+`system:kube-controller-manager`, which would bypass RBAC. Any additional prefixes you configure
+via `reservedPrefixConfig` are reserved in addition to `system:`.
+
 Check https://github.com/kubernetes-sigs/aws-iam-authenticator/blob/master/hack/dev/authenticator_with_dynamicfile_mode.yaml
-about how to configure the reserved prefix.
+about how to configure additional reserved prefixes.
 
 
 ### 6. Set up kubectl to use authentication tokens provided by AWS IAM Authenticator for Kubernetes
