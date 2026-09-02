@@ -25,9 +25,7 @@ func NewConfigMapMapper(cfg config.Config) (*ConfigMapMapper, error) {
 		return nil, err
 	}
 	cm := &ConfigMapMapper{MapStore: ms}
-	if value, exists := cfg.ReservedPrefixConfig[mapper.ModeEKSConfigMap]; exists {
-		cm.usernamePrefixReserveList = value.UsernamePrefixReserveList
-	}
+	cm.usernamePrefixReserveList = mapper.ReservedUsernamePrefixes(cfg, mapper.ModeEKSConfigMap)
 	return cm, nil
 }
 

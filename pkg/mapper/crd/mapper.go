@@ -77,9 +77,7 @@ func NewCRDMapper(cfg config.Config) (*CRDMapper, error) {
 		iamMappingsSynced:  iamMappingsSynced,
 		iamMappingsIndex:   iamMappingsIndex,
 	}
-	if value, exists := cfg.ReservedPrefixConfig[mapper.ModeCRD]; exists {
-		cm.usernamePrefixReserveList = value.UsernamePrefixReserveList
-	}
+	cm.usernamePrefixReserveList = mapper.ReservedUsernamePrefixes(cfg, mapper.ModeCRD)
 
 	return cm, nil
 }

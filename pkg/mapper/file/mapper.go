@@ -63,9 +63,7 @@ func NewFileMapper(cfg config.Config) (*FileMapper, error) {
 	for _, m := range cfg.AutoMappedAWSAccounts {
 		fileMapper.accountMap[m] = true
 	}
-	if value, exists := cfg.ReservedPrefixConfig[mapper.ModeMountedFile]; exists {
-		fileMapper.usernamePrefixReserveList = value.UsernamePrefixReserveList
-	}
+	fileMapper.usernamePrefixReserveList = mapper.ReservedUsernamePrefixes(cfg, mapper.ModeMountedFile)
 	return fileMapper, nil
 }
 

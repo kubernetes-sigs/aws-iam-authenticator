@@ -25,9 +25,7 @@ func NewDynamicFileMapper(cfg config.Config) (*DynamicFileMapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	if value, exists := cfg.ReservedPrefixConfig[mapper.ModeDynamicFile]; exists {
-		ms.usernamePrefixReserveList = value.UsernamePrefixReserveList
-	}
+	ms.usernamePrefixReserveList = mapper.ReservedUsernamePrefixes(cfg, mapper.ModeDynamicFile)
 	return &DynamicFileMapper{ms}, nil
 }
 
