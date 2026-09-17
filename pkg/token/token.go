@@ -98,8 +98,11 @@ const (
 	// The actual token expiration (presigned STS urls are valid for 15 minutes after timestamp in x-amz-date).
 	presignedURLExpiration = 15 * time.Minute
 	v1Prefix               = "k8s-aws-v1."
-	maxTokenLenBytes       = 1024 * 4
-	clusterIDHeader        = "x-k8s-aws-id"
+	// AWS STS allows session tokens up to 4096 bytes (a limit AWS has said may grow),
+	// and embedding one in a presigned URL that is then base64url-encoded can push the
+	// resulting bearer token past that. 16KiB keeps a fail-fast bound while covering that.
+	maxTokenLenBytes = 1024 * 16
+	clusterIDHeader  = "x-k8s-aws-id"
 	// Format of the X-Amz-Date header used for expiration
 	// https://golang.org/pkg/time/#pkg-constants
 	dateHeaderFormat   = "20060102T150405Z"
