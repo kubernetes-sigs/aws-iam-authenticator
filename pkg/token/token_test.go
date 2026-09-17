@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"slices"
 	"strconv"
@@ -298,6 +299,32 @@ func TestVerifyTokenPreSTSValidations(t *testing.T) {
 	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.eu-west-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
 	validationSuccessTest(t, "aws", toToken(fmt.Sprintf("https://sts.sa-east-1.amazonaws.com/?action=GetCallerIdentity&x-amz-signedheaders=x-k8s-aws-id&x-amz-date=%s&x-amz-expires=60", timeStr)))
 	validationErrorTest(t, "aws", toToken(fmt.Sprintf("https://sts.us-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAAAAAAAAAAAAAAAAA%%2F20220601%%2Fus-west-2%%2Fsts%%2Faws4_request&X-Amz-Date=%s&X-Amz-Expires=900&X-Amz-Security-Token=XXXXXXXXXXXXX&X-Amz-SignedHeaders=host%%3Bx-k8s-aws-id&x-amz-credential=eve&X-Amz-Signature=999999999999999999", timeStr)), "input token was not properly formatted: duplicate query parameter found:")
+}
+
+// TestVerifyLargeSecurityToken proves that a bearer token embedding a full
+// 4096-byte X-Amz-Security-Token (the STS session-token size AWS now allows)
+// is larger than the old 4096-byte maxTokenLenBytes, yet still passes
+// validation under the current limit.
+func TestVerifyLargeSecurityToken(t *testing.T) {
+	const oldMaxTokenLenBytes = 1024 * 4
+
+	// The base64 alphabet, including '+' and '/' which require percent-encoding
+	// in a query string, padded with trailing '=' to match the shape of a real
+	// STS session token, sized to STS's documented 4096-byte maximum.
+	alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	securityToken := strings.Repeat(alphabet, (4096/len(alphabet))+1)[:4094] + "=="
+
+	largeURL := fmt.Sprintf("https://sts.us-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAAAAAAAAAAAAAAAAA%%2F20220601%%2Fus-west-2%%2Fsts%%2Faws4_request&X-Amz-Date=%s&X-Amz-Expires=900&X-Amz-Security-Token=%s&X-Amz-SignedHeaders=host%%3Bx-k8s-aws-id&X-Amz-Signature=999999999999999999", timeStr, url.QueryEscape(securityToken))
+	largeToken := toToken(largeURL)
+
+	if got := len(largeToken); got <= oldMaxTokenLenBytes {
+		t.Fatalf("expected bearer token to exceed the old %d-byte limit, got %d bytes", oldMaxTokenLenBytes, got)
+	}
+	if got := len(largeToken); got > maxTokenLenBytes {
+		t.Fatalf("expected bearer token to fit within maxTokenLenBytes (%d), got %d bytes", maxTokenLenBytes, got)
+	}
+
+	validationSuccessTest(t, "aws", largeToken)
 }
 
 func TestVerifyHTTPThrottling(t *testing.T) {
