@@ -1,6 +1,6 @@
 module sigs.k8s.io/aws-iam-authenticator/tests/integration
 
-go 1.27.1
+go 1.27.2
 
 require (
 	github.com/prometheus/client_golang v1.23.2
@@ -69,7 +69,6 @@ require (
 	github.com/prometheus/procfs v0.20.1 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
