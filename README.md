@@ -278,7 +278,7 @@ This includes specifying AWS credentials with enviroment variables or by utilizi
 
 AWS [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html) are supported by `aws-iam-authenticator`
 via the `AWS_PROFILE` environment variable. For example, to authenticate with credentials specified in the _dev_ profile the `AWS_PROFILE` can
-be exported or specified explictly (e.g., `AWS_PROFILE=dev kubectl get all`). If no `AWS_PROFILE` is set, the _default_ profile is used.
+be exported or specified explicitly (e.g., `AWS_PROFILE=dev kubectl get all`). If no `AWS_PROFILE` is set, the _default_ profile is used.
 
 The `AWS_PROFILE` can also be specified directly in the kubeconfig file
 [as part of the `exec` flow](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuration). For example, to specify
