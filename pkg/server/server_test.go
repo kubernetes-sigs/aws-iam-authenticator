@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/prometheus/client_golang/prometheus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -210,6 +211,67 @@ func TestReservedPrefixExists(t *testing.T) {
 				c.want,
 			)
 		}
+	}
+}
+
+type fakeRegionGetter struct {
+	region string
+	err    error
+	calls  int
+}
+
+func (f *fakeRegionGetter) GetRegion(_ context.Context, _ *imds.GetRegionInput, _ ...func(*imds.Options)) (*imds.GetRegionOutput, error) {
+	f.calls++
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &imds.GetRegionOutput{Region: f.region}, nil
+}
+
+func TestResolveRegion(t *testing.T) {
+	cases := []struct {
+		name             string
+		configuredRegion string
+		imds             *fakeRegionGetter
+		want             string
+		wantIMDSCalls    int
+	}{
+		{
+			name:             "configured region is used without calling IMDS",
+			configuredRegion: "ap-south-1",
+			imds:             &fakeRegionGetter{region: "us-west-2"},
+			want:             "ap-south-1",
+			wantIMDSCalls:    0,
+		},
+		{
+			name:             "configured region is used when IMDS would fail",
+			configuredRegion: "ap-south-1",
+			imds:             &fakeRegionGetter{err: errors.New("context deadline exceeded")},
+			want:             "ap-south-1",
+			wantIMDSCalls:    0,
+		},
+		{
+			name:          "IMDS region is used when no region is configured",
+			imds:          &fakeRegionGetter{region: "us-west-2"},
+			want:          "us-west-2",
+			wantIMDSCalls: 1,
+		},
+		{
+			name:          "empty region when IMDS fails and no region is configured",
+			imds:          &fakeRegionGetter{err: errors.New("context deadline exceeded")},
+			want:          "",
+			wantIMDSCalls: 1,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := resolveRegion(context.Background(), c.configuredRegion, c.imds); got != c.want {
+				t.Errorf("resolveRegion(%q): got %q, wanted %q", c.configuredRegion, got, c.want)
+			}
+			if c.imds.calls != c.wantIMDSCalls {
+				t.Errorf("resolveRegion(%q): IMDS called %d times, wanted %d", c.configuredRegion, c.imds.calls, c.wantIMDSCalls)
+			}
+		})
 	}
 }
 

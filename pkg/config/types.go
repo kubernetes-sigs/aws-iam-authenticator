@@ -166,6 +166,11 @@ type Config struct {
 	// by expected resources. https://docs.aws.amazon.com/IAM/latest/UserGuide/confused-deputy.html
 	SourceARN string
 
+	// Region is the AWS region used for the EC2 and STS clients that resolve the private DNS of the calling
+	// kubelet, and for token verification. If empty, the region is looked up from the EC2 Instance Metadata
+	// Service (IMDS) at startup.
+	Region string
+
 	// Address defines the hostname or IP Address to bind the HTTPS server to listen to. This is useful when creating
 	// a local server to handle the authentication request for development.
 	Address string

@@ -208,6 +208,26 @@ func (c *Server) Close() {
 	}
 }
 
+// regionGetter is the subset of the IMDS client used to look up the instance region.
+type regionGetter interface {
+	GetRegion(ctx context.Context, params *imds.GetRegionInput, optFns ...func(*imds.Options)) (*imds.GetRegionOutput, error)
+}
+
+// resolveRegion returns the configured region if set, otherwise the region from IMDS
+// (applicable if run on an EC2 instance). It returns "" if neither is available.
+func resolveRegion(ctx context.Context, configuredRegion string, imdsClient regionGetter) string {
+	if configuredRegion != "" {
+		logrus.Infof("using configured region %q for handler configuration", configuredRegion)
+		return configuredRegion
+	}
+	instanceRegionOutput, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
+	if err != nil {
+		logrus.Errorf("failed to get region from IMDS for handler configuration and no region is configured. imds error: %v", err)
+		return ""
+	}
+	return instanceRegionOutput.Region
+}
+
 type healthzHandler struct{}
 
 func (m *healthzHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
@@ -227,17 +247,7 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 	if err != nil {
 		panic(fmt.Sprintf("could not load config, %v", err))
 	}
-	// Attempt to get the region from IMDS (applicable if run on an EC2 instance)
-	imdsClient := imds.NewFromConfig(cfg)
-	instanceRegionOutput, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
-	instanceRegion := ""
-	if err != nil {
-		// Default to the global region
-		logrus.Infof("failed to get region from IMDS for handler configuration, defaulting to us-east-1. imds error: %v", err)
-		cfg.Region = "us-east-1"
-	} else {
-		instanceRegion = instanceRegionOutput.Region
-	}
+	instanceRegion := resolveRegion(ctx, c.Region, imds.NewFromConfig(cfg))
 
 	h := &handler{
 		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
