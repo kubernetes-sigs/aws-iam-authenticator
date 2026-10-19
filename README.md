@@ -438,6 +438,10 @@ server:
   # role to assume before querying EC2 API in order to discover metadata like EC2 private DNS Name
   ec2DescribeInstancesRoleARN: arn:aws:iam::000000000000:role/DescribeInstancesRole
 
+  # AWS region for EC2 DescribeInstances and token verification. If unset, the region is looked
+  # up from the EC2 Instance Metadata Service (IMDS) at startup. Also settable with `--region`.
+  region: us-west-2
+
   # AWS Account IDs to scrub from server logs. (Defaults to empty list)
   scrubbedAccounts:
   - "111122223333"

@@ -76,6 +76,14 @@ func init() {
 		os.Exit(1)
 	}
 
+	serverCmd.Flags().String("region",
+		"",
+		"The AWS region used for EC2 DescribeInstances and token verification. If empty, the region is looked up from the EC2 Instance Metadata Service (IMDS).")
+	if err := viper.BindPFlag("server.region", serverCmd.Flags().Lookup("region")); err != nil {
+		fmt.Printf("Failed to bind flag '%s' - %+v\n", "server.region", err)
+		os.Exit(1)
+	}
+
 	serverCmd.Flags().String("generate-kubeconfig",
 		"/etc/kubernetes/aws-iam-authenticator/kubeconfig.yaml",
 		"Output `path` where a generated webhook kubeconfig (for `--authentication-token-webhook-config-file`) will be stored.  When running as a container, this should be a hostPath mount and the API server must be able to access the file.")
