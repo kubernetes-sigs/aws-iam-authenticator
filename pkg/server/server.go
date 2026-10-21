@@ -214,16 +214,17 @@ type regionGetter interface {
 }
 
 // resolveRegion returns the configured region if set, otherwise the region from IMDS
-// (applicable if run on an EC2 instance). It returns "" if neither is available.
+// (applicable if run on an EC2 instance). If neither is available it exits: without a
+// region the EC2 and STS clients cannot resolve their endpoints, so every identity mapped
+// with {{EC2PrivateDNSName}} would be denied. Exiting lets the supervisor restart the server.
 func resolveRegion(ctx context.Context, configuredRegion string, imdsClient regionGetter) string {
 	if configuredRegion != "" {
 		logrus.Infof("using configured region %q for handler configuration", configuredRegion)
 		return configuredRegion
 	}
 	instanceRegionOutput, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
-	if err != nil {
-		logrus.Errorf("failed to get region from IMDS for handler configuration and no region is configured. imds error: %v", err)
-		return ""
+	if err != nil || instanceRegionOutput.Region == "" {
+		logrus.Fatalf("failed to get region from IMDS for handler configuration and no region is configured (set --region). imds error: %v", err)
 	}
 	return instanceRegionOutput.Region
 }
@@ -247,7 +248,12 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 	if err != nil {
 		panic(fmt.Sprintf("could not load config, %v", err))
 	}
-	instanceRegion := resolveRegion(ctx, c.Region, imds.NewFromConfig(cfg))
+	// Prefer --region, then the SDK default config (AWS_REGION / shared config), then IMDS.
+	configuredRegion := c.Region
+	if configuredRegion == "" {
+		configuredRegion = cfg.Region
+	}
+	instanceRegion := resolveRegion(ctx, configuredRegion, imds.NewFromConfig(cfg))
 
 	h := &handler{
 		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
