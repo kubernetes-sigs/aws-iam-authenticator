@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Go 1.26.1+ (see `.go-version`)
+- Go 1.27.3+ (see `.go-version`)
 - Docker
 - AWS CLI with credentials configured
 - `jq`

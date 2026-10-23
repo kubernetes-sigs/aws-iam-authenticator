@@ -5,7 +5,7 @@ End-to-end testing verifies the functionality of the AWS IAM authenticator for K
 ## Prerequisites
 
 Have the following installed on your system:
-- go (1.27.2+, see `.go-version`)
+- go (1.27.3+, see `.go-version`)
 - jq
 - awscli
     - Configure your AWS credentials, as well.

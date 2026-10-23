@@ -1,6 +1,6 @@
 module sigs.k8s.io/aws-iam-authenticator
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.42.1
