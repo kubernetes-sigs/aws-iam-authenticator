@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 	authenticationv1beta1 "k8s.io/api/authentication/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -234,6 +235,7 @@ func TestResolveRegion(t *testing.T) {
 		configuredRegion string
 		imds             *fakeRegionGetter
 		want             string
+		wantExit         bool
 		wantIMDSCalls    int
 	}{
 		{
@@ -257,15 +259,25 @@ func TestResolveRegion(t *testing.T) {
 			wantIMDSCalls: 1,
 		},
 		{
-			name:          "empty region when IMDS fails and no region is configured",
+			name:          "exits when IMDS fails and no region is configured",
 			imds:          &fakeRegionGetter{err: errors.New("context deadline exceeded")},
-			want:          "",
+			wantExit:      true,
+			wantIMDSCalls: 1,
+		},
+		{
+			name:          "exits when IMDS returns an empty region and no region is configured",
+			imds:          &fakeRegionGetter{region: ""},
+			wantExit:      true,
 			wantIMDSCalls: 1,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := resolveRegion(context.Background(), c.configuredRegion, c.imds); got != c.want {
+			got, exited := resolveRegionCatchingExit(c.configuredRegion, c.imds)
+			if exited != c.wantExit {
+				t.Fatalf("resolveRegion(%q): exited=%t, wanted exited=%t", c.configuredRegion, exited, c.wantExit)
+			}
+			if !c.wantExit && got != c.want {
 				t.Errorf("resolveRegion(%q): got %q, wanted %q", c.configuredRegion, got, c.want)
 			}
 			if c.imds.calls != c.wantIMDSCalls {
@@ -273,6 +285,25 @@ func TestResolveRegion(t *testing.T) {
 			}
 		})
 	}
+}
+
+// resolveRegionCatchingExit calls resolveRegion with logrus's exit replaced by a panic,
+// so that a fatal log can be observed without terminating the test process.
+func resolveRegionCatchingExit(configuredRegion string, imdsClient regionGetter) (region string, exited bool) {
+	type exitPanic struct{}
+	logger := logrus.StandardLogger()
+	oldExit := logger.ExitFunc
+	logger.ExitFunc = func(int) { panic(exitPanic{}) }
+	defer func() {
+		logger.ExitFunc = oldExit
+		if r := recover(); r != nil {
+			if _, ok := r.(exitPanic); !ok {
+				panic(r)
+			}
+			exited = true
+		}
+	}()
+	return resolveRegion(context.Background(), configuredRegion, imdsClient), false
 }
 
 func TestAuthenticateNonPostError(t *testing.T) {
