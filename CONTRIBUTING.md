@@ -10,7 +10,7 @@ Please make sure to read and observe our [Code of Conduct](https://github.com/cn
 
 ### Prerequisites
 
-- [Go](https://golang.org/dl/) 1.26.1 or later (see `.go-version`)
+- [Go](https://golang.org/dl/) 1.27.3 or later (see `.go-version`)
 - [Docker](https://docs.docker.com/get-docker/) (for building images and running local dev environments)
 - [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) (for local development clusters)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
