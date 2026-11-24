@@ -234,6 +234,7 @@ func TestResolveRegion(t *testing.T) {
 		configuredRegion string
 		imds             *fakeRegionGetter
 		want             string
+		wantErr          bool
 		wantIMDSCalls    int
 	}{
 		{
@@ -257,15 +258,25 @@ func TestResolveRegion(t *testing.T) {
 			wantIMDSCalls: 1,
 		},
 		{
-			name:          "empty region when IMDS fails and no region is configured",
+			name:          "errors when IMDS fails and no region is configured",
 			imds:          &fakeRegionGetter{err: errors.New("context deadline exceeded")},
-			want:          "",
+			wantErr:       true,
+			wantIMDSCalls: 1,
+		},
+		{
+			name:          "errors when IMDS returns an empty region and no region is configured",
+			imds:          &fakeRegionGetter{region: ""},
+			wantErr:       true,
 			wantIMDSCalls: 1,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := resolveRegion(context.Background(), c.configuredRegion, c.imds); got != c.want {
+			got, err := resolveRegion(context.Background(), c.configuredRegion, c.imds)
+			if (err != nil) != c.wantErr {
+				t.Fatalf("resolveRegion(%q): err=%v, wanted error=%t", c.configuredRegion, err, c.wantErr)
+			}
+			if got != c.want {
 				t.Errorf("resolveRegion(%q): got %q, wanted %q", c.configuredRegion, got, c.want)
 			}
 			if c.imds.calls != c.wantIMDSCalls {
