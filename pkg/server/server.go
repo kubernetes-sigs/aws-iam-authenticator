@@ -214,19 +214,20 @@ type regionGetter interface {
 }
 
 // resolveRegion returns the configured region if set, otherwise the region from IMDS
-// (applicable if run on an EC2 instance). If neither is available it exits: without a
-// region the EC2 and STS clients cannot resolve their endpoints, so every identity mapped
-// with {{EC2PrivateDNSName}} would be denied. Exiting lets the supervisor restart the server.
-func resolveRegion(ctx context.Context, configuredRegion string, imdsClient regionGetter) string {
+// (applicable if run on an EC2 instance). It returns an error if neither is available.
+func resolveRegion(ctx context.Context, configuredRegion string, imdsClient regionGetter) (string, error) {
 	if configuredRegion != "" {
 		logrus.Infof("using configured region %q for handler configuration", configuredRegion)
-		return configuredRegion
+		return configuredRegion, nil
 	}
 	instanceRegionOutput, err := imdsClient.GetRegion(ctx, &imds.GetRegionInput{})
-	if err != nil || instanceRegionOutput.Region == "" {
-		logrus.Fatalf("failed to get region from IMDS for handler configuration and no region is configured (set --region). imds error: %v", err)
+	if err != nil {
+		return "", fmt.Errorf("failed to get region from IMDS and no region is configured (set --region): %w", err)
 	}
-	return instanceRegionOutput.Region
+	if instanceRegionOutput.Region == "" {
+		return "", fmt.Errorf("IMDS returned an empty region and no region is configured (set --region)")
+	}
+	return instanceRegionOutput.Region, nil
 }
 
 type healthzHandler struct{}
@@ -253,7 +254,13 @@ func (c *Server) getHandler(ctx context.Context, backendMapper BackendMapper, ec
 	if configuredRegion == "" {
 		configuredRegion = cfg.Region
 	}
-	instanceRegion := resolveRegion(ctx, configuredRegion, imds.NewFromConfig(cfg))
+	instanceRegion, err := resolveRegion(ctx, configuredRegion, imds.NewFromConfig(cfg))
+	if err != nil {
+		// Without a region the EC2 and STS clients cannot resolve their endpoints, so every
+		// identity mapped with {{EC2PrivateDNSName}} would be denied. Exit so the supervisor
+		// restarts the server instead of serving in a broken state.
+		logrus.Fatalf("could not resolve region for handler configuration: %v", err)
+	}
 
 	h := &handler{
 		verifier:                  token.NewVerifier(c.ClusterID, c.PartitionID, instanceRegion),
